@@ -1,0 +1,94 @@
+# ===================================================================
+# Remote Server 库配置示例
+# Spring Cloud Alibaba 2023 远程调用库最佳实践配置
+# ===================================================================
+
+spring:
+  application:
+    name: remote-server-library
+  cloud:
+    nacos:
+      # Nacos服务器地址 - 支持环境变量配置
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        enabled: true
+        # 作为库使用时通常不需要注册自己
+        register-enabled: false
+        # 命名空间（可选）
+        namespace: ${NACOS_NAMESPACE:}
+        # 服务分组（可选）
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        # 心跳间隔
+        heart-beat-interval: 5000
+        # 心跳超时时间
+        heart-beat-timeout: 15000
+        # IP删除超时时间
+        ip-delete-timeout: 30000
+    # 负载均衡配置
+    loadbalancer:
+      # 禁用Ribbon，使用新的LoadBalancer
+      ribbon:
+        enabled: false
+      # 启用缓存
+      cache:
+        enabled: true
+        ttl: 35s
+        capacity: 256
+      # 健康检查配置
+      health-check:
+        initial-delay: 0
+        interval: 30s
+
+# Remote Server Nacos 配置
+remote:
+  nacos:
+    # 启用Nacos服务发现功能
+    enabled: true
+    # 默认协议
+    default-protocol: http
+    # 请求超时时间（毫秒）
+    timeout: 30000
+    # 连接超时时间（毫秒）
+    connect-timeout: 5000
+    # 读取超时时间（毫秒）
+    read-timeout: 30000
+    # 重试配置
+    retry:
+      enabled: true
+      max-attempts: 3
+      backoff-delay: 1000
+    # 服务名称映射配置
+    services:
+      # 核心业务服务
+      user-service: jlm-user
+      student-service: jlm-student
+      teacher-service: jlm-teacher
+      class-service: jlm-class
+      # 业务功能服务
+      homework-service: jlm-homework
+      lesson-service: jlm-lesson
+      exercise-service: jlm-exercise
+      # 系统服务
+      auth-service: jlm-auth
+      gateway-service: jlm-gateway
+      file-service: jlm-file
+      notification-service: jlm-notification
+
+# 日志配置
+logging:
+  level:
+    com.jlm.remote: DEBUG
+    org.springframework.cloud: INFO
+    com.alibaba.nacos: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# 管理端点配置（可选）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,nacos-discovery
+  endpoint:
+    health:
+      show-details: always

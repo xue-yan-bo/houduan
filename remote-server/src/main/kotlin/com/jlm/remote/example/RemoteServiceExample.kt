@@ -1,8 +1,10 @@
 package com.jlm.remote.example
 
+import com.jlm.remote.service.NacosRemoteService
 import com.jlm.remote.service.RemoteFileService
 import com.jlm.remote.service.RemoteHttpService
 import kotlinx.coroutines.runBlocking
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 /**
@@ -14,6 +16,9 @@ class RemoteServiceExample(
     private val remoteHttpService: RemoteHttpService,
     private val remoteFileService: RemoteFileService
 ) {
+
+    @Autowired(required = false)
+    private var nacosRemoteService: NacosRemoteService? = null
 
     /**
      * HTTP请求示例
@@ -61,15 +66,48 @@ class RemoteServiceExample(
     }
 
     /**
+     * Nacos服务调用示例
+     */
+    fun nacosExample() = runBlocking {
+        nacosRemoteService?.let { service ->
+            println("=== Nacos服务调用示例 ===")
+
+            try {
+                // 检查服务可用性
+                val isUserServiceAvailable = service.isServiceAvailable("user-service")
+                println("用户服务可用性: $isUserServiceAvailable")
+
+                if (isUserServiceAvailable) {
+                    // 调用用户服务
+                    val userInfo = service.getByServiceName(
+                        serviceAlias = "user-service",
+                        path = "/api/user/info"
+                    )
+                    println("用户信息: $userInfo")
+                }
+
+                // 检查订单服务
+                val isOrderServiceAvailable = service.isServiceAvailable("order-service")
+                println("订单服务可用性: $isOrderServiceAvailable")
+
+            } catch (e: Exception) {
+                println("Nacos示例执行出错: ${e.message}")
+            }
+        } ?: println("Nacos服务未启用或未配置")
+    }
+
+    /**
      * 综合使用示例
      */
     fun combinedExample() = runBlocking {
         println("=== Remote Server 功能演示 ===")
-        
+
         try {
             httpExample()
             println("\n" + "=".repeat(40) + "\n")
             fileExample()
+            println("\n" + "=".repeat(40) + "\n")
+            nacosExample()
         } catch (e: Exception) {
             println("示例执行出错: ${e.message}")
         }

@@ -1,25 +1,167 @@
-# Spring Boot 基础配置
+# ===================================================================
+# Spring Boot 应用配置 - Homework 服务
+# Spring Cloud Alibaba 2023 最佳实践配置
+# ===================================================================
+
 spring:
   application:
     name: homework
-  # Spring Cloud 2023版本新要求：显式配置import
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # Spring Cloud 2023版本配置导入
   config:
-    import: optional:nacos:homework.yml
+    import:
+      - optional:nacos:${spring.application.name}.yml
+      - optional:nacos:${spring.application.name}-${spring.profiles.active}.yml
+
+  # Nacos 配置
   cloud:
     nacos:
-      # Nacos服务器地址 - 支持环境变量配置
-      serverAddr: ${NACOS_SERVER_ADDR:192.168.1.38:8848}
+      # 服务器地址 - 支持环境变量配置
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      # 服务发现配置
       discovery:
         enabled: true
+        # 服务注册配置
+        register-enabled: true
+        # 命名空间 - 设置为dev以发现同命名空间的服务
+        namespace: ${NACOS_NAMESPACE:dev}
+        # 服务分组
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        # 心跳间隔（毫秒）
+        heart-beat-interval: 5000
+        # 心跳超时时间（毫秒）
+        heart-beat-timeout: 15000
+        # IP删除超时时间（毫秒）
+        ip-delete-timeout: 30000
+        # 元数据
+        metadata:
+          version: ${project.version:25.0}
+          zone: ${DEPLOYMENT_ZONE:default}
+      # 配置中心
       config:
         enabled: true
         file-extension: yml
+        # 配置中心命名空间
+        namespace: ${NACOS_NAMESPACE:dev}
+        # 共享配置
+        shared-configs:
+          - data-id: common-config.yml
+            group: ${NACOS_GROUP:DEFAULT_GROUP}
+            refresh: true
+
+    # 负载均衡配置
+    loadbalancer:
+      # 禁用Ribbon，使用新的LoadBalancer
+      ribbon:
+        enabled: false
+      # 启用缓存
+      cache:
+        enabled: true
+        ttl: 35s
+        capacity: 256
+      # 确保健康检查和服务发现正常工作
+      retry:
+        enabled: true
 
 # 服务器配置
 server:
   port: ${SERVER_PORT:18080}
+  # 优雅关闭
+  shutdown: graceful
+  # Tomcat配置
+  tomcat:
+    # 连接超时时间
+    connection-timeout: 20000
+    # 最大连接数
+    max-connections: 8192
+    threads:
+      # 最大线程数
+      max: 200
+      # 最小线程数
+      min-spare: 10
+
+# OpenFeign 配置
+feign:
+  # 启用熔断器
+  circuitbreaker:
+    enabled: true
+  # 客户端配置
+  client:
+    config:
+      default:
+        # 连接超时时间（毫秒）
+        connect-timeout: 5000
+        # 读取超时时间（毫秒）
+        read-timeout: 30000
+        # 日志级别
+        logger-level: basic
+      # 学生服务特定配置
+      jlm-student:
+        connect-timeout: 3000
+        read-timeout: 10000
+        logger-level: full
+  # 压缩配置
+  compression:
+    request:
+      enabled: true
+      mime-types: text/xml,application/xml,application/json
+      min-request-size: 2048
+    response:
+      enabled: true
+
+# Resilience4j 熔断器配置
+resilience4j:
+  circuitbreaker:
+    instances:
+      jlm-student:
+        # 失败率阈值（百分比）
+        failure-rate-threshold: 50
+        # 慢调用率阈值（百分比）
+        slow-call-rate-threshold: 50
+        # 慢调用持续时间阈值（毫秒）
+        slow-call-duration-threshold: 2000
+        # 滑动窗口大小
+        sliding-window-size: 10
+        # 最小调用次数
+        minimum-number-of-calls: 5
+        # 等待时间（毫秒）
+        wait-duration-in-open-state: 10000
+        # 半开状态下允许的调用次数
+        permitted-number-of-calls-in-half-open-state: 3
+  # 重试配置
+  retry:
+    instances:
+      jlm-student:
+        # 最大重试次数
+        max-attempts: 3
+        # 重试间隔（毫秒）
+        wait-duration: 1000
+        # 指数退避倍数
+        exponential-backoff-multiplier: 2
+  # 限流配置
+  ratelimiter:
+    instances:
+      jlm-student:
+        # 限流周期（秒）
+        limit-refresh-period: 1
+        # 周期内允许的请求数
+        limit-for-period: 10
+        # 等待时间（毫秒）
+        timeout-duration: 1000
+
+# 注意：已移除 Nacos 远程调用配置，现在使用 OpenFeign 进行服务间通信
 
 # 日志配置
 logging:
   level:
+    root: INFO
     com.jlm.homework: INFO
+    com.jlm.remote: DEBUG
+    org.springframework.cloud: INFO
+    com.alibaba.nacos: INFO
+    org.springframework.cloud.loadbalancer: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"

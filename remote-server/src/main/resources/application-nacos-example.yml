@@ -1,0 +1,100 @@
+# Nacos示例配置文件
+# 用于演示Remote Server的Nacos功能
+
+spring:
+  application:
+    name: remote-server-nacos-example
+  cloud:
+    nacos:
+      # Nacos服务器地址 - 可通过环境变量覆盖
+      server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      discovery:
+        enabled: true
+        # 作为示例应用，可以选择是否注册自己
+        register-enabled: false
+        # 命名空间（可选）
+        namespace: ${NACOS_NAMESPACE:}
+        # 服务分组（可选）
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        # 心跳间隔
+        heart-beat-interval: 5000
+        # 心跳超时时间
+        heart-beat-timeout: 15000
+        # IP删除超时时间
+        ip-delete-timeout: 30000
+    # 负载均衡配置
+    loadbalancer:
+      # 禁用Ribbon（使用新的LoadBalancer）
+      ribbon:
+        enabled: false
+      # 启用缓存
+      cache:
+        enabled: true
+        ttl: 35s
+        capacity: 256
+
+# Remote Server Nacos 配置
+remote:
+  nacos:
+    # 启用Nacos服务发现功能
+    enabled: true
+    # 默认协议
+    default-protocol: http
+    # 请求超时时间（毫秒）
+    timeout: 30000
+    # 服务名称映射配置
+    services:
+      # 用户服务
+      user-service: jlm-user-service
+      # 订单服务  
+      order-service: jlm-order-service
+      # 产品服务
+      product-service: jlm-product-service
+      # 文件服务
+      file-service: jlm-file-service
+      # 通知服务
+      notification-service: jlm-notification-service
+      # 认证服务
+      auth-service: jlm-auth-service
+      # 网关服务
+      gateway-service: jlm-gateway-service
+
+# 服务器配置
+server:
+  port: ${SERVER_PORT:18090}
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.jlm.remote: DEBUG
+    org.springframework.cloud: INFO
+    com.alibaba.nacos: INFO
+    org.springframework.cloud.loadbalancer: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,nacos-discovery,loadbalancer
+  endpoint:
+    health:
+      show-details: always
+    nacos-discovery:
+      enabled: true
+
+# 示例配置
+example:
+  # 是否运行示例
+  run-examples: true
+  # 示例运行间隔（秒）
+  interval: 10
+  # 要测试的服务列表
+  test-services:
+    - user-service
+    - order-service
+    - product-service

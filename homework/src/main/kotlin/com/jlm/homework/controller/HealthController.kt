@@ -1,5 +1,6 @@
 package com.jlm.homework.controller
 
+import com.jlm.homework.service.StartupCheckService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.cloud.client.ServiceInstance
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDateTime
+import org.springframework.context.ApplicationContext
 
 /**
  * 健康检查控制器
@@ -20,12 +22,18 @@ class HealthController {
 
     @Autowired
     private lateinit var discoveryClient: DiscoveryClient
-    
+
     @Autowired
     private lateinit var environment: Environment
-    
+
+    @Autowired
+    private lateinit var startupCheckService: StartupCheckService
+
     @Value("\${server.port:18080}")
     private var serverPort: Int = 18080
+
+    @Autowired
+    private lateinit var applicationContext: ApplicationContext
 
     /**
      * 健康检查接口
@@ -78,7 +86,40 @@ class HealthController {
             "nacosServerAddr" to (environment.getProperty("spring.cloud.nacos.server-addr") ?: "未配置"),
             "discoveryEnabled" to (environment.getProperty("spring.cloud.nacos.discovery.enabled") ?: "false"),
             "configEnabled" to (environment.getProperty("spring.cloud.nacos.config.enabled") ?: "false"),
+            "remoteNacosEnabled" to (environment.getProperty("remote.nacos.enabled") ?: "false"),
             "message" to "配置信息获取成功"
+        )
+    }
+
+    /**
+     * 启动报告接口
+     * GET /api/startup-report
+     */
+    @GetMapping("/startup-report")
+    fun startupReport(): Map<String, Any> {
+        val report = startupCheckService.getStartupReport()
+        return mapOf(
+            "success" to true,
+            "data" to report,
+            "message" to "启动报告获取成功"
+        )
+    }
+
+    /**
+     * Bean状态检查接口
+     * GET /api/beans-status
+     */
+    @GetMapping("/beans-status")
+    fun beansStatus(): Map<String, Any> {
+        return mapOf(
+            "nacosWebClient" to applicationContext.containsBean("nacosWebClient"),
+            "discoveryClient" to applicationContext.containsBean("discoveryClient"),
+            "nacosRemoteService" to applicationContext.containsBean("nacosRemoteService"),
+            "nacosConfigDiagnosticService" to applicationContext.containsBean("nacosConfigDiagnosticService"),
+            "nacosServiceConfig" to applicationContext.containsBean("nacosServiceConfig"),
+            "nacosServiceProperties" to applicationContext.containsBean("nacosServiceProperties"),
+            "remoteServerAutoConfiguration" to applicationContext.containsBean("remoteServerAutoConfiguration"),
+            "message" to "Bean状态检查完成"
         )
     }
 } 

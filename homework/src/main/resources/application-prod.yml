@@ -1,9 +1,109 @@
-# 生产环境配置
+# ===================================================================
+# 生产环境配置 - Homework 服务
+# Spring Cloud Alibaba 2023 生产环境最佳实践
+# ===================================================================
+
+spring:
+  cloud:
+    nacos:
+      # 生产环境Nacos配置
+      server-addr: ${NACOS_SERVER_ADDR:nacos-cluster.prod.com:8848}
+      discovery:
+        # 生产环境命名空间
+        namespace: ${NACOS_NAMESPACE:prod}
+        # 生产环境配置组
+        group: ${NACOS_GROUP:PROD_GROUP}
+        # 生产环境元数据
+        metadata:
+          version: ${project.version:25.0}
+          zone: ${DEPLOYMENT_ZONE:prod}
+          cluster: ${CLUSTER_NAME:default}
+      config:
+        # 生产环境命名空间
+        namespace: ${NACOS_NAMESPACE:prod}
+        # 生产环境配置组
+        group: ${NACOS_GROUP:PROD_GROUP}
+        # 生产环境扩展配置
+        extension-configs:
+          - data-id: homework-prod.yml
+            group: PROD_GROUP
+            refresh: true
+          - data-id: database-prod.yml
+            group: PROD_GROUP
+            refresh: true
+          - data-id: redis-prod.yml
+            group: PROD_GROUP
+            refresh: true
+        # 共享配置
+        shared-configs:
+          - data-id: common-prod.yml
+            group: PROD_GROUP
+            refresh: true
+
+# 生产环境服务器配置
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
+  # 优雅关闭
+  shutdown: graceful
+  # Tomcat生产环境优化
+  tomcat:
+    # 最大连接数
+    max-connections: 10000
+    # 接受队列长度
+    accept-count: 1000
+    threads:
+      # 最大线程数
+      max: 800
+      # 最小线程数
+      min-spare: 100
 
 # 生产环境日志配置
 logging:
   level:
     root: WARN
     com.jlm.homework: INFO
+    com.jlm.remote: INFO
+    org.springframework.cloud: WARN
+    com.alibaba.nacos: WARN
+  # 生产环境日志文件配置
+  file:
+    name: /var/log/homework/homework.log
+  logback:
+    rollingpolicy:
+      # 日志文件最大大小
+      max-file-size: 100MB
+      # 保留天数
+      max-history: 30
+      # 总大小限制
+      total-size-cap: 10GB
+
+# 生产环境管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        # 生产环境只暴露必要的端点
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  # 监控配置
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  health:
+    # 健康检查配置
+    nacos:
+      enabled: true
+    diskspace:
+      enabled: true
+      threshold: 10GB
+
+# 生产环境特定配置
+debug: false
+
+# 生产环境JVM配置建议（在启动脚本中设置）
+# -Xms2g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+# -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/log/homework/
+# -Dspring.profiles.active=prod

@@ -1,12 +1,12 @@
 package com.jlm.homework.config
 
+import feign.FeignException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.context.request.WebRequest
-import feign.FeignException
 import java.time.LocalDateTime
 
 /**

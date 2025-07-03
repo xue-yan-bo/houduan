@@ -3,9 +3,13 @@ package com.jlm.homework.feign
 import org.springframework.cloud.openfeign.FeignClient
 import org.springframework.web.bind.annotation.GetMapping
 
+/**
+ * 系统服务 Feign 客户端
+ * 用于调用若依系统服务的接口
+ */
 @FeignClient(
     name = "ruoyi-system",
-    configuration = [FeignConfiguration::class],
+    configuration = [FeignConfiguration::class]
 )
 interface SystemFeignClient {
 

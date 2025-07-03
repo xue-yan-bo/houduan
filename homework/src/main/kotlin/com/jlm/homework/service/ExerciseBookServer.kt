@@ -1,0 +1,189 @@
+package com.jlm.homework.service
+
+import com.jlm.homework.entity.ExerciseBookEntity
+import com.jlm.homework.entity.ExerciseBookStatus
+import com.jlm.homework.repository.ExerciseBookRepo
+import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.stereotype.Service
+import java.time.LocalDateTime
+
+/**
+ * 练习册业务服务类
+ * 处理练习册相关的业务逻辑
+ */
+@Service
+class ExerciseBookServer(
+    private val exerciseBookRepo: ExerciseBookRepo
+) {
+
+    private val logger = LoggerFactory.getLogger(ExerciseBookServer::class.java)
+
+    /**
+     * 分页查询所有练习册
+     * @param pageable 分页参数
+     * @return 分页的练习册列表
+     */
+    fun findAll(pageable: Pageable): List<ExerciseBookEntity> {
+        logger.info("分页查询练习册，页码: {}, 每页大小: {}", pageable.pageNumber, pageable.pageSize)
+        val page = exerciseBookRepo.findAll(pageable)
+        return page.content
+    }
+
+    /**
+     * 根据ID查询练习册
+     * @param id 练习册ID
+     * @return 练习册实体，如果不存在返回null
+     */
+    fun findById(id: Long): ExerciseBookEntity? {
+        logger.info("根据ID查询练习册: {}", id)
+        return exerciseBookRepo.findById(id).orElse(null)
+    }
+
+    /**
+     * 保存练习册
+     * @param exerciseBook 练习册实体
+     * @return 保存后的练习册实体
+     */
+    fun save(exerciseBook: ExerciseBookEntity): ExerciseBookEntity {
+        logger.info("保存练习册: {}", exerciseBook.title)
+        
+        // 如果是新增，设置创建时间
+        val entityToSave = if (exerciseBook.id == null) {
+            exerciseBook.copy(
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now()
+            )
+        } else {
+            // 如果是更新，只更新修改时间
+            exerciseBook.copy(updatedAt = LocalDateTime.now())
+        }
+        
+        return exerciseBookRepo.save(entityToSave)
+    }
+
+    /**
+     * 根据ID删除练习册
+     * @param id 练习册ID
+     */
+    fun deleteById(id: Long) {
+        logger.info("删除练习册，ID: {}", id)
+        exerciseBookRepo.deleteById(id)
+    }
+
+    /**
+     * 根据标题模糊查询练习册
+     * @param title 标题关键词
+     * @return 匹配的练习册列表
+     */
+    fun findByTitleContaining(title: String): List<ExerciseBookEntity> {
+        logger.info("根据标题搜索练习册: {}", title)
+        return exerciseBookRepo.findByTitleContainingIgnoreCase(title)
+    }
+
+    /**
+     * 统计练习册总数
+     * @return 练习册总数
+     */
+    fun count(): Long {
+        logger.info("统计练习册总数")
+        return exerciseBookRepo.count()
+    }
+
+    /**
+     * 根据状态查询练习册
+     * @param status 练习册状态
+     * @return 指定状态的练习册列表
+     */
+    fun findByStatus(status: ExerciseBookStatus): List<ExerciseBookEntity> {
+        logger.info("根据状态查询练习册: {}", status)
+        return exerciseBookRepo.findByStatus(status)
+    }
+
+    /**
+     * 根据学科分页查询练习册
+     * @param subject 学科名称
+     * @param pageable 分页参数
+     * @return 分页的练习册列表
+     */
+    fun findBySubject(subject: String, pageable: Pageable): Page<ExerciseBookEntity> {
+        logger.info("根据学科查询练习册: {}", subject)
+        return exerciseBookRepo.findBySubject(subject, pageable)
+    }
+
+    /**
+     * 根据年级查询练习册
+     * @param grade 年级
+     * @return 对应年级的练习册列表
+     */
+    fun findByGrade(grade: String): List<ExerciseBookEntity> {
+        logger.info("根据年级查询练习册: {}", grade)
+        return exerciseBookRepo.findByGrade(grade)
+    }
+
+    /**
+     * 根据创建者ID分页查询练习册
+     * @param creatorId 创建者ID
+     * @param pageable 分页参数
+     * @return 分页的练习册列表
+     */
+    fun findByCreatorId(creatorId: Long, pageable: Pageable): Page<ExerciseBookEntity> {
+        logger.info("根据创建者ID查询练习册: {}", creatorId)
+        return exerciseBookRepo.findByCreatorId(creatorId, pageable)
+    }
+
+    /**
+     * 根据多个条件查询练习册
+     * @param title 标题关键词（可选）
+     * @param subject 学科（可选）
+     * @param grade 年级（可选）
+     * @param status 状态
+     * @param pageable 分页参数
+     * @return 分页的练习册列表
+     */
+    fun findByConditions(
+        title: String?,
+        subject: String?,
+        grade: String?,
+        status: ExerciseBookStatus = ExerciseBookStatus.ACTIVE,
+        pageable: Pageable
+    ): Page<ExerciseBookEntity> {
+        logger.info("根据条件查询练习册 - 标题: {}, 学科: {}, 年级: {}, 状态: {}", title, subject, grade, status)
+        return exerciseBookRepo.findByConditions(title, subject, grade, status, pageable)
+    }
+
+    /**
+     * 软删除练习册（设置状态为DELETED）
+     * @param id 练习册ID
+     * @return 更新后的练习册实体，如果不存在返回null
+     */
+    fun softDelete(id: Long): ExerciseBookEntity? {
+        logger.info("软删除练习册，ID: {}", id)
+        val exerciseBook = findById(id) ?: return null
+        
+        val deletedEntity = exerciseBook.copy(
+            status = ExerciseBookStatus.DELETED,
+            updatedAt = LocalDateTime.now()
+        )
+        
+        return save(deletedEntity)
+    }
+
+    /**
+     * 激活练习册
+     * @param id 练习册ID
+     * @return 更新后的练习册实体，如果不存在返回null
+     */
+    fun activate(id: Long): ExerciseBookEntity? {
+        logger.info("激活练习册，ID: {}", id)
+        val exerciseBook = findById(id) ?: return null
+        
+        val activatedEntity = exerciseBook.copy(
+            status = ExerciseBookStatus.ACTIVE,
+            updatedAt = LocalDateTime.now()
+        )
+        
+        return save(activatedEntity)
+    }
+}

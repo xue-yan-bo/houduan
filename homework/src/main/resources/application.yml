@@ -1,33 +1,25 @@
+# Spring Boot 基础配置
+spring:
+  application:
+    name: homework
+  # Spring Cloud 2023版本新要求：显式配置import
+  config:
+    import: optional:nacos:homework.yml
+  cloud:
+    nacos:
+      # Nacos服务器地址 - 支持环境变量配置
+      serverAddr: ${NACOS_SERVER_ADDR:192.168.1.38:8848}
+      discovery:
+        enabled: true
+      config:
+        enabled: true
+        file-extension: yml
+
+# 服务器配置
 server:
-  port: 18080
+  port: ${SERVER_PORT:18080}
 
 # 日志配置
 logging:
   level:
-    # 应用日志级别
-    com.jlm.homework: DEBUG
-
----
-# 开发环境特定配置
-spring:
-  config:
-    activate:
-      on-profile: dev
-
----
-# 生产环境特定配置
-spring:
-  config:
-    activate:
-      on-profile: prod
-
-# 生产环境服务器配置
-server:
-  # 生产环境端口
-  port: 8080
-
-# 生产环境日志配置
-logging:
-  level:
-    root: WARN
     com.jlm.homework: INFO

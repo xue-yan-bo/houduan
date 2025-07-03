@@ -1,0 +1,8 @@
+# 开发环境配置
+server:
+  port: 18080
+
+# 开发环境日志配置
+logging:
+  level:
+    com.jlm.homework: DEBUG

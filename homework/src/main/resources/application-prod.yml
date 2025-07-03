@@ -1,0 +1,9 @@
+# 生产环境配置
+server:
+  port: 8080
+
+# 生产环境日志配置
+logging:
+  level:
+    root: WARN
+    com.jlm.homework: INFO

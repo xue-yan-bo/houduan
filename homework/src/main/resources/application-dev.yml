@@ -1,8 +1,38 @@
 # 开发环境配置
 server:
-  port: 18080
+  port: ${SERVER_PORT:18080}
+
+# 开发环境数据库配置覆盖
+spring:
+  datasource:
+    # 开发环境使用专门的数据库
+    url: ${DEV_DATABASE_URL:jdbc:mysql://localhost:3306/homework_dev?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${DEV_DATABASE_USERNAME:root}
+    password: ${DEV_DATABASE_PASSWORD:root123}
+    hikari:
+      # 开发环境使用较小的连接池
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  jpa:
+    # 开发环境显示SQL
+    show-sql: true
+    hibernate:
+      # 开发环境自动更新表结构
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
 
 # 开发环境日志配置
 logging:
   level:
-    com.jlm.homework: DEBUG
+    com.jlm.homework: ${LOG_LEVEL_HOMEWORK:DEBUG}
+    # 开发环境数据库日志
+    org.hibernate.SQL: ${LOG_LEVEL_HIBERNATE_SQL:DEBUG}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${LOG_LEVEL_HIBERNATE_PARAM:TRACE}
+    org.springframework.data.jpa: ${LOG_LEVEL_SPRING_DATA_JPA:DEBUG}
+
+# 开发环境特定配置
+debug: true

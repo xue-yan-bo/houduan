@@ -8,6 +8,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients
 /**
  * Homework微服务主启动类
  * 集成Nacos服务注册与发现功能
+ * JPA配置在DatabaseConfig中处理
  */
 @SpringBootApplication
 @EnableDiscoveryClient  // 启用服务发现客户端

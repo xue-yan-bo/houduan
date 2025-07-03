@@ -12,6 +12,7 @@ spring:
   # Spring Cloud 2023版本配置导入
   config:
     import:
+      - optional:classpath:database.yml
       - optional:nacos:${spring.application.name}.yml
       - optional:nacos:${spring.application.name}-${spring.profiles.active}.yml
 

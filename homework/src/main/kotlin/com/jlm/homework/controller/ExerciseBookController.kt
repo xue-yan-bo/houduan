@@ -2,7 +2,6 @@ package com.jlm.homework.controller
 
 import com.jlm.homework.dto.ExerciseBookRequest
 import com.jlm.homework.dto.ExerciseBookResponse
-import com.jlm.homework.entity.ExerciseBookStatus
 import com.jlm.homework.entity.withImages
 import com.jlm.homework.exception.ParameterException
 import com.jlm.homework.exception.ResourceNotFoundException
@@ -10,8 +9,6 @@ import com.jlm.homework.service.ExerciseBookServer
 import com.jlm.homework.service.UserService
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
 import org.springframework.web.bind.annotation.*
 
 /**
@@ -29,37 +26,20 @@ class ExerciseBookController(
 ) {
 
     /**
-     * 获取练习册列表（分页）
-     * GET /api/exercise-book/list?page=0&size=10&sort=createdAt,desc
-     * 返回格式：{total, rows, code, msg}
+     * 练习册列表查询接口（动态多条件，分页、排序）
+     * POST /api/exercise-book/list
+     * 前端只需请求此接口即可，支持所有查询条件
      */
-    @GetMapping("/list")
-    fun findAll(
-        @RequestParam(defaultValue = "0") page: Int,
-        @RequestParam(defaultValue = "10") size: Int,
-        @RequestParam(defaultValue = "createdAt") sortBy: String,
-        @RequestParam(defaultValue = "desc") sortDir: String
-    ): Map<String, Any> {
-        // 参数验证
-        if (page < 0) {
-            throw ParameterException("页码不能小于0")
+    @PostMapping("/list")
+    fun list(@RequestBody request: ExerciseBookRequest): Map<String, Any> {
+        val validationError = request.validateForQuery()
+        if (validationError != null) {
+            throw ParameterException(validationError)
         }
-        if (size <= 0 || size > 100) {
-            throw ParameterException("每页大小必须在1-100之间")
-        }
-
-        val sort = if (sortDir.lowercase() == "desc") {
-            Sort.by(sortBy).descending()
-        } else {
-            Sort.by(sortBy).ascending()
-        }
-
-        val pageable = PageRequest.of(page, size, sort)
-        val pageResult = exerciseBookService.findAllWithPage(pageable)
-
+        val page = exerciseBookService.searchExerciseBooks(request)
         return mapOf(
-            "total" to pageResult.totalElements,
-            "rows" to ExerciseBookResponse.fromList(pageResult.content)
+            "total" to page.totalElements,
+            "rows" to ExerciseBookResponse.fromList(page.content)
         )
     }
 
@@ -157,20 +137,6 @@ class ExerciseBookController(
     }
 
     /**
-     * 根据标题搜索练习册
-     * GET /api/exercise-book/search?title=数学
-     */
-    @GetMapping("/search")
-    fun searchByTitle(@RequestParam title: String): List<ExerciseBookResponse> {
-        if (title.isBlank()) {
-            throw ParameterException("搜索标题不能为空")
-        }
-
-        val entities = exerciseBookService.findByTitleContaining(title)
-        return ExerciseBookResponse.fromList(entities)
-    }
-
-    /**
      * 获取练习册统计信息
      * GET /api/exercise-book/statistics
      */
@@ -182,66 +148,5 @@ class ExerciseBookController(
             "total" to total,
             "message" to "统计信息获取成功"
         )
-    }
-
-    /**
-     * 动态查询练习册
-     * POST /api/exercise-book/search
-     * 支持多条件动态查询，返回统一格式：{total, rows, code, msg}
-     */
-    @PostMapping("/search")
-    fun searchExerciseBooks(@RequestBody request: ExerciseBookRequest): Map<String, Any> {
-        // 参数验证
-        val validationError = request.validateForQuery()
-        if (validationError != null) {
-            throw ParameterException(validationError)
-        }
-
-        val page = exerciseBookService.searchExerciseBooks(request)
-
-        return mapOf(
-            "total" to page.totalElements,
-            "rows" to ExerciseBookResponse.fromList(page.content)
-        )
-    }
-
-    /**
-     * 简化的动态查询接口（GET方式）
-     * GET /api/exercise-book/query?title=xxx&subject=xxx&grade=xxx&pageNum=1&pageSize=10
-     */
-    @GetMapping("/query")
-    fun queryExerciseBooks(
-        @RequestParam(required = false) title: String?,
-        @RequestParam(required = false) subject: String?,
-        @RequestParam(required = false) subjectId: Long?,
-        @RequestParam(required = false) grade: String?,
-        @RequestParam(required = false) gradeId: Long?,
-        @RequestParam(required = false) classId: Long?,
-        @RequestParam(required = false) difficultyLevel: Int?,
-        @RequestParam(required = false) creatorId: Long?,
-        @RequestParam(required = false) status: ExerciseBookStatus?,
-        @RequestParam(defaultValue = "1") pageNum: Int,
-        @RequestParam(defaultValue = "10") pageSize: Int,
-        @RequestParam(defaultValue = "createdAt") sortBy: String,
-        @RequestParam(defaultValue = "desc") sortDir: String
-    ): Map<String, Any> {
-
-        val request = ExerciseBookRequest(
-            title = title,
-            subject = subject,
-            subjectId = subjectId,
-            grade = grade,
-            gradeId = gradeId,
-            classId = classId,
-            difficultyLevel = difficultyLevel,
-            creatorId = creatorId,
-            status = status ?: ExerciseBookStatus.ACTIVE,
-            pageNum = pageNum,
-            pageSize = pageSize,
-            sortBy = sortBy,
-            sortDir = sortDir
-        )
-
-        return searchExerciseBooks(request)
     }
 }

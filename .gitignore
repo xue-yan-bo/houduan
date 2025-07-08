@@ -18,8 +18,7 @@ target/
 *.iws
 *.iml
 *.ipr
-*.md
-*.sh
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
@@ -33,7 +32,15 @@ build/
 ### VS Code ###
 .vscode/
 .cursor/
-/docs/
 
-.http
-.json
+### macOS ###
+.DS_Store
+**/.DS_Store
+
+### API 测试文件 ###
+*.http
+*.postman_collection.json
+
+### 临时文件 ###
+*.md
+*.sh

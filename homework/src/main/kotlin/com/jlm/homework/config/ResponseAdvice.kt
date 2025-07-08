@@ -52,6 +52,17 @@ class ResponseAdvice : ResponseBodyAdvice<Any> {
             declaringClass.packageName?.contains("swagger") == true) {
             return false
         }
+
+        // 排除OpenAPI相关接口
+        if (declaringClass.packageName?.contains("springdoc") == true ||
+            declaringClass.name.startsWith("org.springdoc")) {
+            return false
+        }
+
+        // 排除字节数组类型（OpenAPI文档返回）
+        if (returnType.parameterType == ByteArray::class.java) {
+            return false
+        }
         
         return true
     }

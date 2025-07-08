@@ -8,6 +8,8 @@ import com.jlm.homework.exception.ParameterException
 import com.jlm.homework.exception.ResourceNotFoundException
 import com.jlm.homework.service.ExerciseBookServer
 import com.jlm.homework.service.UserService
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.web.bind.annotation.*
@@ -16,8 +18,11 @@ import org.springframework.web.bind.annotation.*
  * 练习册控制器
  * 提供练习册相关的REST接口
  */
+@Tag(name = "练习册管理", description = "练习册的创建、查询、更新、删除等操作，支持图片上传")
 @RestController
 @RequestMapping("/api/exercise-book")
+@SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "adminToken")
 class ExerciseBookController(
     private val exerciseBookService: ExerciseBookServer,
     private val userService: UserService

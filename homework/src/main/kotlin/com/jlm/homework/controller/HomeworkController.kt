@@ -8,13 +8,25 @@ import org.springframework.data.domain.Sort
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDateTime
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.ExampleObject
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
 
 /**
  * 作业控制器
  * 演示Spring Data JPA的REST API
  */
+@Tag(name = "作业管理", description = "作业的创建、查询、更新、删除等操作")
 @RestController
 @RequestMapping("/api/homework")
+@SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "adminToken")
 class HomeworkController(
     private val homeworkService: HomeworkService
 ) {
@@ -23,6 +35,7 @@ class HomeworkController(
      * 创建作业
      * POST /api/homework
      */
+    @Operation(summary = "创建作业", description = "创建新的作业")
     @PostMapping
     fun createHomework(@RequestBody request: CreateHomeworkRequest): ResponseEntity<Any> {
         val homework = HomeworkEntity(

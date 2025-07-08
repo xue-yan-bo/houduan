@@ -5,13 +5,25 @@ import com.jlm.homework.feign.UpdateStudentRequest
 import com.jlm.homework.service.StudentFeignService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.ExampleObject
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
 
 /**
  * 学生控制器
  * 提供学生相关的REST接口，使用OpenFeign调用jlm-student服务
  */
+@Tag(name = "学生服务", description = "通过OpenFeign调用jlm-student服务，提供学生信息的代理访问")
 @RestController
 @RequestMapping("/api/student")
+@SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "adminToken")
 class StudentController(
     private val studentFeignService: StudentFeignService
 ) {

@@ -75,6 +75,13 @@
 
         <!-- 注意：已移除 remote-server 依赖，现在使用 OpenFeign 进行远程调用 -->
 
+        <!-- OpenAPI 3.0 (Swagger) 文档生成 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+
         <!-- Jackson Kotlin 模块 -->
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>

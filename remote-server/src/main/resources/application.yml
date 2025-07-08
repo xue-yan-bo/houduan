@@ -61,7 +61,6 @@ remote:
     services:
       # 核心业务服务
       user-service: jlm-user
-      student-service: jlm-student
       teacher-service: jlm-teacher
       class-service: jlm-class
       # 业务功能服务

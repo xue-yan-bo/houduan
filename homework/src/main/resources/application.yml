@@ -98,11 +98,7 @@ feign:
         read-timeout: 30000
         # 日志级别
         logger-level: basic
-      # 学生服务特定配置
-      jlm-student:
-        connect-timeout: 3000
-        read-timeout: 10000
-        logger-level: full
+
   # 压缩配置
   compression:
     request:
@@ -115,42 +111,13 @@ feign:
 # Resilience4j 熔断器配置
 resilience4j:
   circuitbreaker:
-    instances:
-      jlm-student:
-        # 失败率阈值（百分比）
-        failure-rate-threshold: 50
-        # 慢调用率阈值（百分比）
-        slow-call-rate-threshold: 50
-        # 慢调用持续时间阈值（毫秒）
-        slow-call-duration-threshold: 2000
-        # 滑动窗口大小
-        sliding-window-size: 10
-        # 最小调用次数
-        minimum-number-of-calls: 5
-        # 等待时间（毫秒）
-        wait-duration-in-open-state: 10000
-        # 半开状态下允许的调用次数
-        permitted-number-of-calls-in-half-open-state: 3
+    instances: {}
   # 重试配置
   retry:
-    instances:
-      jlm-student:
-        # 最大重试次数
-        max-attempts: 3
-        # 重试间隔（毫秒）
-        wait-duration: 1000
-        # 指数退避倍数
-        exponential-backoff-multiplier: 2
+    instances: {}
   # 限流配置
   ratelimiter:
-    instances:
-      jlm-student:
-        # 限流周期（秒）
-        limit-refresh-period: 1
-        # 周期内允许的请求数
-        limit-for-period: 10
-        # 等待时间（毫秒）
-        timeout-duration: 1000
+    instances: {}
 
 # 注意：已移除 Nacos 远程调用配置，现在使用 OpenFeign 进行服务间通信
 

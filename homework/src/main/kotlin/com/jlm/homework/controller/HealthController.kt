@@ -1,16 +1,15 @@
 package com.jlm.homework.controller
 
-import com.jlm.homework.service.StartupCheckService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.cloud.client.ServiceInstance
 import org.springframework.cloud.client.discovery.DiscoveryClient
+import org.springframework.context.ApplicationContext
 import org.springframework.core.env.Environment
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDateTime
-import org.springframework.context.ApplicationContext
 
 /**
  * 健康检查控制器
@@ -26,8 +25,6 @@ class HealthController {
     @Autowired
     private lateinit var environment: Environment
 
-    @Autowired
-    private lateinit var startupCheckService: StartupCheckService
 
     @Value("\${server.port:18080}")
     private var serverPort: Int = 18080
@@ -91,19 +88,6 @@ class HealthController {
         )
     }
 
-    /**
-     * 启动报告接口
-     * GET /api/startup-report
-     */
-    @GetMapping("/startup-report")
-    fun startupReport(): Map<String, Any> {
-        val report = startupCheckService.getStartupReport()
-        return mapOf(
-            "success" to true,
-            "data" to report,
-            "message" to "启动报告获取成功"
-        )
-    }
 
     /**
      * Bean状态检查接口

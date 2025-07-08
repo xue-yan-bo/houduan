@@ -1,6 +1,6 @@
 package com.jlm.homework.entity
 
-import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonProperty
 import jakarta.persistence.*
 import org.hibernate.annotations.CreationTimestamp
@@ -59,10 +59,22 @@ data class ExerciseBookEntity(
     val gradeId: Long? = null,
 
     /**
-     * 班级ID
+     * 班级ID（单个，保留向后兼容）
      */
     @Column(name = "class_id")
     val classId: Long? = null,
+
+    /**
+     * 班级ID列表（JSON格式存储）
+     */
+    @Column(name = "class_ids", columnDefinition = "JSON")
+    val classIds: String? = null,
+
+    /**
+     * 班级名称列表（JSON格式存储）
+     */
+    @Column(name = "class_names", columnDefinition = "JSON")
+    val classNames: String? = null,
 
     /**
      * 难度等级 (1-5)
@@ -94,7 +106,7 @@ data class ExerciseBookEntity(
      */
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    @JsonIgnore
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     val createdAt: LocalDateTime? = null,
 
     /**
@@ -102,7 +114,7 @@ data class ExerciseBookEntity(
      */
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    @JsonIgnore
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     val updatedAt: LocalDateTime? = null
 )
 
@@ -196,6 +208,42 @@ val ExerciseBookEntity.imageUrls: List<String>
     get() = imageList.map { it.url }
 
 /**
+ * 获取班级ID列表
+ */
+val ExerciseBookEntity.classIdList: List<Long>
+    get() = try {
+        if (classIds.isNullOrBlank()) {
+            // 如果classIds为空，但classId不为空，返回单个classId的列表
+            classId?.let { listOf(it) } ?: emptyList()
+        } else {
+            objectMapper.readValue(
+                classIds,
+                object : com.fasterxml.jackson.core.type.TypeReference<List<Long>>() {}
+            )
+        }
+    } catch (e: Exception) {
+        // 解析失败时，尝试返回单个classId
+        classId?.let { listOf(it) } ?: emptyList()
+    }
+
+/**
+ * 获取班级名称列表
+ */
+val ExerciseBookEntity.classNameList: List<String>
+    get() = try {
+        if (classNames.isNullOrBlank()) {
+            emptyList()
+        } else {
+            objectMapper.readValue(
+                classNames,
+                object : com.fasterxml.jackson.core.type.TypeReference<List<String>>() {}
+            )
+        }
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+/**
  * 创建带图片的练习册实体
  */
 fun ExerciseBookEntity.withImages(imageList: List<ExerciseBookImage>): ExerciseBookEntity {
@@ -223,4 +271,48 @@ fun createImagesFromUrls(urls: List<String>): List<ExerciseBookImage> {
             order = index
         )
     }
+}
+
+/**
+ * 创建带有班级ID列表的练习册实体
+ */
+fun ExerciseBookEntity.withClassIds(classIdList: List<Long>): ExerciseBookEntity {
+    val classIdsJson = if (classIdList.isEmpty()) {
+        null
+    } else {
+        try {
+            objectMapper.writeValueAsString(classIdList)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    return this.copy(classIds = classIdsJson)
+}
+
+/**
+ * 创建带有班级ID和名称列表的练习册实体
+ */
+fun ExerciseBookEntity.withClassIdsAndNames(classIdList: List<Long>, classNameList: List<String>): ExerciseBookEntity {
+    val classIdsJson = if (classIdList.isEmpty()) {
+        null
+    } else {
+        try {
+            objectMapper.writeValueAsString(classIdList)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    val classNamesJson = if (classNameList.isEmpty()) {
+        null
+    } else {
+        try {
+            objectMapper.writeValueAsString(classNameList)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    return this.copy(classIds = classIdsJson, classNames = classNamesJson)
 }

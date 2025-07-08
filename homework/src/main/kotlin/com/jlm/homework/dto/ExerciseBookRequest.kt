@@ -41,9 +41,23 @@ data class ExerciseBookRequest(
     val gradeId: Long? = null,
 
     /**
-     * 班级ID
+     * 班级ID（单个，保留向后兼容）
      */
     val classId: Long? = null,
+
+    /**
+     * 班级ID列表（多选支持）
+     * 支持数组格式：[1, 2, 3] 或逗号分隔字符串格式："1,2,3"
+     */
+    @JsonProperty("classIds")
+    private val _classIds: Any? = null,
+
+    /**
+     * 班级名称列表（多选支持）
+     * 支持数组格式：["一班", "二班"] 或逗号分隔字符串格式："一班,二班"
+     */
+    @JsonProperty("classNames")
+    private val _classNames: Any? = null,
 
     /**
      * 难度等级 (1-5)
@@ -101,6 +115,37 @@ data class ExerciseBookRequest(
         get() = when (_imageUrls) {
             is List<*> -> _imageUrls.mapNotNull { it?.toString()?.trim() }.filter { it.isNotBlank() }
             is String -> _imageUrls.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            else -> emptyList()
+        }
+
+    /**
+     * 获取解析后的班级ID列表
+     * 智能处理多种输入格式，兼容前端传递数组或逗号分隔字符串
+     */
+    val classIds: List<Long>
+        get() = when (_classIds) {
+            is List<*> -> _classIds.mapNotNull {
+                when (it) {
+                    is Number -> it.toLong()
+                    is String -> it.trim().toLongOrNull()
+                    else -> null
+                }
+            }
+            is String -> _classIds.split(",")
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .mapNotNull { it.toLongOrNull() }
+            else -> classId?.let { listOf(it) } ?: emptyList()
+        }
+
+    /**
+     * 获取解析后的班级名称列表
+     * 智能处理多种输入格式，兼容前端传递数组或逗号分隔字符串
+     */
+    val classNames: List<String>
+        get() = when (_classNames) {
+            is List<*> -> _classNames.mapNotNull { it?.toString()?.trim() }.filter { it.isNotBlank() }
+            is String -> _classNames.split(",").map { it.trim() }.filter { it.isNotBlank() }
             else -> emptyList()
         }
 
@@ -168,7 +213,7 @@ data class ExerciseBookRequest(
             subjectId = subjectId,
             grade = grade,
             gradeId = gradeId,
-            classId = classId,
+            classId = classId, // 保留向后兼容
             difficultyLevel = difficultyLevel ?: 1,
             creatorId = currentUserId,
             status = status ?: ExerciseBookStatus.ACTIVE
@@ -184,7 +229,21 @@ data class ExerciseBookRequest(
             else -> emptyList()
         }
 
-        return entity.withImages(imageList)
+        // 先添加图片信息
+        var result = entity.withImages(imageList)
+
+        // 处理班级ID和名称列表
+        if (classIds.isNotEmpty()) {
+            result = if (classNames.isNotEmpty() && classNames.size == classIds.size) {
+                // 如果班级名称列表存在且与ID列表长度一致，同时设置ID和名称
+                result.withClassIdsAndNames(classIds, classNames)
+            } else {
+                // 否则只设置ID列表
+                result.withClassIds(classIds)
+            }
+        }
+
+        return result
     }
 
     /**

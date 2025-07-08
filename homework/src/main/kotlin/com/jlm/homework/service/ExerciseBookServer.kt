@@ -1,5 +1,6 @@
 package com.jlm.homework.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.jlm.homework.dto.ExerciseBookRequest
 import com.jlm.homework.entity.ExerciseBookEntity
 import com.jlm.homework.entity.ExerciseBookStatus
@@ -10,7 +11,6 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
-import java.time.LocalDateTime
 
 /**
  * 练习册业务服务类
@@ -22,6 +22,7 @@ class ExerciseBookServer(
 ) {
 
     private val logger = LoggerFactory.getLogger(ExerciseBookServer::class.java)
+    private val objectMapper = ObjectMapper()
 
     /**
      * 分页查询所有练习册
@@ -55,6 +56,8 @@ class ExerciseBookServer(
         // 直接保存，时间字段由JPA注解自动管理
         return exerciseBookRepo.save(exerciseBook)
     }
+
+
 
     /**
      * 根据ID删除练习册
@@ -196,7 +199,19 @@ class ExerciseBookServer(
         // 构建分页参数（注意：PageRequest的页码从0开始，而前端传递的pageNum从1开始）
         val pageable = PageRequest.of(request.pageNum - 1, request.pageSize, sort)
 
-        // 调用Repository的动态查询方法
+        // 将班级ID列表转换为JSON字符串
+        val classIdsJson = if (request.classIds.isNotEmpty()) {
+            try {
+                objectMapper.writeValueAsString(request.classIds)
+            } catch (e: Exception) {
+                logger.warn("转换班级ID列表为JSON失败: {}", request.classIds, e)
+                null
+            }
+        } else {
+            null
+        }
+
+        // 调用Repository的动态查询方法（支持多班级JSON查询）
         return exerciseBookRepo.findByDynamicConditions(
             title = request.title?.takeIf { it.isNotBlank() },
             subject = request.subject?.takeIf { it.isNotBlank() },
@@ -204,9 +219,10 @@ class ExerciseBookServer(
             grade = request.grade?.takeIf { it.isNotBlank() },
             gradeId = request.gradeId,
             classId = request.classId,
+            classIds = classIdsJson,
             difficultyLevel = request.difficultyLevel,
             creatorId = request.creatorId,
-            status = request.status,
+            status = request.status?.name,
             pageable = pageable
         )
     }
@@ -220,4 +236,6 @@ class ExerciseBookServer(
         logger.info("分页查询练习册（完整信息），页码: {}, 每页大小: {}", pageable.pageNumber, pageable.pageSize)
         return exerciseBookRepo.findAll(pageable)
     }
+
+
 }

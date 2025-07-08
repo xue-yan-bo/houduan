@@ -1,7 +1,7 @@
 package com.jlm.homework.controller
 
 import com.jlm.homework.dto.ExerciseBookRequest
-import com.jlm.homework.entity.ExerciseBookEntity
+import com.jlm.homework.dto.ExerciseBookResponse
 import com.jlm.homework.entity.ExerciseBookStatus
 import com.jlm.homework.entity.withImages
 import com.jlm.homework.exception.ParameterException
@@ -31,6 +31,7 @@ class ExerciseBookController(
     /**
      * 获取练习册列表（分页）
      * GET /api/exercise-book/list?page=0&size=10&sort=createdAt,desc
+     * 返回格式：{total, rows, code, msg}
      */
     @GetMapping("/list")
     fun findAll(
@@ -38,7 +39,7 @@ class ExerciseBookController(
         @RequestParam(defaultValue = "10") size: Int,
         @RequestParam(defaultValue = "createdAt") sortBy: String,
         @RequestParam(defaultValue = "desc") sortDir: String
-    ): List<ExerciseBookEntity> {
+    ): Map<String, Any> {
         // 参数验证
         if (page < 0) {
             throw ParameterException("页码不能小于0")
@@ -46,15 +47,20 @@ class ExerciseBookController(
         if (size <= 0 || size > 100) {
             throw ParameterException("每页大小必须在1-100之间")
         }
-        
+
         val sort = if (sortDir.lowercase() == "desc") {
             Sort.by(sortBy).descending()
         } else {
             Sort.by(sortBy).ascending()
         }
-        
+
         val pageable = PageRequest.of(page, size, sort)
-        return exerciseBookService.findAll(pageable)
+        val pageResult = exerciseBookService.findAllWithPage(pageable)
+
+        return mapOf(
+            "total" to pageResult.totalElements,
+            "rows" to ExerciseBookResponse.fromList(pageResult.content)
+        )
     }
 
     /**
@@ -62,17 +68,19 @@ class ExerciseBookController(
      * GET /api/exercise-book/{id}
      */
     @GetMapping("/{id}")
-    fun findById(@PathVariable id: Long): ExerciseBookEntity {
-        return exerciseBookService.findById(id)
+    fun findById(@PathVariable id: Long): ExerciseBookResponse {
+        val entity = exerciseBookService.findById(id)
             ?: throw ResourceNotFoundException("练习册不存在，ID: $id")
+        return ExerciseBookResponse.from(entity)
     }
 
     /**
      * 创建练习册
      * POST /api/exercise-book
+     * 支持多班级关联，可以通过classIds字段传递多个班级ID
      */
     @PostMapping
-    fun create(@RequestBody request: ExerciseBookRequest): ExerciseBookEntity {
+    fun create(@RequestBody request: ExerciseBookRequest): ExerciseBookResponse {
         // 参数验证
         val validationError = request.validateForCreate()
         if (validationError != null) {
@@ -82,9 +90,10 @@ class ExerciseBookController(
         // 安全获取当前登录用户ID（如果获取失败会使用默认用户ID）
         val currentUserId = userService.getCurrentUserIdSafely()
 
-        // 转换为实体并保存
+        // 转换为实体并保存（toEntity方法已经处理了多班级ID的JSON存储）
         val exerciseBook = request.toEntity(currentUserId)
-        return exerciseBookService.save(exerciseBook)
+        val savedEntity = exerciseBookService.save(exerciseBook)
+        return ExerciseBookResponse.from(savedEntity)
     }
 
     /**
@@ -95,7 +104,7 @@ class ExerciseBookController(
     fun update(
         @PathVariable id: Long,
         @RequestBody request: ExerciseBookRequest
-    ): ExerciseBookEntity {
+    ): ExerciseBookResponse {
         // 检查练习册是否存在
         val existing = exerciseBookService.findById(id)
             ?: throw ResourceNotFoundException("练习册不存在，ID: $id")
@@ -129,7 +138,8 @@ class ExerciseBookController(
             updated = updated.withImages(imageList)
         }
 
-        return exerciseBookService.save(updated)
+        val savedEntity = exerciseBookService.save(updated)
+        return ExerciseBookResponse.from(savedEntity)
     }
 
     /**
@@ -151,12 +161,13 @@ class ExerciseBookController(
      * GET /api/exercise-book/search?title=数学
      */
     @GetMapping("/search")
-    fun searchByTitle(@RequestParam title: String): List<ExerciseBookEntity> {
+    fun searchByTitle(@RequestParam title: String): List<ExerciseBookResponse> {
         if (title.isBlank()) {
             throw ParameterException("搜索标题不能为空")
         }
-        
-        return exerciseBookService.findByTitleContaining(title)
+
+        val entities = exerciseBookService.findByTitleContaining(title)
+        return ExerciseBookResponse.fromList(entities)
     }
 
     /**
@@ -190,7 +201,7 @@ class ExerciseBookController(
 
         return mapOf(
             "total" to page.totalElements,
-            "rows" to page.content
+            "rows" to ExerciseBookResponse.fromList(page.content)
         )
     }
 

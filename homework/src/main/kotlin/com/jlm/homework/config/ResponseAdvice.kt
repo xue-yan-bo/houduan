@@ -63,7 +63,12 @@ class ResponseAdvice : ResponseBodyAdvice<Any> {
         if (returnType.parameterType == ByteArray::class.java) {
             return false
         }
-        
+
+        // 排除已经包含标准分页格式的返回值（包含total, rows, code, msg字段）
+        if (methodName == "getHomeworkList" || methodName == "deleteHomework") {
+            return false
+        }
+
         return true
     }
 

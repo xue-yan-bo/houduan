@@ -1,15 +1,14 @@
 package com.jlm.homework.dto
 
-import com.jlm.homework.entity.ExerciseBookEntity
-import com.jlm.homework.entity.ExerciseBookImage
-import com.jlm.homework.entity.ExerciseBookStatus
-import com.jlm.homework.entity.createImagesFromUrls
-import com.jlm.homework.entity.withImages
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.jlm.homework.entity.*
 
 /**
  * 练习册请求DTO
  * 统一用于创建、更新和查询练习册的请求数据
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class ExerciseBookRequest(
     /**
      * 练习册标题
@@ -63,8 +62,10 @@ data class ExerciseBookRequest(
 
     /**
      * 图片URL列表（简化版，用于接收前端数据）
+     * 支持数组格式：["url1", "url2"] 或逗号分隔字符串格式："url1,url2"
      */
-    val imageUrls: List<String>? = null,
+    @JsonProperty("imageUrls")
+    private val _imageUrls: Any? = null,
 
     /**
      * 图片信息列表（详细版，包含描述、类型等）
@@ -92,6 +93,17 @@ data class ExerciseBookRequest(
      */
     val sortDir: String = "desc"
 ) {
+    /**
+     * 获取解析后的图片URL列表
+     * 智能处理多种输入格式，兼容前端传递字符串或数组
+     */
+    val imageUrls: List<String>
+        get() = when (_imageUrls) {
+            is List<*> -> _imageUrls.mapNotNull { it?.toString()?.trim() }.filter { it.isNotBlank() }
+            is String -> _imageUrls.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            else -> emptyList()
+        }
+
     /**
      * 验证创建请求参数
      */
@@ -166,8 +178,8 @@ data class ExerciseBookRequest(
         val imageList = when {
             // 优先使用详细的图片信息
             !images.isNullOrEmpty() -> images
-            // 其次使用简单的URL列表
-            !imageUrls.isNullOrEmpty() -> createImagesFromUrls(imageUrls)
+            // 其次使用URL列表（智能解析）
+            imageUrls.isNotEmpty() -> createImagesFromUrls(imageUrls)
             // 默认为空列表
             else -> emptyList()
         }

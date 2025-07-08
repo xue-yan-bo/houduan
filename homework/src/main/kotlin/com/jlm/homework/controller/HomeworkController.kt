@@ -2,21 +2,15 @@ package com.jlm.homework.controller
 
 import com.jlm.homework.entity.HomeworkEntity
 import com.jlm.homework.entity.HomeworkStatus
+import com.jlm.homework.exception.ResourceNotFoundException
 import com.jlm.homework.service.HomeworkService
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
-import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.*
-import java.time.LocalDateTime
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.Parameter
-import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.ExampleObject
-import io.swagger.v3.oas.annotations.media.Schema
-import io.swagger.v3.oas.annotations.responses.ApiResponse
-import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
+import org.springframework.web.bind.annotation.*
+import java.time.LocalDateTime
 
 /**
  * 作业控制器
@@ -37,7 +31,7 @@ class HomeworkController(
      */
     @Operation(summary = "创建作业", description = "创建新的作业")
     @PostMapping
-    fun createHomework(@RequestBody request: CreateHomeworkRequest): ResponseEntity<Any> {
+    fun createHomework(@RequestBody request: CreateHomeworkRequest): HomeworkEntity {
         val homework = HomeworkEntity(
             title = request.title,
             description = request.description,
@@ -48,14 +42,8 @@ class HomeworkController(
             maxScore = request.maxScore,
             createdBy = request.createdBy
         )
-        
-        val savedHomework = homeworkService.createHomework(homework)
-        
-        return ResponseEntity.ok(mapOf(
-            "success" to true,
-            "data" to savedHomework,
-            "message" to "作业创建成功"
-        ))
+
+        return homeworkService.createHomework(homework)
     }
     
     /**
@@ -63,55 +51,39 @@ class HomeworkController(
      * GET /api/homework/{id}
      */
     @GetMapping("/{id}")
-    fun getHomework(@PathVariable id: Long): ResponseEntity<Any> {
-        val homework = homeworkService.getHomeworkById(id)
-        
-        return if (homework != null) {
-            ResponseEntity.ok(mapOf(
-                "success" to true,
-                "data" to homework,
-                "message" to "获取作业成功"
-            ))
-        } else {
-            ResponseEntity.ok(mapOf(
-                "success" to false,
-                "data" to null,
-                "message" to "作业不存在"
-            ))
-        }
+    fun getHomework(@PathVariable id: Long): HomeworkEntity {
+        return homeworkService.getHomeworkById(id)
+            ?: throw ResourceNotFoundException("作业不存在，ID: $id")
     }
     
     /**
      * 获取作业列表（分页）
-     * GET /api/homework?page=0&size=10&sort=createdAt,desc
+     * GET /api/homework/list?pageNum=1&pageSize=10&sortBy=createdAt&sortDir=desc
+     * 返回格式：{total, rows, code, msg}
      */
-    @GetMapping
+    @GetMapping("/list")
     fun getHomeworkList(
-        @RequestParam(defaultValue = "0") page: Int,
-        @RequestParam(defaultValue = "10") size: Int,
+        @RequestParam(defaultValue = "1") pageNum: Int,
+        @RequestParam(defaultValue = "10") pageSize: Int,
         @RequestParam(defaultValue = "createdAt") sortBy: String,
         @RequestParam(defaultValue = "desc") sortDir: String
-    ): ResponseEntity<Any> {
+    ): Map<String, Any> {
         val sort = if (sortDir.lowercase() == "desc") {
             Sort.by(sortBy).descending()
         } else {
             Sort.by(sortBy).ascending()
         }
-        
-        val pageable = PageRequest.of(page, size, sort)
+
+        // 注意：PageRequest的页码从0开始，而前端传递的pageNum从1开始
+        val pageable = PageRequest.of(pageNum - 1, pageSize, sort)
         val homeworkPage = homeworkService.getAllHomework(pageable)
-        
-        return ResponseEntity.ok(mapOf(
-            "success" to true,
-            "data" to mapOf(
-                "content" to homeworkPage.content,
-                "totalElements" to homeworkPage.totalElements,
-                "totalPages" to homeworkPage.totalPages,
-                "currentPage" to homeworkPage.number,
-                "size" to homeworkPage.size
-            ),
-            "message" to "获取作业列表成功"
-        ))
+
+        return mapOf(
+            "total" to homeworkPage.totalElements,
+            "rows" to homeworkPage.content,
+            "code" to 200,
+            "msg" to "获取作业列表成功"
+        )
     }
     
     /**
@@ -119,14 +91,8 @@ class HomeworkController(
      * GET /api/homework/status/{status}
      */
     @GetMapping("/status/{status}")
-    fun getHomeworkByStatus(@PathVariable status: HomeworkStatus): ResponseEntity<Any> {
-        val homeworkList = homeworkService.getHomeworkByStatus(status)
-        
-        return ResponseEntity.ok(mapOf(
-            "success" to true,
-            "data" to homeworkList,
-            "message" to "获取${status}状态作业成功"
-        ))
+    fun getHomeworkByStatus(@PathVariable status: HomeworkStatus): List<HomeworkEntity> {
+        return homeworkService.getHomeworkByStatus(status)
     }
     
     /**
@@ -134,14 +100,8 @@ class HomeworkController(
      * GET /api/homework/teacher/{teacherId}
      */
     @GetMapping("/teacher/{teacherId}")
-    fun getHomeworkByTeacher(@PathVariable teacherId: Long): ResponseEntity<Any> {
-        val homeworkList = homeworkService.getHomeworkByTeacher(teacherId)
-        
-        return ResponseEntity.ok(mapOf(
-            "success" to true,
-            "data" to homeworkList,
-            "message" to "获取教师作业成功"
-        ))
+    fun getHomeworkByTeacher(@PathVariable teacherId: Long): List<HomeworkEntity> {
+        return homeworkService.getHomeworkByTeacher(teacherId)
     }
     
     /**
@@ -149,14 +109,8 @@ class HomeworkController(
      * GET /api/homework/search?title=数学
      */
     @GetMapping("/search")
-    fun searchHomework(@RequestParam title: String): ResponseEntity<Any> {
-        val homeworkList = homeworkService.searchHomeworkByTitle(title)
-        
-        return ResponseEntity.ok(mapOf(
-            "success" to true,
-            "data" to homeworkList,
-            "message" to "搜索作业成功"
-        ))
+    fun searchHomework(@RequestParam title: String): List<HomeworkEntity> {
+        return homeworkService.searchHomeworkByTitle(title)
     }
     
     /**
@@ -164,14 +118,8 @@ class HomeworkController(
      * GET /api/homework/due-soon
      */
     @GetMapping("/due-soon")
-    fun getDueSoonHomework(): ResponseEntity<Any> {
-        val homeworkList = homeworkService.getDueSoonHomework()
-        
-        return ResponseEntity.ok(mapOf(
-            "success" to true,
-            "data" to homeworkList,
-            "message" to "获取即将到期作业成功"
-        ))
+    fun getDueSoonHomework(): List<HomeworkEntity> {
+        return homeworkService.getDueSoonHomework()
     }
     
     /**
@@ -179,22 +127,9 @@ class HomeworkController(
      * PUT /api/homework/{id}/publish
      */
     @PutMapping("/{id}/publish")
-    fun publishHomework(@PathVariable id: Long): ResponseEntity<Any> {
-        val homework = homeworkService.publishHomework(id)
-        
-        return if (homework != null) {
-            ResponseEntity.ok(mapOf(
-                "success" to true,
-                "data" to homework,
-                "message" to "作业发布成功"
-            ))
-        } else {
-            ResponseEntity.ok(mapOf(
-                "success" to false,
-                "data" to null,
-                "message" to "作业不存在或发布失败"
-            ))
-        }
+    fun publishHomework(@PathVariable id: Long): HomeworkEntity {
+        return homeworkService.publishHomework(id)
+            ?: throw ResourceNotFoundException("作业不存在或发布失败，ID: $id")
     }
     
     /**
@@ -202,14 +137,10 @@ class HomeworkController(
      * GET /api/homework/statistics
      */
     @GetMapping("/statistics")
-    fun getHomeworkStatistics(): ResponseEntity<Any> {
+    fun getHomeworkStatistics(): Map<String, Any> {
         val statistics = homeworkService.getHomeworkStatistics()
-        
-        return ResponseEntity.ok(mapOf(
-            "success" to true,
-            "data" to statistics,
-            "message" to "获取作业统计成功"
-        ))
+        // 将HomeworkStatus枚举转换为字符串，便于前端处理
+        return statistics.mapKeys { it.key.name }
     }
     
     /**
@@ -217,14 +148,12 @@ class HomeworkController(
      * DELETE /api/homework/{id}
      */
     @DeleteMapping("/{id}")
-    fun deleteHomework(@PathVariable id: Long): ResponseEntity<Any> {
+    fun deleteHomework(@PathVariable id: Long): Map<String, Any> {
         val success = homeworkService.deleteHomework(id)
-        
-        return ResponseEntity.ok(mapOf(
+        return mapOf(
             "success" to success,
-            "data" to null,
             "message" to if (success) "作业删除成功" else "作业删除失败"
-        ))
+        )
     }
 }
 

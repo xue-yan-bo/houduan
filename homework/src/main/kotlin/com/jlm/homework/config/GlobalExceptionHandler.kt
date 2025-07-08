@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.context.request.WebRequest
 import java.time.LocalDateTime
+import org.springframework.http.converter.HttpMessageNotReadableException
 
 /**
  * 全局异常处理器
@@ -99,6 +100,29 @@ class GlobalExceptionHandler {
         )
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse)
+    }
+
+    /**
+     * 处理JSON解析异常（如参数格式错误、类型不匹配等）
+     */
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleHttpMessageNotReadableException(
+        ex: HttpMessageNotReadableException,
+        request: WebRequest
+    ): ResponseEntity<Map<String, Any>> {
+        logger.warn("参数解析异常: {}", ex.message, ex)
+
+        val errorResponse = mapOf(
+            "success" to false,
+            "error" to mapOf(
+                "code" to "JSON_PARSE_ERROR",
+                "message" to "请求参数格式错误，请检查字段类型和格式",
+                "details" to (ex.message ?: "JSON解析失败"),
+                "timestamp" to LocalDateTime.now().toString(),
+                "path" to request.getDescription(false)
+            )
+        )
+        return ResponseEntity.badRequest().body(errorResponse)
     }
 
     /**

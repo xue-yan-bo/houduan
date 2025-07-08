@@ -1,11 +1,14 @@
 package com.jlm.homework.service
 
+import com.jlm.homework.dto.ExerciseBookRequest
 import com.jlm.homework.entity.ExerciseBookEntity
 import com.jlm.homework.entity.ExerciseBookStatus
 import com.jlm.homework.repository.ExerciseBookRepo
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 
@@ -48,19 +51,9 @@ class ExerciseBookServer(
      */
     fun save(exerciseBook: ExerciseBookEntity): ExerciseBookEntity {
         logger.info("保存练习册: {}", exerciseBook.title)
-        
-        // 如果是新增，设置创建时间
-        val entityToSave = if (exerciseBook.id == null) {
-            exerciseBook.copy(
-                createdAt = LocalDateTime.now(),
-                updatedAt = LocalDateTime.now()
-            )
-        } else {
-            // 如果是更新，只更新修改时间
-            exerciseBook.copy(updatedAt = LocalDateTime.now())
-        }
-        
-        return exerciseBookRepo.save(entityToSave)
+
+        // 直接保存，时间字段由JPA注解自动管理
+        return exerciseBookRepo.save(exerciseBook)
     }
 
     /**
@@ -161,12 +154,11 @@ class ExerciseBookServer(
     fun softDelete(id: Long): ExerciseBookEntity? {
         logger.info("软删除练习册，ID: {}", id)
         val exerciseBook = findById(id) ?: return null
-        
+
         val deletedEntity = exerciseBook.copy(
-            status = ExerciseBookStatus.DELETED,
-            updatedAt = LocalDateTime.now()
+            status = ExerciseBookStatus.DELETED
         )
-        
+
         return save(deletedEntity)
     }
 
@@ -178,12 +170,54 @@ class ExerciseBookServer(
     fun activate(id: Long): ExerciseBookEntity? {
         logger.info("激活练习册，ID: {}", id)
         val exerciseBook = findById(id) ?: return null
-        
+
         val activatedEntity = exerciseBook.copy(
-            status = ExerciseBookStatus.ACTIVE,
-            updatedAt = LocalDateTime.now()
+            status = ExerciseBookStatus.ACTIVE
         )
-        
+
         return save(activatedEntity)
+    }
+
+    /**
+     * 动态查询练习册（支持多条件）
+     * @param request 查询条件请求对象
+     * @return 分页的练习册列表
+     */
+    fun searchExerciseBooks(request: ExerciseBookRequest): Page<ExerciseBookEntity> {
+        logger.info("动态查询练习册 - 条件: {}", request)
+
+        // 构建排序
+        val sort = if (request.sortDir.lowercase() == "desc") {
+            Sort.by(request.sortBy).descending()
+        } else {
+            Sort.by(request.sortBy).ascending()
+        }
+
+        // 构建分页参数（注意：PageRequest的页码从0开始，而前端传递的pageNum从1开始）
+        val pageable = PageRequest.of(request.pageNum - 1, request.pageSize, sort)
+
+        // 调用Repository的动态查询方法
+        return exerciseBookRepo.findByDynamicConditions(
+            title = request.title?.takeIf { it.isNotBlank() },
+            subject = request.subject?.takeIf { it.isNotBlank() },
+            subjectId = request.subjectId,
+            grade = request.grade?.takeIf { it.isNotBlank() },
+            gradeId = request.gradeId,
+            classId = request.classId,
+            difficultyLevel = request.difficultyLevel,
+            creatorId = request.creatorId,
+            status = request.status,
+            pageable = pageable
+        )
+    }
+
+    /**
+     * 获取练习册分页数据（返回完整分页信息）
+     * @param pageable 分页参数
+     * @return 分页的练习册数据
+     */
+    fun findAllWithPage(pageable: Pageable): Page<ExerciseBookEntity> {
+        logger.info("分页查询练习册（完整信息），页码: {}, 每页大小: {}", pageable.pageNumber, pageable.pageSize)
+        return exerciseBookRepo.findAll(pageable)
     }
 }

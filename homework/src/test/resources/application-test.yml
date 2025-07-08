@@ -1,0 +1,50 @@
+# 测试环境配置
+spring:
+  # 数据库配置 - 使用H2内存数据库进行测试
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+    
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+        
+  # H2控制台配置（测试时可用）
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# 日志配置
+logging:
+  level:
+    com.jlm.homework: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.data.jpa: DEBUG
+
+# 禁用Nacos和Feign相关配置
+remote:
+  nacos:
+    enabled: false
+
+# 禁用Feign客户端
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
+        
+# 测试专用配置
+test:
+  data:
+    cleanup: true  # 测试后清理数据

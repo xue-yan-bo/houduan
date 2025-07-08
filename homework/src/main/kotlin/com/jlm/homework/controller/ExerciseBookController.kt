@@ -1,9 +1,13 @@
 package com.jlm.homework.controller
 
+import com.jlm.homework.dto.ExerciseBookRequest
 import com.jlm.homework.entity.ExerciseBookEntity
+import com.jlm.homework.entity.ExerciseBookStatus
+import com.jlm.homework.entity.withImages
 import com.jlm.homework.exception.ParameterException
 import com.jlm.homework.exception.ResourceNotFoundException
 import com.jlm.homework.service.ExerciseBookServer
+import com.jlm.homework.service.UserService
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.web.bind.annotation.*
@@ -15,7 +19,8 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/exercise-book")
 class ExerciseBookController(
-    private val exerciseBookService: ExerciseBookServer
+    private val exerciseBookService: ExerciseBookServer,
+    private val userService: UserService
 ) {
 
     /**
@@ -62,12 +67,18 @@ class ExerciseBookController(
      * POST /api/exercise-book
      */
     @PostMapping
-    fun create(@RequestBody exerciseBook: ExerciseBookEntity): ExerciseBookEntity {
-        // 基本参数验证
-        if (exerciseBook.title.isNullOrBlank()) {
-            throw ParameterException("练习册标题不能为空")
+    fun create(@RequestBody request: ExerciseBookRequest): ExerciseBookEntity {
+        // 参数验证
+        val validationError = request.validateForCreate()
+        if (validationError != null) {
+            throw ParameterException(validationError)
         }
-        
+
+        // 安全获取当前登录用户ID（如果获取失败会使用默认用户ID）
+        val currentUserId = userService.getCurrentUserIdSafely()
+
+        // 转换为实体并保存
+        val exerciseBook = request.toEntity(currentUserId)
         return exerciseBookService.save(exerciseBook)
     }
 
@@ -78,24 +89,41 @@ class ExerciseBookController(
     @PutMapping("/{id}")
     fun update(
         @PathVariable id: Long,
-        @RequestBody exerciseBook: ExerciseBookEntity
+        @RequestBody request: ExerciseBookRequest
     ): ExerciseBookEntity {
         // 检查练习册是否存在
         val existing = exerciseBookService.findById(id)
             ?: throw ResourceNotFoundException("练习册不存在，ID: $id")
-        
-        // 基本参数验证
-        if (exerciseBook.title.isNullOrBlank()) {
-            throw ParameterException("练习册标题不能为空")
+
+        // 参数验证
+        val validationError = request.validateForUpdate()
+        if (validationError != null) {
+            throw ParameterException(validationError)
         }
-        
-        // 更新字段
-        val updated = existing.copy(
-            title = exerciseBook.title,
-            description = exerciseBook.description,
-            updatedAt = java.time.LocalDateTime.now()
+
+        // 更新字段（只更新非空字段）
+        var updated = existing.copy(
+            title = request.title ?: existing.title,
+            description = request.description ?: existing.description,
+            subject = request.subject ?: existing.subject,
+            subjectId = request.subjectId ?: existing.subjectId,
+            grade = request.grade ?: existing.grade,
+            gradeId = request.gradeId ?: existing.gradeId,
+            classId = request.classId ?: existing.classId,
+            difficultyLevel = request.difficultyLevel ?: existing.difficultyLevel,
+            status = request.status ?: existing.status
         )
-        
+
+        // 处理图片更新
+        if (request.images != null || request.imageUrls != null) {
+            val imageList = when {
+                !request.images.isNullOrEmpty() -> request.images
+                !request.imageUrls.isNullOrEmpty() -> com.jlm.homework.entity.createImagesFromUrls(request.imageUrls)
+                else -> emptyList()
+            }
+            updated = updated.withImages(imageList)
+        }
+
         return exerciseBookService.save(updated)
     }
 
@@ -138,5 +166,66 @@ class ExerciseBookController(
             "total" to total,
             "message" to "统计信息获取成功"
         )
+    }
+
+    /**
+     * 动态查询练习册
+     * POST /api/exercise-book/search
+     * 支持多条件动态查询，返回统一格式：{total, rows, code, msg}
+     */
+    @PostMapping("/search")
+    fun searchExerciseBooks(@RequestBody request: ExerciseBookRequest): Map<String, Any> {
+        // 参数验证
+        val validationError = request.validateForQuery()
+        if (validationError != null) {
+            throw ParameterException(validationError)
+        }
+
+        val page = exerciseBookService.searchExerciseBooks(request)
+
+        return mapOf(
+            "total" to page.totalElements,
+            "rows" to page.content
+        )
+    }
+
+    /**
+     * 简化的动态查询接口（GET方式）
+     * GET /api/exercise-book/query?title=xxx&subject=xxx&grade=xxx&pageNum=1&pageSize=10
+     */
+    @GetMapping("/query")
+    fun queryExerciseBooks(
+        @RequestParam(required = false) title: String?,
+        @RequestParam(required = false) subject: String?,
+        @RequestParam(required = false) subjectId: Long?,
+        @RequestParam(required = false) grade: String?,
+        @RequestParam(required = false) gradeId: Long?,
+        @RequestParam(required = false) classId: Long?,
+        @RequestParam(required = false) difficultyLevel: Int?,
+        @RequestParam(required = false) creatorId: Long?,
+        @RequestParam(required = false) status: ExerciseBookStatus?,
+        @RequestParam(defaultValue = "1") pageNum: Int,
+        @RequestParam(defaultValue = "10") pageSize: Int,
+        @RequestParam(defaultValue = "createdAt") sortBy: String,
+        @RequestParam(defaultValue = "desc") sortDir: String
+    ): Map<String, Any> {
+
+        val request = ExerciseBookRequest(
+            title = title,
+            subject = subject,
+            subjectId = subjectId,
+            grade = grade,
+            gradeId = gradeId,
+            classId = classId,
+            difficultyLevel = difficultyLevel,
+            creatorId = creatorId,
+            status = status ?: ExerciseBookStatus.ACTIVE,
+            pageNum = pageNum,
+            pageSize = pageSize,
+            sortBy = sortBy,
+            sortDir = sortDir
+        )
+
+        return searchExerciseBooks(request)
     }
 }

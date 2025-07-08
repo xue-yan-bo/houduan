@@ -23,15 +23,15 @@ interface SystemFeignClient {
 
 
 data class LoginUserInfo(
-    val roles: List<String>,
-    val userInfo: UserInfo,
-    val currentRole: String,
+    val roles: List<String>? = emptyList(),
+    val userInfo: UserInfo? = null,
+    val currentRole: String? = null,
 )
 
 data class UserInfo(
-    val admin: Boolean,
-    val userName: String,
-    val nickName: String,
-    val userUuid: String,
-    val userId: Long,
+    val admin: Boolean? = false,
+    val userName: String? = null,
+    val nickName: String? = null,
+    val userUuid: String? = null,
+    val userId: Long? = null,
 )

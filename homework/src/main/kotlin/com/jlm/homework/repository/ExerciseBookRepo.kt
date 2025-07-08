@@ -75,7 +75,7 @@ interface ExerciseBookRepo : JpaRepository<ExerciseBookEntity, Long> {
      * @return 分页的练习册列表
      */
     @Query("""
-        SELECT e FROM ExerciseBookEntity e 
+        SELECT e FROM ExerciseBookEntity e
         WHERE (:title IS NULL OR LOWER(e.title) LIKE LOWER(CONCAT('%', :title, '%')))
         AND (:subject IS NULL OR e.subject = :subject)
         AND (:grade IS NULL OR e.grade = :grade)
@@ -87,6 +87,46 @@ interface ExerciseBookRepo : JpaRepository<ExerciseBookEntity, Long> {
         @Param("subject") subject: String?,
         @Param("grade") grade: String?,
         @Param("status") status: ExerciseBookStatus,
+        pageable: Pageable
+    ): Page<ExerciseBookEntity>
+
+    /**
+     * 增强的动态查询：支持更多查询条件
+     * @param title 标题关键词（可选）
+     * @param subject 学科名称（可选）
+     * @param subjectId 学科ID（可选）
+     * @param grade 年级名称（可选）
+     * @param gradeId 年级ID（可选）
+     * @param classId 班级ID（可选）
+     * @param difficultyLevel 难度等级（可选）
+     * @param creatorId 创建者ID（可选）
+     * @param status 状态
+     * @param pageable 分页参数
+     * @return 分页的练习册列表
+     */
+    @Query("""
+        SELECT e FROM ExerciseBookEntity e
+        WHERE (:title IS NULL OR TRIM(:title) = '' OR LOWER(e.title) LIKE LOWER(CONCAT('%', :title, '%')))
+        AND (:subject IS NULL OR TRIM(:subject) = '' OR e.subject = :subject)
+        AND (:subjectId IS NULL OR e.subjectId = :subjectId)
+        AND (:grade IS NULL OR TRIM(:grade) = '' OR e.grade = :grade)
+        AND (:gradeId IS NULL OR e.gradeId = :gradeId)
+        AND (:classId IS NULL OR e.classId = :classId)
+        AND (:difficultyLevel IS NULL OR e.difficultyLevel = :difficultyLevel)
+        AND (:creatorId IS NULL OR e.creatorId = :creatorId)
+        AND (:status IS NULL OR e.status = :status)
+        ORDER BY e.createdAt DESC
+    """)
+    fun findByDynamicConditions(
+        @Param("title") title: String?,
+        @Param("subject") subject: String?,
+        @Param("subjectId") subjectId: Long?,
+        @Param("grade") grade: String?,
+        @Param("gradeId") gradeId: Long?,
+        @Param("classId") classId: Long?,
+        @Param("difficultyLevel") difficultyLevel: Int?,
+        @Param("creatorId") creatorId: Long?,
+        @Param("status") status: ExerciseBookStatus?,
         pageable: Pageable
     ): Page<ExerciseBookEntity>
 }

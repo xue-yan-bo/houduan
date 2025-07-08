@@ -19,8 +19,8 @@ interface TeacherFeignClient {
 
 
 data class Teacher(
-    val userUuid: String,
-    val name: String,
+    val userUuid: String? = null,
+    val name: String? = null,
 )
 
 

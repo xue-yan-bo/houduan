@@ -1,7 +1,7 @@
 package com.jlm.homework.controller
 
 import com.jlm.homework.dto.*
-import com.jlm.homework.entity.withImages
+import com.jlm.homework.entity.*
 import com.jlm.homework.exception.ParameterException
 import com.jlm.homework.exception.ResourceNotFoundException
 import com.jlm.homework.service.ExerciseBookServer
@@ -125,13 +125,24 @@ class ExerciseBookController(
         )
 
         // 处理图片更新
-        if (request.images != null || request.imageUrls != null) {
+        if (request.images != null || request.imageUrls.isNotEmpty()) {
             val imageList = when {
-                !request.images.isNullOrEmpty() -> request.images
-                !request.imageUrls.isNullOrEmpty() -> com.jlm.homework.entity.createImagesFromUrls(request.imageUrls)
+                !request.images.isNullOrEmpty() -> request.images!!
+                request.imageUrls.isNotEmpty() -> com.jlm.homework.entity.createImagesFromUrls(request.imageUrls)
                 else -> emptyList()
             }
             updated = updated.withImages(imageList)
+        }
+
+        // 处理班级ID和名称列表的更新
+        if (request.classIds.isNotEmpty()) {
+            updated = if (request.classNames.isNotEmpty() && request.classNames.size == request.classIds.size) {
+                // 如果班级名称列表存在且与ID列表长度一致，同时更新ID和名称
+                updated.withClassIdsAndNames(request.classIds, request.classNames)
+            } else {
+                // 否则只更新ID列表
+                updated.withClassIds(request.classIds)
+            }
         }
 
         val savedEntity = exerciseBookService.save(updated)

@@ -51,14 +51,15 @@ data class ExerciseBookRequest(
      * 班级ID列表（多选支持）
      * 支持数组格式：[1, 2, 3] 或逗号分隔字符串格式："1,2,3"
      */
-    @JsonProperty("classIds")
+    @field:JsonProperty("classIds")
     private val _classIds: Any? = null,
 
     /**
      * 班级名称列表（多选支持）
      * 支持数组格式：["一班", "二班"] 或逗号分隔字符串格式："一班,二班"
+     * 只用于反序列化，避免与业务属性classNames冲突
      */
-    @JsonProperty("classNames")
+    @field:JsonProperty("classNames")
     private val _classNames: Any? = null,
 
     /**
@@ -80,7 +81,7 @@ data class ExerciseBookRequest(
      * 图片URL列表（简化版，用于接收前端数据）
      * 支持数组格式：["url1", "url2"] 或逗号分隔字符串格式："url1,url2"
      */
-    @JsonProperty("imageUrls")
+    @field:JsonProperty("imageUrls")
     private val _imageUrls: Any? = null,
 
     /**
@@ -106,7 +107,7 @@ data class ExerciseBookRequest(
      * 格式：["2025-06-30T16:00:00.000Z", "2025-07-02T16:00:00.000Z"]
      * 第一个元素为开始时间，第二个元素为结束时间
      */
-    @JsonProperty("createdAt")
+    @field:JsonProperty("createdAt")
     private val _createdAt: Any? = null,
 
     // 查询相关字段
@@ -116,9 +117,21 @@ data class ExerciseBookRequest(
     val pageNum: Int = 1,
 
     /**
+     * 前端分页参数（从0开始，兼容前端）
+     */
+    @field:JsonProperty("page")
+    private val _page: Int? = null,
+
+    /**
      * 每页大小
      */
     val pageSize: Int = 10,
+
+    /**
+     * 前端每页大小参数（兼容前端）
+     */
+    @field:JsonProperty("size")
+    private val _size: Int? = null,
 
     /**
      * 排序字段
@@ -144,6 +157,7 @@ data class ExerciseBookRequest(
 
     /**
      * 获取解析后的班级名称列表
+     * 只做业务使用，不参与序列化/反序列化，避免Jackson冲突
      */
     val classNames: List<String>
         get() = RequestDataParser.parseStringList(_classNames)
@@ -159,6 +173,18 @@ data class ExerciseBookRequest(
      */
     val parsedCreatedEndTime: LocalDateTime?
         get() = RequestTimeParser.parseEndTime(_createdAt, createdEndTime)
+
+    /**
+     * 获取实际页码（自动处理前端0开始的分页）
+     */
+    val actualPageNum: Int
+        get() = _page?.let { it + 1 } ?: pageNum
+
+    /**
+     * 获取实际每页大小
+     */
+    val actualPageSize: Int
+        get() = _size ?: pageSize
 
     /**
      * 检查是否有非空的查询条件

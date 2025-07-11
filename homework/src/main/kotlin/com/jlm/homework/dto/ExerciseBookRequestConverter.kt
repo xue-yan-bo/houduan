@@ -30,7 +30,7 @@ object ExerciseBookRequestConverter {
             // 优先使用详细的图片信息
             !request.images.isNullOrEmpty() -> request.images
             // 其次使用URL列表（智能解析）
-            request.imageUrls.isNotEmpty() -> com.jlm.homework.entity.createImagesFromUrls(request.imageUrls)
+            request.imageUrls.isNotEmpty() -> createImagesFromUrls(request.imageUrls)
             // 默认为空列表
             else -> emptyList()
         }

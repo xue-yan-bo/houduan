@@ -103,8 +103,6 @@
     </dependencies>
 
     <build>
-        <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
-        <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
         <plugins>
             <!-- Spring Boot Maven 插件 -->
             <plugin>
@@ -143,15 +141,15 @@
                         <phase>none</phase>
                     </execution>
                     <execution>
-                        <id>java-compile</id>
-                        <phase>compile</phase>
+                        <id>compile-java</id>
+                        <phase>process-sources</phase>
                         <goals>
                             <goal>compile</goal>
                         </goals>
                     </execution>
                     <execution>
-                        <id>java-test-compile</id>
-                        <phase>test-compile</phase>
+                        <id>test-compile-java</id>
+                        <phase>process-test-sources</phase>
                         <goals>
                             <goal>testCompile</goal>
                         </goals>

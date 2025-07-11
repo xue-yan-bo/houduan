@@ -96,8 +96,6 @@
     </dependencies>
 
     <build>
-        <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
-        <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
         <plugins>
             <!-- Maven Compiler 插件 - 用于编译 Java 代码 -->
             <plugin>

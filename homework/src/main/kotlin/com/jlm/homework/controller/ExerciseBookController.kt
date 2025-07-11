@@ -1,7 +1,6 @@
 package com.jlm.homework.controller
 
-import com.jlm.homework.dto.ExerciseBookRequest
-import com.jlm.homework.dto.ExerciseBookResponse
+import com.jlm.homework.dto.*
 import com.jlm.homework.entity.withImages
 import com.jlm.homework.exception.ParameterException
 import com.jlm.homework.exception.ResourceNotFoundException
@@ -29,6 +28,23 @@ class ExerciseBookController(
      * 练习册列表查询接口（动态多条件，分页、排序）
      * POST /api/exercise-book/list
      * 前端只需请求此接口即可，支持所有查询条件
+     * 
+     * 支持的查询条件：
+     * - title: 标题模糊查询
+     * - subject/subjectId: 学科查询
+     * - grade/gradeId: 年级查询
+     * - classId/classIds: 班级查询（支持单个或多个）
+     * - difficultyLevel: 难度等级查询
+     * - creatorId: 创建者查询
+     * - status: 状态查询
+     * - createdStartTime: 创建时间开始时间（格式：yyyy-MM-dd HH:mm:ss）
+     * - createdEndTime: 创建时间结束时间（格式：yyyy-MM-dd HH:mm:ss）
+     * 
+     * 分页和排序：
+     * - pageNum: 页码（从1开始，默认1）
+     * - pageSize: 每页大小（默认10，最大100）
+     * - sortBy: 排序字段（默认createdAt）
+     * - sortDir: 排序方向（asc/desc，默认desc）
      */
     @PostMapping("/list")
     fun list(@RequestBody request: ExerciseBookRequest): Map<String, Any> {

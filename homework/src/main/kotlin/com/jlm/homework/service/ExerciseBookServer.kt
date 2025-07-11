@@ -133,6 +133,14 @@ class ExerciseBookServer(
                 predicates += cb.equal(root.get<Any>("status"), it)
             }
             
+            // 创建时间区间查询
+            request.parsedCreatedStartTime?.let { startTime ->
+                predicates += cb.greaterThanOrEqualTo(root.get("createdAt"), startTime)
+            }
+            request.parsedCreatedEndTime?.let { endTime ->
+                predicates += cb.lessThanOrEqualTo(root.get("createdAt"), endTime)
+            }
+            
             // 组合所有条件
             cb.and(*predicates.toTypedArray())
         }

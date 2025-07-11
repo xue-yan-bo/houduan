@@ -31,6 +31,6 @@ fun ExerciseBookRequest.validateForQuery(): String? {
 /**
  * 转换为实体对象（用于创建）
  */
-fun ExerciseBookRequest.toEntity(currentUserId: Long): ExerciseBookEntity {
-    return ExerciseBookRequestConverter.toEntity(this, currentUserId)
+fun ExerciseBookRequest.toEntity(currentUserId: Long, schoolId: Long): ExerciseBookEntity {
+    return ExerciseBookRequestConverter.toEntity(this, currentUserId, schoolId)
 } 

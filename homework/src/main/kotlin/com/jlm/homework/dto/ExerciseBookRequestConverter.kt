@@ -11,7 +11,7 @@ object ExerciseBookRequestConverter {
     /**
      * 转换为实体对象（用于创建）
      */
-    fun toEntity(request: ExerciseBookRequest, currentUserId: Long): ExerciseBookEntity {
+    fun toEntity(request: ExerciseBookRequest, currentUserId: Long, schoolId: Long): ExerciseBookEntity {
         val entity = ExerciseBookEntity(
             title = request.title,
             description = request.description,
@@ -22,6 +22,7 @@ object ExerciseBookRequestConverter {
             classId = request.classId, // 保留向后兼容
             difficultyLevel = request.difficultyLevel ?: 1,
             creatorId = currentUserId,
+            schoolId = schoolId,
             status = request.status ?: ExerciseBookStatus.ACTIVE
         )
 

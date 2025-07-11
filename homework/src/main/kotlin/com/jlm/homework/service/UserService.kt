@@ -1,6 +1,7 @@
 package com.jlm.homework.service
 
 import com.jlm.homework.feign.SystemFeignClient
+import com.jlm.homework.feign.SysFeignClient
 import com.jlm.homework.feign.TeacherFeignClient
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -12,7 +13,8 @@ import org.springframework.stereotype.Service
 @Service
 class UserService(
     private val systemFeignClient: SystemFeignClient,
-    private val teacherFeignClient: TeacherFeignClient
+    private val teacherFeignClient: TeacherFeignClient,
+    private val sysFeignClient: SysFeignClient
 ) {
 
     private val logger = LoggerFactory.getLogger(UserService::class.java)
@@ -111,11 +113,69 @@ class UserService(
     fun isCurrentUserTeacher(): Boolean {
         return try {
             val userInfo = getCurrentUserInfo()
-            userInfo?.teacherName != null
+            userInfo?.teacherName?.isNotBlank() == true
         } catch (e: Exception) {
-            logger.warn("检查用户教师身份失败", e)
+            logger.warn("检查用户是否为教师失败: {}", e.message)
             false
         }
+    }
+
+    /**
+     * 获取当前登录用户所属学校信息
+     * @return 学校信息，如果获取失败返回null
+     */
+    fun getCurrentSchool(): com.jlm.homework.feign.School? {
+        return try {
+            val school = sysFeignClient.currentSchool()
+            if (school != null) {
+                logger.info("获取当前学校信息: schoolId={}, schoolName={}", school.schoolId, school.schoolName)
+                school
+            } else {
+                logger.warn("未获取到当前学校信息")
+                null
+            }
+        } catch (e: Exception) {
+            logger.error("获取当前学校信息失败: {}", e.message)
+            null
+        }
+    }
+
+    /**
+     * 获取当前登录用户所属学校ID
+     * @return 学校ID，如果获取失败返回默认学校ID
+     */
+    fun getCurrentSchoolId(): Long {
+        return try {
+            val school = getCurrentSchool()
+            school?.schoolId ?: getDefaultSchoolId()
+        } catch (e: Exception) {
+            logger.warn("获取当前学校ID失败，使用默认值: {}", e.message)
+            getDefaultSchoolId()
+        }
+    }
+
+    /**
+     * 安全获取当前学校ID
+     * 提供更好的容错性，确保不会因为远程服务问题而阻塞业务
+     */
+    fun getCurrentSchoolIdSafely(): Long {
+        return try {
+            getCurrentSchoolId()
+        } catch (e: Exception) {
+            logger.warn("安全获取学校ID失败，使用默认值: {}", e.message)
+            getDefaultSchoolId()
+        }
+    }
+
+    /**
+     * 获取默认学校ID
+     * 当无法获取当前学校信息时使用
+     */
+    private fun getDefaultSchoolId(): Long {
+        // 可以从配置文件读取，或者使用固定值
+        val defaultSchoolId = 1000L
+        logger.info("使用默认学校ID: {}", defaultSchoolId)
+        return defaultSchoolId
     }
 }
 

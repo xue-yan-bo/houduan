@@ -73,6 +73,11 @@ data class ExerciseBookRequest(
     val creatorId: Long? = null,
 
     /**
+     * 学校ID（租户标识）
+     */
+    val schoolId: Long? = null,
+
+    /**
      * 状态 (ACTIVE, INACTIVE, DELETED)
      */
     val status: ExerciseBookStatus? = null,

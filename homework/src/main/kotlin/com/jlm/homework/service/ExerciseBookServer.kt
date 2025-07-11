@@ -94,6 +94,11 @@ class ExerciseBookServer(
         val spec = Specification<ExerciseBookEntity> { root, _, cb ->
             val predicates = mutableListOf<Predicate>()
             
+            // 租户隔离：必须查询当前学校的数据
+            request.schoolId?.let {
+                predicates += cb.equal(root.get<Long>("schoolId"), it)
+            }
+            
             // 标题模糊查询
             request.title?.takeIf { it.isNotBlank() }?.let {
                 predicates += cb.like(cb.lower(root.get("title")), "%" + it.lowercase() + "%")

@@ -18,6 +18,7 @@ object RequestConditionChecker {
                request.classId != null ||
                request.difficultyLevel != null ||
                request.creatorId != null ||
+               request.schoolId != null ||
                request.parsedCreatedStartTime != null ||
                request.parsedCreatedEndTime != null
     }

@@ -52,7 +52,12 @@ class ExerciseBookController(
         if (validationError != null) {
             throw ParameterException(validationError)
         }
-        val page = exerciseBookService.searchExerciseBooks(request)
+        
+        // 租户隔离：自动添加当前学校ID作为查询条件
+        val currentSchoolId = userService.getCurrentSchoolIdSafely()
+        val requestWithSchoolId = request.copy(schoolId = currentSchoolId)
+        
+        val page = exerciseBookService.searchExerciseBooks(requestWithSchoolId)
         return mapOf(
             "total" to page.totalElements,
             "rows" to ExerciseBookResponse.fromList(page.content)
@@ -67,6 +72,13 @@ class ExerciseBookController(
     fun findById(@PathVariable id: Long): ExerciseBookResponse {
         val entity = exerciseBookService.findById(id)
             ?: throw ResourceNotFoundException("练习册不存在，ID: $id")
+            
+        // 租户隔离：检查练习册是否属于当前学校
+        val currentSchoolId = userService.getCurrentSchoolIdSafely()
+        if (entity.schoolId != currentSchoolId) {
+            throw ResourceNotFoundException("练习册不存在，ID: $id")
+        }
+        
         return ExerciseBookResponse.from(entity)
     }
 
@@ -85,9 +97,12 @@ class ExerciseBookController(
 
         // 安全获取当前登录用户ID（如果获取失败会使用默认用户ID）
         val currentUserId = userService.getCurrentUserIdSafely()
+        
+        // 租户隔离：获取当前学校ID
+        val currentSchoolId = userService.getCurrentSchoolIdSafely()
 
         // 转换为实体并保存（toEntity方法已经处理了多班级ID的JSON存储）
-        val exerciseBook = request.toEntity(currentUserId)
+        val exerciseBook = request.toEntity(currentUserId, currentSchoolId)
         val savedEntity = exerciseBookService.save(exerciseBook)
         return ExerciseBookResponse.from(savedEntity)
     }
@@ -105,13 +120,19 @@ class ExerciseBookController(
         val existing = exerciseBookService.findById(id)
             ?: throw ResourceNotFoundException("练习册不存在，ID: $id")
 
+        // 租户隔离：检查练习册是否属于当前学校
+        val currentSchoolId = userService.getCurrentSchoolIdSafely()
+        if (existing.schoolId != currentSchoolId) {
+            throw ResourceNotFoundException("练习册不存在，ID: $id")
+        }
+
         // 参数验证
         val validationError = request.validateForUpdate()
         if (validationError != null) {
             throw ParameterException(validationError)
         }
 
-        // 更新字段（只更新非空字段）
+        // 更新字段（只更新非空字段，schoolId保持不变）
         var updated = existing.copy(
             title = request.title ?: existing.title,
             description = request.description ?: existing.description,
@@ -122,6 +143,7 @@ class ExerciseBookController(
             classId = request.classId ?: existing.classId,
             difficultyLevel = request.difficultyLevel ?: existing.difficultyLevel,
             status = request.status ?: existing.status
+            // schoolId 保持不变，不允许修改
         )
 
         // 处理图片更新
@@ -156,8 +178,14 @@ class ExerciseBookController(
     @DeleteMapping("/{id}")
     fun delete(@PathVariable id: Long): String {
         // 检查练习册是否存在
-        exerciseBookService.findById(id)
+        val entity = exerciseBookService.findById(id)
             ?: throw ResourceNotFoundException("练习册不存在，ID: $id")
+            
+        // 租户隔离：检查练习册是否属于当前学校
+        val currentSchoolId = userService.getCurrentSchoolIdSafely()
+        if (entity.schoolId != currentSchoolId) {
+            throw ResourceNotFoundException("练习册不存在，ID: $id")
+        }
         
         exerciseBookService.deleteById(id)
         return "练习册删除成功"

@@ -1,4 +1,4 @@
-package com.jlm.homework;
+package com.jlm.homework.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

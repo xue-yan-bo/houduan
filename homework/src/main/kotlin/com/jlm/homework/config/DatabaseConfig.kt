@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement
  */
 @Configuration
 @EnableJpaRepositories(
-    basePackages = ["com.jlm.homework.repository", "com.jlm.homework.mapper"]
+    basePackages = ["com.jlm.homework.repository"]
 )
 @EntityScan(
     basePackages = ["com.jlm.homework.entity"]

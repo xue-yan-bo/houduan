@@ -70,6 +70,11 @@ data class ExerciseBookResponse(
     val creatorId: Long?,
 
     /**
+     * 学校ID（租户标识）
+     */
+    val schoolId: Long?,
+
+    /**
      * 状态
      */
     val status: ExerciseBookStatus,
@@ -109,6 +114,7 @@ data class ExerciseBookResponse(
                 classNames = entity.classNameList,
                 difficultyLevel = entity.difficultyLevel,
                 creatorId = entity.creatorId,
+                schoolId = entity.schoolId,
                 status = entity.status,
                 imageUrls = entity.imageUrls,
                 createdAt = entity.createdAt,

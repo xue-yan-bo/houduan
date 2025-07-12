@@ -2,7 +2,9 @@ package com.jlm.homework.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.jlm.homework.entity.*
+import com.jlm.homework.entity.ExerciseBookImage
+import com.jlm.homework.entity.ExerciseBookStatus
+import java.time.LocalDateTime
 
 /**
  * 练习册请求DTO
@@ -49,14 +51,15 @@ data class ExerciseBookRequest(
      * 班级ID列表（多选支持）
      * 支持数组格式：[1, 2, 3] 或逗号分隔字符串格式："1,2,3"
      */
-    @JsonProperty("classIds")
+    @field:JsonProperty("classIds")
     private val _classIds: Any? = null,
 
     /**
      * 班级名称列表（多选支持）
      * 支持数组格式：["一班", "二班"] 或逗号分隔字符串格式："一班,二班"
+     * 只用于反序列化，避免与业务属性classNames冲突
      */
-    @JsonProperty("classNames")
+    @field:JsonProperty("classNames")
     private val _classNames: Any? = null,
 
     /**
@@ -70,6 +73,11 @@ data class ExerciseBookRequest(
     val creatorId: Long? = null,
 
     /**
+     * 学校ID（租户标识）
+     */
+    val schoolId: Long? = null,
+
+    /**
      * 状态 (ACTIVE, INACTIVE, DELETED)
      */
     val status: ExerciseBookStatus? = null,
@@ -78,13 +86,34 @@ data class ExerciseBookRequest(
      * 图片URL列表（简化版，用于接收前端数据）
      * 支持数组格式：["url1", "url2"] 或逗号分隔字符串格式："url1,url2"
      */
-    @JsonProperty("imageUrls")
+    @field:JsonProperty("imageUrls")
     private val _imageUrls: Any? = null,
 
     /**
      * 图片信息列表（详细版，包含描述、类型等）
      */
     val images: List<ExerciseBookImage>? = null,
+
+    // 时间查询相关字段
+    /**
+     * 创建时间查询 - 开始时间
+     * 格式：yyyy-MM-dd HH:mm:ss 或 yyyy-MM-dd
+     */
+    val createdStartTime: LocalDateTime? = null,
+
+    /**
+     * 创建时间查询 - 结束时间
+     * 格式：yyyy-MM-dd HH:mm:ss 或 yyyy-MM-dd
+     */
+    val createdEndTime: LocalDateTime? = null,
+
+    /**
+     * 创建时间查询 - 数组格式（前端兼容）
+     * 格式：["2025-06-30T16:00:00.000Z", "2025-07-02T16:00:00.000Z"]
+     * 第一个元素为开始时间，第二个元素为结束时间
+     */
+    @field:JsonProperty("createdAt")
+    private val _createdAt: Any? = null,
 
     // 查询相关字段
     /**
@@ -93,9 +122,21 @@ data class ExerciseBookRequest(
     val pageNum: Int = 1,
 
     /**
+     * 前端分页参数（从0开始，兼容前端）
+     */
+    @field:JsonProperty("page")
+    private val _page: Int? = null,
+
+    /**
      * 每页大小
      */
     val pageSize: Int = 10,
+
+    /**
+     * 前端每页大小参数（兼容前端）
+     */
+    @field:JsonProperty("size")
+    private val _size: Int? = null,
 
     /**
      * 排序字段
@@ -109,154 +150,51 @@ data class ExerciseBookRequest(
 ) {
     /**
      * 获取解析后的图片URL列表
-     * 智能处理多种输入格式，兼容前端传递字符串或数组
      */
     val imageUrls: List<String>
-        get() = when (_imageUrls) {
-            is List<*> -> _imageUrls.mapNotNull { it?.toString()?.trim() }.filter { it.isNotBlank() }
-            is String -> _imageUrls.split(",").map { it.trim() }.filter { it.isNotBlank() }
-            else -> emptyList()
-        }
+        get() = RequestDataParser.parseStringList(_imageUrls)
 
     /**
      * 获取解析后的班级ID列表
-     * 智能处理多种输入格式，兼容前端传递数组或逗号分隔字符串
      */
     val classIds: List<Long>
-        get() = when (_classIds) {
-            is List<*> -> _classIds.mapNotNull {
-                when (it) {
-                    is Number -> it.toLong()
-                    is String -> it.trim().toLongOrNull()
-                    else -> null
-                }
-            }
-            is String -> _classIds.split(",")
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
-                .mapNotNull { it.toLongOrNull() }
-            else -> classId?.let { listOf(it) } ?: emptyList()
-        }
+        get() = RequestDataParser.parseLongList(_classIds, classId)
 
     /**
      * 获取解析后的班级名称列表
-     * 智能处理多种输入格式，兼容前端传递数组或逗号分隔字符串
+     * 只做业务使用，不参与序列化/反序列化，避免Jackson冲突
      */
     val classNames: List<String>
-        get() = when (_classNames) {
-            is List<*> -> _classNames.mapNotNull { it?.toString()?.trim() }.filter { it.isNotBlank() }
-            is String -> _classNames.split(",").map { it.trim() }.filter { it.isNotBlank() }
-            else -> emptyList()
-        }
+        get() = RequestDataParser.parseStringList(_classNames)
 
     /**
-     * 验证创建请求参数
+     * 获取解析后的创建时间开始时间
      */
-    fun validateForCreate(): String? {
-        if (title.isNullOrBlank()) {
-            return "练习册标题不能为空"
-        }
-        if (title.length > 200) {
-            return "练习册标题长度不能超过200个字符"
-        }
-        if (difficultyLevel != null && (difficultyLevel < 1 || difficultyLevel > 5)) {
-            return "难度等级必须在1-5之间"
-        }
-        return null
-    }
+    val parsedCreatedStartTime: LocalDateTime?
+        get() = RequestTimeParser.parseStartTime(_createdAt, createdStartTime)
 
     /**
-     * 验证更新请求参数
+     * 获取解析后的创建时间结束时间
      */
-    fun validateForUpdate(): String? {
-        if (title != null) {
-            if (title.isBlank()) {
-                return "练习册标题不能为空"
-            }
-            if (title.length > 200) {
-                return "练习册标题长度不能超过200个字符"
-            }
-        }
-        if (difficultyLevel != null && (difficultyLevel < 1 || difficultyLevel > 5)) {
-            return "难度等级必须在1-5之间"
-        }
-        return null
-    }
+    val parsedCreatedEndTime: LocalDateTime?
+        get() = RequestTimeParser.parseEndTime(_createdAt, createdEndTime)
 
     /**
-     * 验证查询请求参数
+     * 获取实际页码（自动处理前端0开始的分页）
      */
-    fun validateForQuery(): String? {
-        if (pageNum < 1) {
-            return "页码必须大于0"
-        }
-        if (pageSize <= 0 || pageSize > 100) {
-            return "每页大小必须在1-100之间"
-        }
-        if (difficultyLevel != null && (difficultyLevel < 1 || difficultyLevel > 5)) {
-            return "难度等级必须在1-5之间"
-        }
-        if (sortDir.lowercase() !in listOf("asc", "desc")) {
-            return "排序方向只能是asc或desc"
-        }
-        return null
-    }
+    val actualPageNum: Int
+        get() = _page?.let { it + 1 } ?: pageNum
 
     /**
-     * 转换为实体对象（用于创建）
+     * 获取实际每页大小
      */
-    fun toEntity(currentUserId: Long): ExerciseBookEntity {
-        val entity = ExerciseBookEntity(
-            title = title,
-            description = description,
-            subject = subject,
-            subjectId = subjectId,
-            grade = grade,
-            gradeId = gradeId,
-            classId = classId, // 保留向后兼容
-            difficultyLevel = difficultyLevel ?: 1,
-            creatorId = currentUserId,
-            status = status ?: ExerciseBookStatus.ACTIVE
-        )
-
-        // 处理图片信息
-        val imageList = when {
-            // 优先使用详细的图片信息
-            !images.isNullOrEmpty() -> images
-            // 其次使用URL列表（智能解析）
-            imageUrls.isNotEmpty() -> createImagesFromUrls(imageUrls)
-            // 默认为空列表
-            else -> emptyList()
-        }
-
-        // 先添加图片信息
-        var result = entity.withImages(imageList)
-
-        // 处理班级ID和名称列表
-        if (classIds.isNotEmpty()) {
-            result = if (classNames.isNotEmpty() && classNames.size == classIds.size) {
-                // 如果班级名称列表存在且与ID列表长度一致，同时设置ID和名称
-                result.withClassIdsAndNames(classIds, classNames)
-            } else {
-                // 否则只设置ID列表
-                result.withClassIds(classIds)
-            }
-        }
-
-        return result
-    }
+    val actualPageSize: Int
+        get() = _size ?: pageSize
 
     /**
      * 检查是否有非空的查询条件
      */
     fun hasSearchConditions(): Boolean {
-        return !title.isNullOrBlank() ||
-               !subject.isNullOrBlank() ||
-               subjectId != null ||
-               !grade.isNullOrBlank() ||
-               gradeId != null ||
-               classId != null ||
-               difficultyLevel != null ||
-               creatorId != null
+        return RequestConditionChecker.hasSearchConditions(this)
     }
 }

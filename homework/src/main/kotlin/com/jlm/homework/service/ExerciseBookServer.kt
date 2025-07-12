@@ -79,6 +79,8 @@ class ExerciseBookServer(
      */
     fun searchExerciseBooks(request: ExerciseBookRequest): Page<ExerciseBookEntity> {
         logger.info("动态查询练习册 - 条件: {}", request)
+        logger.info("解析后的classIds: {}", request.classIds)
+        logger.info("实际分页参数 - pageNum: {}, pageSize: {}", request.actualPageNum, request.actualPageSize)
 
         // 构建排序
         val sort = if (request.sortDir.lowercase() == "desc") {
@@ -86,11 +88,16 @@ class ExerciseBookServer(
         } else {
             Sort.by(request.sortBy).ascending()
         }
-        val pageable = PageRequest.of(request.pageNum - 1, request.pageSize, sort)
+        val pageable = PageRequest.of(request.actualPageNum - 1, request.actualPageSize, sort)
 
         // 使用JPA Specification实现动态条件拼接
         val spec = Specification<ExerciseBookEntity> { root, _, cb ->
             val predicates = mutableListOf<Predicate>()
+            
+            // 租户隔离：必须查询当前学校的数据
+            request.schoolId?.let {
+                predicates += cb.equal(root.get<Long>("schoolId"), it)
+            }
             
             // 标题模糊查询
             request.title?.takeIf { it.isNotBlank() }?.let {
@@ -116,9 +123,29 @@ class ExerciseBookServer(
             request.classId?.let {
                 predicates += cb.equal(root.get<Long>("classId"), it)
             }
-            // 多班级ID查询（classIds）
+            // 多班级ID查询（classIds）- 支持JSON字段查询
             if (request.classIds.isNotEmpty()) {
-                predicates += root.get<Long>("classId").`in`(request.classIds)
+                val classIdPredicates = mutableListOf<Predicate>()
+                
+                // 查询单个class_id字段（向后兼容）
+                classIdPredicates += root.get<Long>("classId").`in`(request.classIds)
+                
+                // 查询JSON格式的class_ids字段
+                // 使用JSON_CONTAINS函数查询JSON数组中是否包含指定的班级ID
+                request.classIds.forEach { classIdToFind ->
+                    classIdPredicates += cb.isTrue(
+                        cb.function(
+                            "JSON_CONTAINS",
+                            Boolean::class.java,
+                            root.get<String>("classIds"),
+                            cb.literal("$classIdToFind"),
+                            cb.literal("$")
+                        )
+                    )
+                }
+                
+                // 使用OR连接所有班级ID条件（只要有一个匹配就返回）
+                predicates += cb.or(*classIdPredicates.toTypedArray())
             }
             // 难度等级查询
             request.difficultyLevel?.let {
@@ -131,6 +158,14 @@ class ExerciseBookServer(
             // 状态查询
             request.status?.let {
                 predicates += cb.equal(root.get<Any>("status"), it)
+            }
+            
+            // 创建时间区间查询
+            request.parsedCreatedStartTime?.let { startTime ->
+                predicates += cb.greaterThanOrEqualTo(root.get("createdAt"), startTime)
+            }
+            request.parsedCreatedEndTime?.let { endTime ->
+                predicates += cb.lessThanOrEqualTo(root.get("createdAt"), endTime)
             }
             
             // 组合所有条件

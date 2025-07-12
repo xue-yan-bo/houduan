@@ -89,6 +89,12 @@ data class ExerciseBookEntity(
     val creatorId: Long? = null,
 
     /**
+     * 学校ID（租户标识）
+     */
+    @Column(name = "school_id")
+    val schoolId: Long? = null,
+
+    /**
      * 状态 (ACTIVE, INACTIVE, DELETED)
      */
     @Enumerated(EnumType.STRING)

@@ -3,6 +3,7 @@ package com.jlm.homework.controller;
 import com.jlm.homework.dto.ResultDto;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.service.IHomeworkPublishService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,16 @@ public class HomeworkPublishController {
     @PostMapping("/create")
     public ResultDto<String> create(HomeworkPublish homeworkPublish) {
         ResultDto<String> resultDto = new ResultDto<>();
+        if(homeworkPublish==null){
+            resultDto.setErrorMsg("发布作业不能是空数据！");
+            resultDto.setSuccess(false);
+            return resultDto;
+        }
+        if(StringUtils.isEmpty(homeworkPublish.getHomeworkName())){
+            resultDto.setErrorMsg("发布作业名称不能为空！");
+            resultDto.setSuccess(false);
+            return resultDto;
+        }
         String id=homeworkPublishService.create(homeworkPublish);
         resultDto.setData(id);
         return resultDto;
@@ -58,6 +69,15 @@ public class HomeworkPublishController {
         Page<HomeworkPublish> list = homeworkPublishService.selectList(page, homeworkPublish);
         resultDto.setSuccess(true);
         resultDto.setData(list);
+        return resultDto;
+    }
+
+    @GetMapping("/delete/{id}")
+    public ResultDto deleteById(@PathVariable Long id) {
+        ResultDto<String> resultDto = new ResultDto<>();
+        homeworkPublishService.deleteById(id);
+        resultDto.setSuccess(true);
+        resultDto.setData("OK");
         return resultDto;
     }
 }

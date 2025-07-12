@@ -29,7 +29,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
 
     @Override
     public HomeworkPublish getById(Long id) {
-        return homeworkPublishMapper.getById(id);
+        return homeworkPublishMapper.getReferenceById(id);
     }
 
     @Override
@@ -40,7 +40,15 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
     @Override
     public Page<HomeworkPublish> selectList(Page<HomeworkPublish> page, HomeworkPublish homeworkPublish) {
         Pageable pageable = PageRequest.of(page.getNumber(), page.getSize(), page.getSort());
+        homeworkPublish.setDeleteFlag(0);
         Example<HomeworkPublish>  example = Example.of(homeworkPublish);
         return homeworkPublishMapper.findAll(example,pageable);
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        HomeworkPublish homeworkPublish=homeworkPublishMapper.getReferenceById(id);
+        homeworkPublish.setDeleteFlag(1);
+        homeworkPublishMapper.save(homeworkPublish);
     }
 }

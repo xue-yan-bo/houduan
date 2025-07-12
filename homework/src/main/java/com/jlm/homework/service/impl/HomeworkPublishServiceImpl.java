@@ -1,10 +1,9 @@
 package com.jlm.homework.service.impl;
 
 import com.jlm.homework.entity.HomeworkPublish;
-import com.jlm.homework.mapper.HomeworkPublishMapper;
+import com.jlm.homework.repository.HomeworkPublishRepository;
 import com.jlm.homework.service.IHomeworkPublishService;
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,7 +15,7 @@ import java.util.Date;
 @Service
 public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
     @Resource
-    private HomeworkPublishMapper homeworkPublishMapper;
+    private HomeworkPublishRepository homeworkPublishRepository;
     @Override
     public String create(HomeworkPublish homeworkPublish) {
         if(homeworkPublish!=null
@@ -24,18 +23,18 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 &&homeworkPublish.getPublishTime()==null){
             homeworkPublish.setPublishTime(new Date());
         }
-        homeworkPublishMapper.save(homeworkPublish);
+        homeworkPublishRepository.save(homeworkPublish);
         return homeworkPublish.getId().toString();
     }
 
     @Override
     public HomeworkPublish getById(Long id) {
-        return homeworkPublishMapper.getReferenceById(id);
+        return homeworkPublishRepository.getReferenceById(id);
     }
 
     @Override
     public HomeworkPublish update(HomeworkPublish homeworkPublish) {
-        return homeworkPublishMapper.save(homeworkPublish);
+        return homeworkPublishRepository.save(homeworkPublish);
     }
 
     @Override
@@ -43,13 +42,13 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
         Pageable pageable = PageRequest.of(page.getNumber(), page.getSize(), page.getSort());
         homeworkPublish.setDeleteFlag(0);
         Example<HomeworkPublish>  example = Example.of(homeworkPublish);
-        return homeworkPublishMapper.findAll(example,pageable);
+        return homeworkPublishRepository.findAll(example,pageable);
     }
 
     @Override
     public void deleteById(Long id) {
-        HomeworkPublish homeworkPublish=homeworkPublishMapper.getReferenceById(id);
+        HomeworkPublish homeworkPublish=homeworkPublishRepository.getReferenceById(id);
         homeworkPublish.setDeleteFlag(1);
-        homeworkPublishMapper.save(homeworkPublish);
+        homeworkPublishRepository.save(homeworkPublish);
     }
 }

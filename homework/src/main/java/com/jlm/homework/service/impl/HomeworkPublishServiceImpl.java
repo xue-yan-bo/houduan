@@ -3,6 +3,7 @@ package com.jlm.homework.service.impl;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.mapper.HomeworkPublishMapper;
 import com.jlm.homework.service.IHomeworkPublishService;
+import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
@@ -14,7 +15,7 @@ import java.util.Date;
 
 @Service
 public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
-    @Autowired
+    @Resource
     private HomeworkPublishMapper homeworkPublishMapper;
     @Override
     public String create(HomeworkPublish homeworkPublish) {

@@ -2,7 +2,10 @@ package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.ResultDto;
 import com.jlm.homework.entity.HomeworkPublish;
+import com.jlm.homework.exception.BusinessException;
+import com.jlm.homework.exception.ParameterException;
 import com.jlm.homework.service.IHomeworkPublishService;
+import com.jlm.homework.service.UserService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -13,71 +16,56 @@ import org.springframework.web.bind.annotation.*;
 public class HomeworkPublishController {
     @Autowired
     private IHomeworkPublishService homeworkPublishService;
+    @Autowired
+    private UserService userService;
 
     /**
      * 创建
      */
     @PostMapping("/create")
-    public ResultDto<String> create(HomeworkPublish homeworkPublish) {
+    public String create(@RequestBody HomeworkPublish homeworkPublish) throws Throwable {
         ResultDto<String> resultDto = new ResultDto<>();
-        if(homeworkPublish==null){
-            resultDto.setErrorMsg("发布作业不能是空数据！");
-            resultDto.setSuccess(false);
-            return resultDto;
-        }
-        if(StringUtils.isEmpty(homeworkPublish.getHomeworkName())){
-            resultDto.setErrorMsg("发布作业名称不能为空！");
-            resultDto.setSuccess(false);
-            return resultDto;
-        }
+        homeworkPublish.setUserId(userService.getCurrentUserId());
         String id=homeworkPublishService.create(homeworkPublish);
-        resultDto.setData(id);
-        return resultDto;
+        return id;
     }
 
     @GetMapping("/{id}")
-    public ResultDto<HomeworkPublish> getById(@PathVariable Long id) {
-        ResultDto<HomeworkPublish> resultDto = new ResultDto<>();
+    public HomeworkPublish getById(@PathVariable Long id) {
         HomeworkPublish homeworkPublish = homeworkPublishService.getById(id);
-        resultDto.setSuccess(true);
-        resultDto.setData(homeworkPublish);
-        return resultDto;
+        return homeworkPublish;
     }
 
     /**
      * 更新
      */
     @PostMapping("/update")
-    public ResultDto<HomeworkPublish> update(HomeworkPublish homeworkPublish) {
-        ResultDto<HomeworkPublish> resultDto = new ResultDto<>();
+    public HomeworkPublish update(@RequestBody HomeworkPublish homeworkPublish) {
         homeworkPublish=homeworkPublishService.update(homeworkPublish);
-        resultDto.setData(homeworkPublish);
-        return resultDto;
+        return homeworkPublish;
 
 
     }
 
     /**
      * 分页查询
-     * @param page
      * @param homeworkPublish
      * @return
      */
     @GetMapping("/queryList")
-    public ResultDto<Page<HomeworkPublish>> selectPurchaseList(Page<HomeworkPublish> page, HomeworkPublish homeworkPublish) {
-        ResultDto<Page<HomeworkPublish>> resultDto = new ResultDto<>();
-        Page<HomeworkPublish> list = homeworkPublishService.selectList(page, homeworkPublish);
-        resultDto.setSuccess(true);
-        resultDto.setData(list);
-        return resultDto;
+    public Page<HomeworkPublish> selectPurchaseList(
+            @RequestParam(defaultValue = "1")Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            HomeworkPublish homeworkPublish) {
+
+        Page<HomeworkPublish> list = homeworkPublishService.selectList(pageNum,pageSize, homeworkPublish);
+
+        return list;
     }
 
     @GetMapping("/delete/{id}")
-    public ResultDto deleteById(@PathVariable Long id) {
-        ResultDto<String> resultDto = new ResultDto<>();
+    public void deleteById(@PathVariable Long id) {
         homeworkPublishService.deleteById(id);
-        resultDto.setSuccess(true);
-        resultDto.setData("OK");
-        return resultDto;
+
     }
 }

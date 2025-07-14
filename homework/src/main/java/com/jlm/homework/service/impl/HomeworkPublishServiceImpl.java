@@ -23,23 +23,25 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 &&homeworkPublish.getPublishTime()==null){
             homeworkPublish.setPublishTime(new Date());
         }
+        homeworkPublish.setDeleteFlag(0);
         homeworkPublishRepository.save(homeworkPublish);
         return homeworkPublish.getId().toString();
     }
 
     @Override
     public HomeworkPublish getById(Long id) {
-        return homeworkPublishRepository.getReferenceById(id);
+        return homeworkPublishRepository.getById(id);
     }
 
     @Override
     public HomeworkPublish update(HomeworkPublish homeworkPublish) {
+        homeworkPublish.setDeleteFlag(0);
         return homeworkPublishRepository.save(homeworkPublish);
     }
 
     @Override
-    public Page<HomeworkPublish> selectList(Page<HomeworkPublish> page, HomeworkPublish homeworkPublish) {
-        Pageable pageable = PageRequest.of(page.getNumber(), page.getSize(), page.getSort());
+    public Page<HomeworkPublish> selectList(Integer pageNum,Integer pageSize, HomeworkPublish homeworkPublish) {
+        Pageable pageable = PageRequest.of(pageNum-1, pageSize);
         homeworkPublish.setDeleteFlag(0);
         Example<HomeworkPublish>  example = Example.of(homeworkPublish);
         return homeworkPublishRepository.findAll(example,pageable);

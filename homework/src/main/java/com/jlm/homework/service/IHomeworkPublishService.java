@@ -10,7 +10,7 @@ public interface IHomeworkPublishService {
 
     HomeworkPublish update(HomeworkPublish homeworkPublish);
 
-    Page<HomeworkPublish> selectList(Page<HomeworkPublish> page, HomeworkPublish homeworkPublish);
+    Page<HomeworkPublish> selectList(Integer pageNum,Integer pageSize, HomeworkPublish homeworkPublish);
 
     void deleteById(Long id);
 }

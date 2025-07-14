@@ -6,13 +6,15 @@ import com.jlm.homework.exception.BusinessException;
 import com.jlm.homework.exception.ParameterException;
 import com.jlm.homework.service.IHomeworkPublishService;
 import com.jlm.homework.service.UserService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "作业发布", description = "作业发布的创建、查询、更新、删除等操作")
 @RestController
-@RequestMapping("/homeworkPublish")
+@RequestMapping("/api/homework-publish")
 public class HomeworkPublishController {
     @Autowired
     private IHomeworkPublishService homeworkPublishService;

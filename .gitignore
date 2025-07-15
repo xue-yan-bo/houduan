@@ -44,3 +44,4 @@ build/
 ### 临时文件 ###
 *.md
 *.sh
+*.excalidraw

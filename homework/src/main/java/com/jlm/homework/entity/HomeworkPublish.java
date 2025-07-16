@@ -7,11 +7,15 @@ import io.swagger.v3.core.util.Json;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 作业发布 实体类
@@ -31,15 +35,47 @@ public class HomeworkPublish implements Serializable {
     @NotBlank(message = "作业名称不能为空")
     private String homeworkName;
     /**
+     * 年级ID
+     */
+    @Column(name = "grade_id")
+    private Long gradeId;
+    /**
+     * 年级
+     */
+    @Column(name = "grade_name")
+    private String gradeName;
+    @Transient
+    private List<Long> classId;
+    /**
      * 发布班级ID
      */
-    @Column(name = "class_id")
-    private Long classId;
+    @Column(name = "class_ids")
+    private String classIds;
+
+    public List<Long> getClassId() {
+        if(!StringUtils.isEmpty(classIds)&&classIds.contains(",")){
+            String[] de =classIds.split(",");
+            classId = Arrays.stream(de).map(String::trim).map(Long::valueOf).collect(Collectors.toList());
+        }else if(!StringUtils.isEmpty(classIds)) {
+            classId = Arrays.asList(Long.parseLong(classIds));
+        }
+        return classId;
+    }
+    @Transient
+    private List<String> className;
+
+    public List<String> getClassName() {
+        if(!StringUtils.isEmpty(classNames)){
+            className =Arrays.asList(classNames.split(","));
+        }
+        return className;
+    }
+
     /**
-     * 是否定时发布,1是、0否
+     * 班级名称
      */
-    @Column(name = "class_name")
-    private String className;
+    @Column(name = "class_names")
+    private String classNames;
     /**
      * 是否定时发布,1是、0否
      */
@@ -96,16 +132,33 @@ public class HomeworkPublish implements Serializable {
      * 发布人ID
      */
     @Column(name = "user_id")
-    private Long userId;
+    private String userId;
     /**
      * 删除标识
      */
     @Column(name = "delete_flag")
     private Integer deleteFlag;
 
+    @Transient
+    private List<String> topicImages;
+
     /**
      * 题目图片url
      */
-    @Column(name = "topic_images", columnDefinition = "JSON")
-    private String topicImages;
+    @Column(name = "topic_images")
+    private String topicImagesStr;
+
+    public List<String> getTopicImages() {
+        if(!StringUtils.isEmpty(topicImagesStr)){
+            topicImages = Arrays.asList(topicImagesStr.split(" ,"));
+        }
+        return topicImages;
+    }
+    public void setTopicImagesStr(String topicImagesStr) {
+        if(!topicImages.isEmpty()){
+            this.topicImagesStr = String.join(" ,", topicImages);
+        }else{
+            this.topicImagesStr = topicImagesStr;
+        }
+    }
 }

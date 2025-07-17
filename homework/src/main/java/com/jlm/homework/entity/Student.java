@@ -1,9 +1,12 @@
 package com.jlm.homework.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.core.util.Json;
 import lombok.Data;
 
 import java.util.Date;
+import java.util.List;
+
 @Data
 public class Student {
 
@@ -12,9 +15,11 @@ public class Student {
     private String classesIds;
     private String classesName;
     private String createBy;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
     private String delFlag;
-    private Date enrolledData;
+
+    private String enrolledData;
     private String formerName;
     private Long gradeId;
     private String gradeName;
@@ -42,9 +47,10 @@ public class Student {
     private String studentImage;
     private String studentName;
     private String studentStatus;
-    private Integer studentStatusNumber;
+    private String studentStatusNumber;
     private String studentType;
     private String updateBy;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date updateTime;
     private String userId;
     private String userIds;

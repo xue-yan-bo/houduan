@@ -1,7 +1,9 @@
 package com.jlm.homework.dto;
 
-import java.util.Date;
+import lombok.Data;
 
+import java.util.Date;
+@Data
 public class HomeworkPublishRequest {
     /**
      *作业名称
@@ -10,15 +12,15 @@ public class HomeworkPublishRequest {
     /**
      * 发布班级ID
      */
-    private Long classId;
+    private String classIds;
     /**
      * 发布时间
      */
-    private Date publishTime;
+    private String publishTime;
     /**
      * 截止时间
      */
-    private Date deadline;
+    private String deadline;
     /**
      * 试题来源, 1练习册 2题库  3模版发布
      */

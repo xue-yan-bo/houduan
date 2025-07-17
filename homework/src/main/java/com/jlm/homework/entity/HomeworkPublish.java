@@ -34,6 +34,8 @@ public class HomeworkPublish implements Serializable {
     @Column(name = "homework_name")
     @NotBlank(message = "作业名称不能为空")
     private String homeworkName;
+    @Column(name = "school_id")
+    private Long schoolId;
     /**
      * 年级ID
      */

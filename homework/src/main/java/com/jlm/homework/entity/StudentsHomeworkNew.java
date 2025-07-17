@@ -1,10 +1,8 @@
 package com.jlm.homework.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.Data;
 
@@ -20,12 +18,13 @@ import java.util.Date;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class StudentsHomeworkNew implements Serializable {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     /**
      * 作用类型，1设计作业、2发布作业、3组题作业
      */
     @Column(name = "homework_type")
-    private     Integer homeworkType;
+    private  Integer homeworkType;
     /**
      * 发布作业Id
      */
@@ -71,6 +70,18 @@ public class StudentsHomeworkNew implements Serializable {
      */
     @Column(name = "submit_file_url")
     private String submitFileUrl;
+
+    /**
+     * 提交状态
+     */
+    @Column(name = "submit_status")
+    private Integer submitStatus;
+    /**
+     * 提交时间
+     */
+    @Column(name = "submit_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date submitTime;
     /**
      * AI审批结果
      */
@@ -80,12 +91,20 @@ public class StudentsHomeworkNew implements Serializable {
      * 创建时间
      */
     @Column(name = "create_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
     /**
      * 审批状态
      */
     @Column(name = "audit_status")
     private String auditStatus;
+
+    /**
+     * 审批时间
+     */
+    @Column(name = "audit_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date auditTime;
     /**
      * 错误原因
      */

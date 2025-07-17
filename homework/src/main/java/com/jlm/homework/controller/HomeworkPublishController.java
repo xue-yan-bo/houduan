@@ -1,8 +1,8 @@
 package com.jlm.homework.controller;
 
+import com.jlm.homework.dto.HomeworkPublishRequest;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.service.IHomeworkPublishService;
-//import com.jlm.homework.service.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,17 +15,12 @@ import org.springframework.web.bind.annotation.*;
 public class HomeworkPublishController {
     @Autowired
     private IHomeworkPublishService homeworkPublishService;
-    /*@Autowired
-    private UserService userService;*/
 
     /**
      * 创建
      */
     @PostMapping("/create")
     public String create(@RequestBody HomeworkPublish homeworkPublish) throws Throwable {
-        if(StringUtils.isEmpty(homeworkPublish.getUserId())) {
-            //homeworkPublish.setUserId(userService.getCurrentUserInfo().getUserUuid());
-        }
         String id=homeworkPublishService.create(homeworkPublish);
         return id;
     }
@@ -49,16 +44,16 @@ public class HomeworkPublishController {
 
     /**
      * 分页查询
-     * @param homeworkPublish
+     * @param homeworkPublishRequest
      * @return
      */
     @GetMapping("/queryList")
     public Page<HomeworkPublish> selectPurchaseList(
             @RequestParam(defaultValue = "1")Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            HomeworkPublish homeworkPublish) {
+            HomeworkPublishRequest homeworkPublishRequest) {
 
-        Page<HomeworkPublish> list = homeworkPublishService.selectList(pageNum,pageSize, homeworkPublish);
+        Page<HomeworkPublish> list = homeworkPublishService.selectList(pageNum,pageSize, homeworkPublishRequest);
 
         return list;
     }

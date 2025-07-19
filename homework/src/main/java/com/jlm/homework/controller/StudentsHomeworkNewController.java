@@ -7,6 +7,7 @@ import com.jlm.homework.service.IStudentsHomeworkNewService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
@@ -25,8 +26,11 @@ public class StudentsHomeworkNewController {
      * @return
      */
     @GetMapping("/publish/{homeworkPublishId}")
-    public List<StudentsHomeworkNew> getStudentsHomeworkList(@PathVariable Long homeworkPublishId, StudentsHomeworkRequest studentsHomeworkRequest) {
-        List<StudentsHomeworkNew>  studentsHomeworkList=studentsHomeworkNewService.getByHomeworkPublishId(homeworkPublishId,studentsHomeworkRequest);
+    public Page<StudentsHomeworkNew> getStudentsHomeworkList(@PathVariable Long homeworkPublishId,
+                                                             @RequestParam(defaultValue = "1")Integer pageNum,
+                                                             @RequestParam(defaultValue = "10") Integer pageSize,
+                                                             StudentsHomeworkRequest studentsHomeworkRequest) {
+        Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewService.getListByHomeworkPublishId(homeworkPublishId,pageNum,pageSize,studentsHomeworkRequest);
         return studentsHomeworkList;
     }
 

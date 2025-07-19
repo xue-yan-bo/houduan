@@ -163,4 +163,9 @@ public class HomeworkPublish implements Serializable {
             this.topicImagesStr = topicImagesStr;
         }
     }
+    /**
+     * 批改状态，0待批改、1已批改
+     */
+    @Column(name = "audit_status")
+    private Integer auditStatus;
 }

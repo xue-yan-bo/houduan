@@ -7,20 +7,22 @@ import com.jlm.homework.repository.HomeworkPublishRepository;
 import com.jlm.homework.service.IHomeworkPublishService;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
 import jakarta.annotation.Resource;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -114,36 +116,75 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
 
     @Override
     public Page<HomeworkPublish> selectList(Integer pageNum,Integer pageSize, HomeworkPublishRequest homeworkPublishRequest) {
+        if(pageNum==null||pageNum<=0||pageSize==null||pageSize<=0){
+            pageNum=1;
+            pageSize=10;
+        }
         Pageable pageable = PageRequest.of(pageNum-1, pageSize);
-        HomeworkPublish homeworkPublish = new HomeworkPublish();
-        if(StringUtils.isNotEmpty(homeworkPublishRequest.getHomeworkName())){
-            homeworkPublish.setHomeworkName(homeworkPublishRequest.getHomeworkName());
-        }
-        if(StringUtils.isNotEmpty(homeworkPublishRequest.getClassIds())) {
-            homeworkPublish.setClassIds(homeworkPublishRequest.getClassIds());
-        }
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        try {
-            if(StringUtils.isNotEmpty(homeworkPublishRequest.getPublishTime())){
+        Specification<HomeworkPublish> specification = new Specification<HomeworkPublish>() {
 
-                Date publishTime = sdf.parse(homeworkPublishRequest.getPublishTime());
-                homeworkPublish.setPublishTime(publishTime);
+            @Override
+            public Predicate toPredicate(Root<HomeworkPublish> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                Predicate condition = null;
+                if(StringUtils.isNotEmpty(homeworkPublishRequest.getHomeworkName())){
+                    condition = criteriaBuilder.equal(root.get("homeworkName"),homeworkPublishRequest.getHomeworkName());
+                }else {
+                    condition= criteriaBuilder.conjunction();
+                }
+                Predicate cond1 = null;
+                if(StringUtils.isNotEmpty(homeworkPublishRequest.getClassIds())) {
+                    cond1 = criteriaBuilder.like(root.get("classIds"),"%"+homeworkPublishRequest.getClassIds()+"%");
+                }else {
+                    cond1  = criteriaBuilder.conjunction();
+                }
+                Predicate cond2 = null;
+                Predicate cond3 = null;
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                Calendar calendar = Calendar.getInstance();
+                try {
+
+                    if(StringUtils.isNotEmpty(homeworkPublishRequest.getPublishTime())){
+
+                        Date publishTime = sdf.parse(homeworkPublishRequest.getPublishTime());
+                        calendar.setTime(publishTime);
+                        calendar.add(Calendar.DAY_OF_MONTH,1);
+                        Date publishTime1 = calendar.getTime();
+                        cond2 =criteriaBuilder.between(root.get("publishTime"),publishTime,publishTime1);
+                    }else {
+                        cond2 = criteriaBuilder.conjunction();
+                    }
+                    if(StringUtils.isNotEmpty(homeworkPublishRequest.getDeadline())){
+
+                        Date deadline = sdf.parse(homeworkPublishRequest.getDeadline());
+                        calendar.setTime(deadline);
+                        calendar.add(Calendar.DAY_OF_MONTH,1);
+                        Date deadline1 = calendar.getTime();
+                        cond3 =criteriaBuilder.between(root.get("deadline"),deadline,deadline1);
+                    }else {
+                        cond3 =criteriaBuilder.conjunction();
+                    }
+                }catch (ParseException e) {
+                    throw new RuntimeException(e);
+                }
+                Predicate cond4 = null;
+                if(homeworkPublishRequest.getTestSource()!=null){
+                    cond4 =criteriaBuilder.equal(root.get("testSource"),homeworkPublishRequest.getTestSource());
+                }else {
+                    cond4 =criteriaBuilder.conjunction();
+                }
+                Predicate cond5 = null;
+                if(homeworkPublishRequest.getAuditStatus()!=null){
+                    cond5= criteriaBuilder.equal(root.get("auditStatus"),homeworkPublishRequest.getAuditStatus());
+                }else {
+                    cond5 =criteriaBuilder.conjunction();
+                }
+                Predicate cond6 = criteriaBuilder.equal(root.get("deleteFlag"),0);
+                query.where(condition,cond1,cond2,cond3,cond4,cond5,cond6);
+                return null;
             }
-            if(StringUtils.isNotEmpty(homeworkPublishRequest.getDeadline())){
+        };
 
-                Date deadline = sdf.parse(homeworkPublishRequest.getDeadline());
-                homeworkPublish.setDeadline(deadline);
-            }
-        }catch (ParseException e) {
-            throw new RuntimeException(e);
-        }
-        if(homeworkPublishRequest.getTestSource()!=null){
-            homeworkPublish.setTestSource(homeworkPublishRequest.getTestSource());
-        }
-
-        homeworkPublish.setDeleteFlag(0);
-        Example<HomeworkPublish>  example = Example.of(homeworkPublish);
-        return homeworkPublishRepository.findAll(example,pageable);
+        return homeworkPublishRepository.findAll(specification,pageable);
     }
 
     @Override

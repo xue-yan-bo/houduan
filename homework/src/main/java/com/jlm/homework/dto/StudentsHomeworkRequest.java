@@ -10,4 +10,5 @@ public class StudentsHomeworkRequest {
     private Integer submitStatus;
     private String submitTime;
     private String auditTime;
+    private String auditStatus;
 }

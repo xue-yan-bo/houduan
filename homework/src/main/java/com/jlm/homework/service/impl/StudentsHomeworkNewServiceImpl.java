@@ -5,12 +5,14 @@ import com.alibaba.nacos.shaded.com.google.gson.JsonArray;
 import com.alibaba.nacos.shaded.com.google.gson.JsonObject;
 import com.jlm.homework.dto.Result;
 import com.jlm.homework.dto.StudentsHomeworkRequest;
+import com.jlm.homework.entity.ExerciseBookEntity;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.Student;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.feign.StudentFeginClient;
 import com.jlm.homework.repository.HomeworkPublishRepository;
 import com.jlm.homework.repository.StudentsHomeworkNewRepository;
+import com.jlm.homework.service.ExerciseBookServer;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.service.UserService;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -30,10 +32,7 @@ import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Service
 @AllArgsConstructor
@@ -44,10 +43,17 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private HomeworkPublishRepository homeworkPublishRepository;
     @Autowired
     private StudentFeginClient studentFeginClient;
-
+    @Autowired
+    private ExerciseBookServer exerciseBookServer;
     @Override
     public void createStudentsHomeworkByHomeworkPublish(HomeworkPublish homeworkPublish) {
         if(!homeworkPublish.getClassId().isEmpty()){
+            String subject = null;
+            if(homeworkPublish.getExerciseBookId() != null){
+                ExerciseBookEntity exerciseBook = exerciseBookServer.findById(homeworkPublish.getExerciseBookId());
+                subject =  exerciseBook.getSubject();
+            }
+
             for(Long classId:homeworkPublish.getClassId()){
                 try {
                     Long schoolId=homeworkPublish.getSchoolId();
@@ -68,6 +74,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         studentsHomework.setCreateTime(new Date());
                         studentsHomework.setSubmitStatus(0);
                         studentsHomework.setAuditStatus("0");
+                        studentsHomework.setSubject(subject);
                         studentsHomeworkNewRepository.save(studentsHomework);
                     }
                 } catch (Exception e) {
@@ -169,8 +176,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
             @Override
             public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                Predicate condition0 = criteriaBuilder.equal(root.get("homeworkPublishId"), homeworkPublishId);
                 if(studentsHomeworkRequest!=null){
-                    Predicate condition0 = criteriaBuilder.equal(root.get("homeworkPublishId"), homeworkPublishId);
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                     Calendar calendar = Calendar.getInstance();
                     Predicate condition1 = null;
@@ -208,7 +215,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             condition4 = criteriaBuilder.conjunction();
                         }
                         Predicate condition5 = null;
-                        if(studentsHomeworkRequest.getAuditStatus()!=null){
+                        if(StringUtils.isNotEmpty(studentsHomeworkRequest.getAuditStatus())){
                             condition5 =criteriaBuilder.equal(root.get("auditStatus"), studentsHomeworkRequest.getAuditStatus());
                         }else {
                             condition5 = criteriaBuilder.conjunction();
@@ -227,5 +234,57 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         };
         Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(specification,pageable);
         return studentsHomeworkList;
+    }
+
+    @Override
+    public List<StudentsHomeworkNew> getClassHomeworkStatistics(String subject, Long classId, String startDate) {
+
+        Specification<HomeworkPublish> specification= new Specification<HomeworkPublish>() {
+
+            @Override
+            public Predicate toPredicate(Root<HomeworkPublish> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                try {
+                    Predicate condition0 = null;
+                    if(StringUtils.isNotEmpty(subject)){
+                        condition0 =criteriaBuilder.equal(root.get("subject"), subject);
+                    }else {
+                        condition0 = criteriaBuilder.conjunction();
+                    }
+                    Predicate condition1 = null;
+                    if(classId!=null){
+                        condition1 =criteriaBuilder.like(root.get("classId"), "%"+classId+"%");
+                    }else {
+                        condition1 = criteriaBuilder.conjunction();
+                    }
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                    Calendar calendar = Calendar.getInstance();
+                    Predicate condition2 = null;
+                    if(StringUtils.isNotEmpty(startDate)){
+                        Date start = null;
+
+                            start = sdf.parse(startDate);
+
+                        calendar.setTime(start);
+                        calendar.add(Calendar.DAY_OF_MONTH,1);
+                        Date end = calendar.getTime();
+                        condition2 = criteriaBuilder.between(root.get("publishTime"),start,end);
+                    }else {
+                        condition2 = criteriaBuilder.conjunction();
+                    }
+                    query.where(condition0,condition1,condition2);
+                } catch (ParseException e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            }
+        };
+        Optional<HomeworkPublish> optional=homeworkPublishRepository.findOne(specification);
+        HomeworkPublish homeworkPublish=optional.get();
+        StudentsHomeworkNew  studentsHomeworkNew=new StudentsHomeworkNew();
+        studentsHomeworkNew.setHomeworkPublishId(homeworkPublish.getId());
+        studentsHomeworkNew.setClassesId(classId);
+        studentsHomeworkNew.setSubject(subject);
+        List<StudentsHomeworkNew> studentsHomeworkNewList = studentsHomeworkNewRepository.findAll(Example.of(studentsHomeworkNew));
+        return studentsHomeworkNewList;
     }
 }

@@ -168,4 +168,9 @@ public class HomeworkPublish implements Serializable {
      */
     @Column(name = "audit_status")
     private Integer auditStatus;
+    /**
+     * 科目
+     */
+    @Column(name = "subject")
+    private String subject;
 }

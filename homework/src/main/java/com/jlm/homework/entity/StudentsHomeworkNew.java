@@ -131,6 +131,20 @@ public class StudentsHomeworkNew implements Serializable {
     @Column(name = "teacher_audit_level")
     private String teacherAuditLevel;
 
-
+    /**
+     * 科目
+     */
+    @Column(name = "subject")
+    private String subject;
+    /**
+     * 正确率
+     */
+    @Column(name = "accuracy")
+    private Double accuracy;
+    /**
+     * 班级排名
+     */
+    @Column(name = "class_rank")
+    private Double classRank;
 
 }

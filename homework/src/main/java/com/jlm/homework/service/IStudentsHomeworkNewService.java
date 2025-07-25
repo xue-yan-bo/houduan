@@ -16,4 +16,6 @@ public interface IStudentsHomeworkNewService {
     StudentsHomeworkNew update(StudentsHomeworkNew studentsHomework);
 
     Page<StudentsHomeworkNew> getListByHomeworkPublishId(Long homeworkPublishId, Integer pageNum, Integer pageSize, StudentsHomeworkRequest studentsHomeworkRequest);
+
+    List<StudentsHomeworkNew> getClassHomeworkStatistics(String subject, Long classId, String startDate);
 }

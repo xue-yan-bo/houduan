@@ -59,4 +59,17 @@ public class StudentsHomeworkNewController {
         studentsHomework=studentsHomeworkNewService.update(studentsHomework);
         return studentsHomework;
     }
+
+    /**
+     * 根据
+     * @param studentsHomework
+     * @return
+     */
+    @GetMapping("/publish/page")
+    public Page<StudentsHomeworkNew> getStudentsHomeworkPage( @RequestParam(defaultValue = "1")Integer pageNum,
+                @RequestParam(defaultValue = "10") Integer pageSize,
+                StudentsHomeworkNew studentsHomework) {
+        Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewService.getStudentsHomeworkPage(pageNum,pageSize,studentsHomework);
+        return studentsHomeworkList;
+    }
 }

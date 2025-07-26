@@ -8,6 +8,10 @@ public class AverageAccuracyDto {
      */
     private Long classId;
     /**
+     * 班级名称
+     */
+    private String className;
+    /**
      * 平均正确率
      */
     private Double averageAccuracy;

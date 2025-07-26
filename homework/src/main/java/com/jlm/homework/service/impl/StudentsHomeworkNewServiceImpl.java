@@ -1,8 +1,6 @@
 package com.jlm.homework.service.impl;
 
-import com.alibaba.nacos.api.exception.NacosException;
-import com.alibaba.nacos.shaded.com.google.gson.JsonArray;
-import com.alibaba.nacos.shaded.com.google.gson.JsonObject;
+import com.jlm.homework.dto.AverageAccuracyDto;
 import com.jlm.homework.dto.Result;
 import com.jlm.homework.dto.StudentsHomeworkRequest;
 import com.jlm.homework.entity.ExerciseBookEntity;
@@ -19,14 +17,10 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.data.domain.Example;
+import org.springframework.data.domain.*;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +29,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service
-@AllArgsConstructor
 public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewService {
     @Resource
     private StudentsHomeworkNewRepository studentsHomeworkNewRepository;
@@ -45,6 +38,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private StudentFeginClient studentFeginClient;
     @Autowired
     private ExerciseBookServer exerciseBookServer;
+    @Autowired
+    private UserService userService;
     @Override
     public void createStudentsHomeworkByHomeworkPublish(HomeworkPublish homeworkPublish) {
         if(!homeworkPublish.getClassId().isEmpty()){
@@ -65,6 +60,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     for(Student student:studentList){
                         StudentsHomeworkNew studentsHomework = new StudentsHomeworkNew();
                         studentsHomework.setClassesId(classId);
+                        studentsHomework.setClassesName(student.getClassesName());
                         studentsHomework.setHomeworkType(2);
                         studentsHomework.setHomeworkPublishId(homeworkPublish.getId());
                         studentsHomework.setSchoolId(student.getSchoolId());
@@ -171,7 +167,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Override
     public Page<StudentsHomeworkNew> getListByHomeworkPublishId(Long homeworkPublishId, Integer pageNum, Integer pageSize, StudentsHomeworkRequest studentsHomeworkRequest) {
         StudentsHomeworkNew homeworkNew = new StudentsHomeworkNew();
-        Pageable pageable = PageRequest.of(pageNum-1, pageSize);
+        Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
+        Pageable pageable = PageRequest.of(pageNum-1, pageSize,sort);
         Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
 
             @Override
@@ -286,5 +283,68 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         studentsHomeworkNew.setSubject(subject);
         List<StudentsHomeworkNew> studentsHomeworkNewList = studentsHomeworkNewRepository.findAll(Example.of(studentsHomeworkNew));
         return studentsHomeworkNewList;
+    }
+
+    @Override
+    public Page<StudentsHomeworkNew> getStudentsHomeworkPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework) {
+        StudentsHomeworkNew homeworkNew = new StudentsHomeworkNew();
+        Sort sort = Sort.by(Sort.Direction.DESC,"createTime");
+        Pageable pageable = PageRequest.of(pageNum-1, pageSize,sort);
+        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
+
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                if(studentsHomework!=null){
+
+                    Predicate condition0 = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolId());
+                    Predicate condition1 = null;
+                    if(StringUtils.isNotEmpty(studentsHomework.getAuditStatus())){
+                        condition1 = criteriaBuilder.equal(root.get("auditStatus"), studentsHomework.getAuditStatus());
+                    }else {
+                        condition1 = criteriaBuilder.conjunction();
+                    }
+                    Predicate condition2 = null;
+                    if(studentsHomework.getClassesId()!=null){
+                        condition2 = criteriaBuilder.equal(root.get("classesId"), studentsHomework.getClassesId());
+                    }else {
+                        condition2 = criteriaBuilder.conjunction();
+                    }
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                    Calendar calendar = Calendar.getInstance();
+
+                    try {
+                        Predicate condition3 = null;
+                        if(studentsHomework.getCreateTime()!=null){
+                            Date createTime = studentsHomework.getCreateTime();
+                            calendar.setTime(createTime);
+                            calendar.add(Calendar.DAY_OF_MONTH,1);
+                            Date createTime1 = calendar.getTime();
+                            condition3 = criteriaBuilder.between(root.get("createTime").as(Date.class),createTime,createTime1);
+
+                        }else {
+                            condition3 = criteriaBuilder.conjunction();
+                        }
+
+
+                        query.where(condition0,condition1,condition2,condition3);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+
+                }
+                return null;
+            }
+
+
+        };
+        Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(specification,pageable);
+        return studentsHomeworkList;
+    }
+
+    @Override
+    public List<AverageAccuracyDto> getAverageAccuracyStatistics(String subject, Long classId, String startDate, String endDate) {
+        //根据班级id、科目和时间查询班级所有学生的平均正确率
+        List<AverageAccuracyDto> averageAccuracyDtos =new  ArrayList<>() ;
+        return averageAccuracyDtos;
     }
 }

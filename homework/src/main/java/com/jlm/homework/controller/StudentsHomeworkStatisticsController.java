@@ -52,7 +52,7 @@ public class StudentsHomeworkStatisticsController {
     @GetMapping("/average-accuracy-statistics")
     public List<AverageAccuracyDto> getAverageAccuracyStatistics(String subject,Long classId,String startDate,String endDate){
         List<AverageAccuracyDto>  averageAccuracyDtos =new ArrayList<>();
-
+        averageAccuracyDtos = studentsHomeworkNewService.getAverageAccuracyStatistics(subject,classId,startDate,endDate);
         return averageAccuracyDtos;
     }
     /**

@@ -30,6 +30,12 @@ public class StudentsHomeworkNew implements Serializable {
      */
     @Column(name = "homework_publish_id")
     private Long homeworkPublishId;
+
+    /**
+     * 发布作业名称
+     */
+    @Column(name = "homework_publish_name")
+    private String homeworkPublishName;
     /**
      * 组合作业ID
      */
@@ -50,6 +56,12 @@ public class StudentsHomeworkNew implements Serializable {
      */
     @Column(name = "classes_id")
     private Long classesId;
+
+    /**
+     * 班级名称
+     */
+    @Column(name = "classes_name")
+    private String classesName;
     /**
      * 学生Id
      */

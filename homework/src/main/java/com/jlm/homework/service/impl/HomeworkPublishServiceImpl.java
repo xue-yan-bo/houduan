@@ -15,10 +15,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -136,7 +133,8 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             pageNum=1;
             pageSize=10;
         }
-        Pageable pageable = PageRequest.of(pageNum-1, pageSize);
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
+        Pageable pageable = PageRequest.of(pageNum-1, pageSize, sort);
         Specification<HomeworkPublish> specification = new Specification<HomeworkPublish>() {
 
             @Override

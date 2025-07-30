@@ -33,7 +33,11 @@ public class StudentsHomeworkNewController {
         Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewService.getListByHomeworkPublishId(homeworkPublishId,pageNum,pageSize,studentsHomeworkRequest);
         return studentsHomeworkList;
     }
-
+    @GetMapping("/{id}")
+    public StudentsHomeworkNew getById(@PathVariable Long id) {
+        StudentsHomeworkNew studentsHomeworkNew = studentsHomeworkNewService.getById(id);
+        return studentsHomeworkNew;
+    }
     /**
      * 提交作业
      */

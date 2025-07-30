@@ -1,5 +1,6 @@
 package com.jlm.homework.service;
 
+import com.jlm.homework.dto.AccuracyDto;
 import com.jlm.homework.dto.AverageAccuracyDto;
 import com.jlm.homework.dto.StudentsHomeworkRequest;
 import com.jlm.homework.entity.HomeworkPublish;
@@ -22,5 +23,7 @@ public interface IStudentsHomeworkNewService {
 
     Page<StudentsHomeworkNew> getStudentsHomeworkPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 
-    List<AverageAccuracyDto> getAverageAccuracyStatistics(String subject, Long classId, String startDate, String endDate);
+    AccuracyDto getAverageAccuracyStatistics(String subject, Long classId, String startDate, String endDate);
+
+    StudentsHomeworkNew getById(Long id);
 }

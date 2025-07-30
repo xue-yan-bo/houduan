@@ -1,7 +1,9 @@
 package com.jlm.homework.dto;
 
-import java.util.Date;
+import lombok.Data;
 
+import java.util.Date;
+@Data
 public class AverageAccuracyDto {
     /**
      * 班级ID
@@ -18,5 +20,5 @@ public class AverageAccuracyDto {
     /**
      * 发布日期
      */
-    private Date publishDate;
+    private String publishDate;
 }

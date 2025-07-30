@@ -1,5 +1,6 @@
 package com.jlm.homework.controller;
 
+import com.jlm.homework.dto.AccuracyDto;
 import com.jlm.homework.dto.AverageAccuracyDto;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.entity.StudentsHomeworkStatistics;
@@ -50,10 +51,9 @@ public class StudentsHomeworkStatisticsController {
      * @return
      */
     @GetMapping("/average-accuracy-statistics")
-    public List<AverageAccuracyDto> getAverageAccuracyStatistics(String subject,Long classId,String startDate,String endDate){
-        List<AverageAccuracyDto>  averageAccuracyDtos =new ArrayList<>();
-        averageAccuracyDtos = studentsHomeworkNewService.getAverageAccuracyStatistics(subject,classId,startDate,endDate);
-        return averageAccuracyDtos;
+    public AccuracyDto getAverageAccuracyStatistics(String subject, Long classId, String startDate, String endDate){
+        AccuracyDto accuracyDto = studentsHomeworkNewService.getAverageAccuracyStatistics(subject,classId,startDate,endDate);
+        return accuracyDto;
     }
     /**
      * 班级作业统计

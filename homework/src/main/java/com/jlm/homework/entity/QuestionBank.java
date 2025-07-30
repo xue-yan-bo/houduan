@@ -38,6 +38,16 @@ public class QuestionBank implements Serializable {
     @Column(name = "semester")
     private String semester;
     /**
+     *章
+     */
+    @Column(name = "chapter")
+    private String chapter;
+    /**
+     *节
+     */
+    @Column(name = "section")
+    private String section;
+    /**
      *科目
      */
     @Column(name = "subject")
@@ -50,8 +60,8 @@ public class QuestionBank implements Serializable {
     /**
      *问题内容
      */
-    @Column(name = "questionContent")
-    private String question_content;
+    @Column(name = "question_content")
+    private String questionContent;
     /**
      *答案
      */
@@ -88,6 +98,7 @@ public class QuestionBank implements Serializable {
      */
     @Column(name = "popularity")
     private String popularity;
+
     /**
      *创建时间
      */

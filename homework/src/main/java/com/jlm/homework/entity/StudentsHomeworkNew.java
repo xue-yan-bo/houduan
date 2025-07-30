@@ -1,13 +1,20 @@
 package com.jlm.homework.entity;
 
+import com.alibaba.nacos.shaded.javax.annotation.meta.TypeQualifierDefault;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
 import jakarta.persistence.*;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.SqlTypes;
+
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 学生作业 实体类
@@ -135,8 +142,8 @@ public class StudentsHomeworkNew implements Serializable {
     /**
      * 老师审批建议
      */
-    @Column(name = "teacherAuditSuggest")
-    private String teacher_audit_suggest;
+    @Column(name = "teacher_audit_suggest")
+    private String teacherAuditSuggest;
     /**
      * 老师审批评级
      */
@@ -158,5 +165,35 @@ public class StudentsHomeworkNew implements Serializable {
      */
     @Column(name = "class_rank")
     private Double classRank;
+    /**
+     * 截止时间
+     */
+    @Column(name = "deadline")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date deadline;
+    /**
+     * 学生写作业坐标
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "students_coordinate", columnDefinition = "JSON")
+    private List<StudentsCoordinate> studentsCoordinate;
+    /**
+     * 老师审批标识坐标
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "audit_logo_coordinate", columnDefinition = "JSON")
+    private List<AuditLogoCoordinate> auditLogoCoordinate;
+    /**
+     * 老师审批坐标
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "audit_coordinate", columnDefinition = "JSON")
+    private List<AuditLogoCoordinate> auditCoordinate;
 
+    /**
+     * 老师批注坐标
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "comments_coordinate", columnDefinition = "JSON")
+    private List<CommentsCoordinate> commentsCoordinate;
 }

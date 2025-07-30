@@ -1,8 +1,6 @@
 package com.jlm.homework.service.impl;
 
-import com.jlm.homework.dto.AverageAccuracyDto;
-import com.jlm.homework.dto.Result;
-import com.jlm.homework.dto.StudentsHomeworkRequest;
+import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.ExerciseBookEntity;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.Student;
@@ -22,6 +20,7 @@ import org.springframework.data.domain.*;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.jdbc.support.JdbcAccessor;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
@@ -40,6 +39,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private ExerciseBookServer exerciseBookServer;
     @Autowired
     private UserService userService;
+    @Autowired
+    private JdbcAccessor jdbcAccessor;
+
     @Override
     public void createStudentsHomeworkByHomeworkPublish(HomeworkPublish homeworkPublish) {
         if(!homeworkPublish.getClassId().isEmpty()){
@@ -50,6 +52,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             }
 
             for(Long classId:homeworkPublish.getClassId()){
+                if(classId==null){
+                    continue;
+                }
                 try {
                     Long schoolId=homeworkPublish.getSchoolId();
                     Result<Student> result = studentFeginClient.getStudentList(1,100,schoolId,classId,0);
@@ -63,6 +68,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         studentsHomework.setClassesName(student.getClassesName());
                         studentsHomework.setHomeworkType(2);
                         studentsHomework.setHomeworkPublishId(homeworkPublish.getId());
+                        studentsHomework.setHomeworkPublishName(homeworkPublish.getHomeworkName());
                         studentsHomework.setSchoolId(student.getSchoolId());
                         studentsHomework.setStudentId(student.getStudentId());
                         studentsHomework.setStudentName(student.getStudentName());
@@ -71,6 +77,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         studentsHomework.setSubmitStatus(0);
                         studentsHomework.setAuditStatus("0");
                         studentsHomework.setSubject(subject);
+                        studentsHomework.setDeadline(homeworkPublish.getDeadline());
                         studentsHomeworkNewRepository.save(studentsHomework);
                     }
                 } catch (Exception e) {
@@ -342,9 +349,132 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public List<AverageAccuracyDto> getAverageAccuracyStatistics(String subject, Long classId, String startDate, String endDate) {
+    public AccuracyDto getAverageAccuracyStatistics(String subject, Long classId, String startDate, String endDate) {
+        AccuracyDto accuracyDto =new AccuracyDto();
         //根据班级id、科目和时间查询班级所有学生的平均正确率
         List<AverageAccuracyDto> averageAccuracyDtos =new  ArrayList<>() ;
-        return averageAccuracyDtos;
+        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
+
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+
+                Predicate condition1 = null;
+                if(StringUtils.isNotEmpty(subject)){
+                    condition1 = criteriaBuilder.equal(root.get("subject"), subject);
+                }else {
+                    condition1 = criteriaBuilder.conjunction();
+                }
+                Predicate condition2 = null;
+                if(classId!=null){
+                    condition2 = criteriaBuilder.equal(root.get("classesId"), classId);
+                }else {
+                    condition2 = criteriaBuilder.conjunction();
+                }
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                Calendar calendar = Calendar.getInstance();
+
+                try {
+                    Predicate condition3 = null;
+                    if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
+                        Date startDate1 = sdf.parse(startDate);
+                        Date endDate1 = sdf.parse(endDate);
+                        condition3 = criteriaBuilder.between(root.get("createTime").as(Date.class),startDate1,endDate1);
+
+                    }else {
+                        condition3 = criteriaBuilder.conjunction();
+                    }
+
+
+                    query.where(condition1,condition2,condition3);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+
+                return null;
+            }
+
+
+        };
+        List<StudentsHomeworkNew> studentsHomeworkNewList=studentsHomeworkNewRepository.findAll();
+
+        //班级平均正确率统计
+        Map<String,Double> averageAccuracyMap =new  HashMap<>();
+        Map<String,Integer> studentNumMap =new HashMap<>();
+        for(StudentsHomeworkNew studentsHomeworkNew:studentsHomeworkNewList){
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            String pulishDate = sdf.format(studentsHomeworkNew.getCreateTime());
+            String classKey = studentsHomeworkNew.getClassesId()+","+pulishDate;
+            if(averageAccuracyMap.get(classKey)==null){
+                if(studentsHomeworkNew.getAccuracy()!=null){
+                    averageAccuracyMap.put(classKey,studentsHomeworkNew.getAccuracy());
+                }else{
+                    averageAccuracyMap.put(classKey,0d);
+                }
+            }else {
+                if(studentsHomeworkNew.getAccuracy()!=null){
+                    Double totalAccuracy = averageAccuracyMap.get(classKey)+studentsHomeworkNew.getAccuracy();
+                    averageAccuracyMap.put(classKey,totalAccuracy);
+                }
+            }
+            if(studentNumMap.get(classKey)==null){
+                studentNumMap.put(classKey,1);
+            }else {
+                studentNumMap.put(classKey,studentNumMap.get(classKey)+1);
+            }
+        }
+        for(String key:averageAccuracyMap.keySet()){
+            AverageAccuracyDto averageAccuracyDto = new AverageAccuracyDto();
+            Double averageAccuracy = averageAccuracyMap.get(key)/studentNumMap.get(key);
+            averageAccuracyDto.setAverageAccuracy(averageAccuracy);
+            Long classesId = Long.valueOf(key.substring(0,key.indexOf(",")));
+            averageAccuracyDto.setClassId(classesId);
+            String publishDate = key.substring(key.indexOf(",")+1);
+            averageAccuracyDto.setPublishDate(publishDate);
+            averageAccuracyDtos.add(averageAccuracyDto);
+        }
+        accuracyDto.setAverageAccuracyDtos(averageAccuracyDtos);
+        //科目平均正确率统计
+        List<SubjectAccuracyDto> subjectAccuracyDtoList =new ArrayList<>();
+        Map<String,Double> subjectAverageAccuracyMap =new  HashMap<>();
+        Map<String,Integer> studentNumMap1 =new HashMap<>();
+        for(StudentsHomeworkNew studentsHomeworkNew:studentsHomeworkNewList){
+
+            String classSubjectKey = studentsHomeworkNew.getClassesId()+","+studentsHomeworkNew.getSubject();
+            if(subjectAverageAccuracyMap.get(classSubjectKey)==null){
+                if(studentsHomeworkNew.getAccuracy()!=null){
+                    subjectAverageAccuracyMap.put(classSubjectKey,studentsHomeworkNew.getAccuracy());
+                }else{
+                    subjectAverageAccuracyMap.put(classSubjectKey,0d);
+                }
+            }else {
+                if(studentsHomeworkNew.getAccuracy()!=null){
+                    Double totalAccuracy = subjectAverageAccuracyMap.get(classSubjectKey)+studentsHomeworkNew.getAccuracy();
+                    subjectAverageAccuracyMap.put(classSubjectKey,totalAccuracy);
+                }
+            }
+            if(studentNumMap.get(classSubjectKey)==null){
+                studentNumMap1.put(classSubjectKey,1);
+            }else {
+                studentNumMap1.put(classSubjectKey,studentNumMap1.get(classSubjectKey)+1);
+            }
+        }
+        for(String key:subjectAverageAccuracyMap.keySet()){
+            SubjectAccuracyDto subjectAccuracyDto = new SubjectAccuracyDto();
+            Double averageAccuracy = subjectAverageAccuracyMap.get(key)/studentNumMap1.get(key);
+            subjectAccuracyDto.setAverageAccuracy(averageAccuracy);
+            Long classesId = Long.valueOf(key.substring(0,key.indexOf(",")));
+            subjectAccuracyDto.setClassId(classesId);
+            String subjectStr = key.substring(key.indexOf(",")+1);
+            subjectAccuracyDto.setSubject(subjectStr);
+            subjectAccuracyDtoList.add(subjectAccuracyDto);
+        }
+        accuracyDto.setSubjectAccuracyDtos(subjectAccuracyDtoList);
+        return accuracyDto;
+    }
+
+    @Override
+    public StudentsHomeworkNew getById(Long id) {
+        return studentsHomeworkNewRepository.findById(id).get();
     }
 }

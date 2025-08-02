@@ -241,7 +241,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public List<StudentsHomeworkNew> getClassHomeworkStatistics(String subject, Long classId, String startDate) {
+    public List<StudentsHomeworkNew> getClassHomeworkStatistics(String subject, Long classId, String startDate,String endDate) {
 
         Specification<HomeworkPublish> specification= new Specification<HomeworkPublish>() {
 
@@ -266,11 +266,11 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     if(StringUtils.isNotEmpty(startDate)){
                         Date start = null;
 
-                            start = sdf.parse(startDate);
+                        start = sdf.parse(startDate);
 
                         calendar.setTime(start);
-                        calendar.add(Calendar.DAY_OF_MONTH,1);
-                        Date end = calendar.getTime();
+
+                        Date end = sdf.parse(endDate);
                         condition2 = criteriaBuilder.between(root.get("publishTime"),start,end);
                     }else {
                         condition2 = criteriaBuilder.conjunction();
@@ -282,14 +282,18 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 return null;
             }
         };
-        Optional<HomeworkPublish> optional=homeworkPublishRepository.findOne(specification);
-        HomeworkPublish homeworkPublish=optional.get();
-        StudentsHomeworkNew  studentsHomeworkNew=new StudentsHomeworkNew();
-        studentsHomeworkNew.setHomeworkPublishId(homeworkPublish.getId());
-        studentsHomeworkNew.setClassesId(classId);
-        studentsHomeworkNew.setSubject(subject);
-        List<StudentsHomeworkNew> studentsHomeworkNewList = studentsHomeworkNewRepository.findAll(Example.of(studentsHomeworkNew));
-        return studentsHomeworkNewList;
+        List<HomeworkPublish> homeworkPublishList=homeworkPublishRepository.findAll(specification);
+        List<StudentsHomeworkNew> studentsHomeworkList = new ArrayList<>();
+        for(HomeworkPublish homeworkPublish:homeworkPublishList){
+            StudentsHomeworkNew  studentsHomeworkNew=new StudentsHomeworkNew();
+            studentsHomeworkNew.setHomeworkPublishId(homeworkPublish.getId());
+            studentsHomeworkNew.setClassesId(classId);
+            studentsHomeworkNew.setSubject(subject);
+            List<StudentsHomeworkNew> studentsHomeworkNewList = studentsHomeworkNewRepository.findAll(Example.of(studentsHomeworkNew));
+            studentsHomeworkList.addAll(studentsHomeworkNewList);
+        }
+
+        return studentsHomeworkList;
     }
 
     @Override
@@ -401,8 +405,13 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         //班级平均正确率统计
         Map<String,Double> averageAccuracyMap =new  HashMap<>();
         Map<String,Integer> studentNumMap =new HashMap<>();
+        Map<Long,String> classNameMap =new HashMap<>();
         for(StudentsHomeworkNew studentsHomeworkNew:studentsHomeworkNewList){
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            if(studentsHomeworkNew.getCreateTime()==null){
+                continue;
+            }
+            classNameMap.put(studentsHomeworkNew.getClassesId(),studentsHomeworkNew.getClassesName());
             String pulishDate = sdf.format(studentsHomeworkNew.getCreateTime());
             String classKey = studentsHomeworkNew.getClassesId()+","+pulishDate;
             if(averageAccuracyMap.get(classKey)==null){
@@ -431,6 +440,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             averageAccuracyDto.setClassId(classesId);
             String publishDate = key.substring(key.indexOf(",")+1);
             averageAccuracyDto.setPublishDate(publishDate);
+            averageAccuracyDto.setClassName(classNameMap.get(classesId));
             averageAccuracyDtos.add(averageAccuracyDto);
         }
         accuracyDto.setAverageAccuracyDtos(averageAccuracyDtos);
@@ -467,6 +477,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             subjectAccuracyDto.setClassId(classesId);
             String subjectStr = key.substring(key.indexOf(",")+1);
             subjectAccuracyDto.setSubject(subjectStr);
+            subjectAccuracyDto.setClassName(classNameMap.get(classesId));
             subjectAccuracyDtoList.add(subjectAccuracyDto);
         }
         accuracyDto.setSubjectAccuracyDtos(subjectAccuracyDtoList);

@@ -29,8 +29,8 @@ public class KnowledgePointServiceImpl implements IKnowledgePointService {
 
     @Override
     public Page<KnowledgePoint> selectList(Integer pageNum, Integer pageSize, KnowledgePoint knowledgePoint) {
-        pageNum = pageNum == null ? 0 : pageNum;
-        pageSize = pageSize == null ? 0 : pageSize;
+        pageNum = pageNum == null ? 0 : pageNum-1;
+        pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.ASC, "id");
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
         return knowledgePointRepository.findAll(Example.of(knowledgePoint),pageable);

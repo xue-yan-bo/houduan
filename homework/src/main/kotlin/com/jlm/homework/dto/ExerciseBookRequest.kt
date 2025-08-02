@@ -2,6 +2,7 @@ package com.jlm.homework.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.jlm.homework.entity.ExerciseBookChapter
 import com.jlm.homework.entity.ExerciseBookImage
 import com.jlm.homework.entity.ExerciseBookStatus
 import java.time.LocalDateTime
@@ -146,7 +147,12 @@ data class ExerciseBookRequest(
     /**
      * 排序方向 (asc/desc)
      */
-    val sortDir: String = "desc"
+    val sortDir: String = "desc",
+
+    /**
+     * 练习册章节
+     */
+    val exerciseBookChaprtList: List<ExerciseBookChapter> ?= null
 ) {
     /**
      * 获取解析后的图片URL列表

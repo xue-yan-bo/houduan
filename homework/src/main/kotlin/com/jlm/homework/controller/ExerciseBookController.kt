@@ -6,6 +6,7 @@ import com.jlm.homework.exception.ParameterException
 import com.jlm.homework.exception.ResourceNotFoundException
 import com.jlm.homework.service.ExerciseBookServer
 import com.jlm.homework.service.UserService
+import com.jlm.homework.service.impl.ExerciseBookChapterServiceIpml
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.*
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*
 @SecurityRequirement(name = "adminToken")
 class ExerciseBookController(
     private val exerciseBookService: ExerciseBookServer,
+    private val exerciseBookChapterServer: ExerciseBookChapterServiceIpml,
     private val userService: UserService
 ) {
 
@@ -78,8 +80,10 @@ class ExerciseBookController(
         if (entity.schoolId != currentSchoolId) {
             throw ResourceNotFoundException("练习册不存在，ID: $id")
         }
-        
-        return ExerciseBookResponse.from(entity)
+        var exerciseBookChapterList= exerciseBookChapterServer.getByExerciseBookId(entity.id);
+        var response=ExerciseBookResponse.from(entity)
+        response.exerciseBookChaprtList = exerciseBookChapterList
+        return response
     }
 
     /**
@@ -104,6 +108,13 @@ class ExerciseBookController(
         // 转换为实体并保存（toEntity方法已经处理了多班级ID的JSON存储）
         val exerciseBook = request.toEntity(currentUserId, currentSchoolId)
         val savedEntity = exerciseBookService.save(exerciseBook)
+        var exerciseBookChaprtList = request.exerciseBookChaprtList;
+        if (exerciseBookChaprtList != null) {
+            for (exerciseBookChaprt in exerciseBookChaprtList) {
+                exerciseBookChaprt.setExerciseBookId(savedEntity.id);
+            }
+        }
+        exerciseBookChapterServer.saveList(exerciseBookChaprtList);
         return ExerciseBookResponse.from(savedEntity)
     }
 
@@ -168,6 +179,13 @@ class ExerciseBookController(
         }
 
         val savedEntity = exerciseBookService.save(updated)
+        var exerciseBookChaprtList = request.exerciseBookChaprtList;
+        if (exerciseBookChaprtList != null) {
+            for (exerciseBookChaprt in exerciseBookChaprtList) {
+                exerciseBookChaprt.setExerciseBookId(savedEntity.id);
+            }
+        }
+        exerciseBookChapterServer.saveList(exerciseBookChaprtList);
         return ExerciseBookResponse.from(savedEntity)
     }
 

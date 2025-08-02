@@ -94,7 +94,9 @@ data class ExerciseBookResponse(
      * 更新时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    val updatedAt: LocalDateTime?
+    val updatedAt: LocalDateTime?,
+
+    var exerciseBookChaprtList: List<ExerciseBookChapter>? =null
 ) {
     companion object {
         /**
@@ -119,6 +121,7 @@ data class ExerciseBookResponse(
                 imageUrls = entity.imageUrls,
                 createdAt = entity.createdAt,
                 updatedAt = entity.updatedAt
+
             )
         }
 
@@ -128,5 +131,8 @@ data class ExerciseBookResponse(
         fun fromList(entities: List<ExerciseBookEntity>): List<ExerciseBookResponse> {
             return entities.map { from(it) }
         }
+
     }
+
+
 }

@@ -122,6 +122,7 @@ data class ExerciseBookEntity(
     @Column(name = "updated_at", nullable = false)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     val updatedAt: LocalDateTime? = null
+
 )
 
 /**

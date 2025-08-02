@@ -28,8 +28,8 @@ public class QuestionTypeServiceImpl implements IQuestionTypeService {
 
     @Override
     public Page<QuestionType> selectList(Integer pageNum, Integer pageSize, QuestionType questionType) {
-        pageNum = pageNum == null ? 0 : pageNum;
-        pageSize = pageSize == null ? 0 : pageSize;
+        pageNum = pageNum == null ? 0 : pageNum-1;
+        pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.ASC, "sort");
         Pageable pageable;
         pageable = PageRequest.of(pageNum, pageSize, sort);

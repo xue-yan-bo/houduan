@@ -61,9 +61,9 @@ public class StudentsHomeworkStatisticsController {
      * @return
      */
     @GetMapping("/class-homework-statistics")
-    public List<StudentsHomeworkNew> getClassHomeworkStatistics(String subject,Long classId,String startDate){
+    public List<StudentsHomeworkNew> getClassHomeworkStatistics(String subject,Long classId,String startDate,String endDate){
         List<StudentsHomeworkNew>  studentsHomeworkNewList =new ArrayList<>();
-        studentsHomeworkNewList =studentsHomeworkNewService.getClassHomeworkStatistics(subject,classId,startDate);
+        studentsHomeworkNewList =studentsHomeworkNewService.getClassHomeworkStatistics(subject,classId,startDate,endDate);
         return studentsHomeworkNewList;
     }
 }

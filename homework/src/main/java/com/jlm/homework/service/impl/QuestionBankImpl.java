@@ -31,11 +31,12 @@ public class QuestionBankImpl implements IQuestionBankService {
 
     @Override
     public Page<QuestionBank> selectList(Integer pageNum, Integer pageSize, QuestionBank questionBank) {
-        pageNum = pageNum == null ? 0 : pageNum;
-        pageSize = pageSize == null ? 0 : pageSize;
+        pageNum = pageNum == null ? 0 : pageNum-1;
+        pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.ASC, "id");
         Pageable pageable;
         pageable = PageRequest.of(pageNum, pageSize, sort);
+        questionBank=QuestionBank.hanldKong(questionBank);
         return questionBankRepository.findAll(Example.of(questionBank), pageable);
     }
 

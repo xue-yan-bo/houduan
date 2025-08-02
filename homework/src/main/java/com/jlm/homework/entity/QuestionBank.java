@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -100,8 +101,63 @@ public class QuestionBank implements Serializable {
     private String popularity;
 
     /**
+     *解析
+     */
+    @Column(name = "parse")
+    private String parse;
+
+    /**
      *创建时间
      */
     @Column(name = "create_time")
     private Date createTime;
+
+    public static QuestionBank hanldKong(QuestionBank questionBank){
+        if(questionBank==null){
+            return null;
+        }
+        if(StringUtils.isEmpty(questionBank.getQuestionType())){
+            questionBank.setQuestionType(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getAnswer())){
+            questionBank.setAnswer(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getArea())){
+            questionBank.setArea(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getGrade())){
+            questionBank.setGrade(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getChapter())){
+            questionBank.setChapter(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getKnowledgePoint())){
+            questionBank.setKnowledgePoint(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getPaperType())){
+            questionBank.setPaperType(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getPopularity())){
+            questionBank.setPopularity(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getSection())){
+            questionBank.setSection(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getSubject())){
+            questionBank.setSubject(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getSemester())){
+            questionBank.setSemester(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getSource())){
+            questionBank.setSource(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getParse())){
+            questionBank.setParse(null);
+        }
+        if(StringUtils.isEmpty(questionBank.getQuestionContent())){
+            questionBank.setQuestionContent(null);
+        }
+        return questionBank;
+    }
 }

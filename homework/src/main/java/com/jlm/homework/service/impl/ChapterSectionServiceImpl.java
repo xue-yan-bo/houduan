@@ -29,8 +29,8 @@ public class ChapterSectionServiceImpl implements IChapterSectionService {
 
     @Override
     public Page<ChapterSection> selectList(Integer pageNum, Integer pageSize, ChapterSection chapterSection) {
-        pageNum = pageNum == null ? 0 : pageNum;
-        pageSize = pageSize == null ? 0 : pageSize;
+        pageNum = pageNum == null ? 0 : pageNum-1;
+        pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable;
         pageable = PageRequest.of(pageNum, pageSize, sort);

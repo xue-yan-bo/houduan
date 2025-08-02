@@ -1,0 +1,74 @@
+package com.jlm.homework.entity;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
+import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.io.Serializable;
+import java.util.List;
+/**
+ * 练习册题 实体类
+ */
+@Data
+@Entity
+@Table(name = "exercise_book_question")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+public class ExerciseBookQuestion implements Serializable {
+    @Id
+    private Long id;
+    /**
+     * 练习册ID
+     */
+    @Column(name = "exercise_book_id")
+    private Long exerciseBookId;
+
+    /**
+     * 练习册章节ID
+     */
+    @Column(name = "exercise_book_chapter_id")
+    private Long exerciseBookChapterId;
+
+    /**
+     * 知识点ID
+     */
+    @Column(name = "book_knowledge_point_id")
+    private Long bookKnowledgePointId;
+    /**
+     * 知识点
+     */
+    @Column(name = "knowledge_point")
+    private  String knowledgePoint;
+    /**
+     * 所在练习册页数
+     */
+    @Column(name = "page_number")
+    private Integer pageNumber;
+    /**
+     * 大题号
+     */
+    @Column(name = "title_big_no")
+    private Integer titleBigNo;
+    /**
+     * 小题号
+     */
+    @Column(name = "title_small_no")
+    private Integer titleSmallNo;
+    /**
+     * 题所在坐标
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "coordinates",columnDefinition = "JSON")
+    private QuestionCoordinate coordinates;
+    /**
+     * 题的图片截图
+     */
+    @Column(name = "croppedlrl")
+    private String croppedlrl;
+    /**
+     * 题所在练习册页面图片
+     */
+    @Column(name = "imagelrl")
+    private String imagelrl;
+}

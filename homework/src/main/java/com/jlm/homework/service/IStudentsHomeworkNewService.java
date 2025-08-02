@@ -19,7 +19,7 @@ public interface IStudentsHomeworkNewService {
 
     Page<StudentsHomeworkNew> getListByHomeworkPublishId(Long homeworkPublishId, Integer pageNum, Integer pageSize, StudentsHomeworkRequest studentsHomeworkRequest);
 
-    List<StudentsHomeworkNew> getClassHomeworkStatistics(String subject, Long classId, String startDate);
+    List<StudentsHomeworkNew> getClassHomeworkStatistics(String subject, Long classId, String startDate,String endDate);
 
     Page<StudentsHomeworkNew> getStudentsHomeworkPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 

@@ -16,9 +16,9 @@ object ExerciseBookValidator {
         if (request.title.length > 200) {
             return "练习册标题长度不能超过200个字符"
         }
-        if (request.difficultyLevel != null && (request.difficultyLevel < 1 || request.difficultyLevel > 5)) {
+        /*if (request.difficultyLevel != null && (request.difficultyLevel < 1 || request.difficultyLevel > 5)) {
             return "难度等级必须在1-5之间"
-        }
+        }*/
         return null
     }
 

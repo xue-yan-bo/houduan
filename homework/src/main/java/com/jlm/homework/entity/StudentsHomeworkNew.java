@@ -196,4 +196,15 @@ public class StudentsHomeworkNew implements Serializable {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "comments_coordinate", columnDefinition = "JSON")
     private List<CommentsCoordinate> commentsCoordinate;
+
+    /**
+     * 章节
+     */
+    @Column(name = "chapter")
+    private String chapter;
+    /**
+     * 知识点
+     */
+    @Column(name = "knowledge_point")
+    private String knowledgePoint;
 }

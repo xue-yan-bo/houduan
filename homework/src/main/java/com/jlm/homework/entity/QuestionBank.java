@@ -1,16 +1,16 @@
 package com.jlm.homework.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 题库 实体类
@@ -21,6 +21,7 @@ import java.util.Date;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class QuestionBank implements Serializable {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     /**
@@ -111,6 +112,12 @@ public class QuestionBank implements Serializable {
      */
     @Column(name = "create_time")
     private Date createTime;
+    /**
+     * 选项
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "options", columnDefinition = "JSON")
+    private List<String> options;
 
     public static QuestionBank hanldKong(QuestionBank questionBank){
         if(questionBank==null){

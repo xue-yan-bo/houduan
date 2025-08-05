@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 作业发布 实体类
+ * 课堂练习 实体类
  */
 @Data
 @Entity
@@ -173,4 +173,15 @@ public class HomeworkPublish implements Serializable {
      */
     @Column(name = "subject")
     private String subject;
+
+    /**
+     * 章节
+     */
+    @Column(name = "chapter")
+    private String chapter;
+    /**
+     * 知识点
+     */
+    @Column(name = "knowledge_point")
+    private String knowledgePoint;
 }

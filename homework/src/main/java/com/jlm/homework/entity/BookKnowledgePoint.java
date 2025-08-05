@@ -13,6 +13,7 @@ import java.util.List;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class BookKnowledgePoint {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(name = "exercise_book_id")
     private Long exerciseBookId;

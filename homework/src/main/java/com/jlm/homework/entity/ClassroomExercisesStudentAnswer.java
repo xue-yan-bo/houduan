@@ -3,28 +3,37 @@ package com.jlm.homework.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
-import org.springframework.web.bind.annotation.RequestParam;
 
-import java.io.Serializable;
+import java.util.Date;
 
 /**
- * 课堂练习题 实体类
+ * 课堂练习学生答案 实体类
  */
 @Data
 @Entity
-@Table(name = "classroom_exercises_question")
+@Table(name = "classroom_exercises_student_answer")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class ClassroomExercisesQuestion implements Serializable {
+public class ClassroomExercisesStudentAnswer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    /**
+     * 学生UUid
+     */
+    @Column(name = "student_id")
+    private String studentId;
+    /**
+     * 学生姓名
+     */
+    @Column(name = "student_name")
+    private String studentName;
     /**
      * 随堂练习id
      */
     @Column(name = "classroom_exercises_id")
     private Long classroomExercisesId;
     /**
-     * 题号
+     * v
      */
     @Column(name = "title_number")
     private Integer titleNumber;
@@ -44,14 +53,19 @@ public class ClassroomExercisesQuestion implements Serializable {
     @Column(name = "knowledge_point")
     private String knowledgePoint;
     /**
-     * 来源类型，0题库、1自编、2考试题
+     * 学生答案
      */
-    @Column(name = "source_type")
-    private String sourceType;
+    @Column(name = "student_answer")
+    private String studentAnswer;
     /**
-     * 来源是题库，题库id
+     * 正确标识
      */
-    @Column(name = "question_bank_id")
-    private Long questionBankId;
+    @Column(name = "right_flag")
+    private Long rightFlag;
 
+    /**
+     * 创建时间
+     */
+    @Column(name = "create_time")
+    private Date create_time;
 }

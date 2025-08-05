@@ -15,6 +15,7 @@ import java.util.List;
 @Table(name = "students_homework_statistics")
 public class StudentsHomeworkStatistics implements Serializable {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     /**
      * 发布作业ID

@@ -12,7 +12,7 @@ public class StudentAnswerDto {
      */
     private Integer answerStudentNumber;
     /**
-     * 答题人数
+     * 未答题人数
      */
     private Integer unanswerStudentNumber;
     /**

@@ -8,7 +8,9 @@ import jakarta.annotation.Resource;
 import org.springframework.data.domain.Example;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExercisesStudentAnswerService {
@@ -33,7 +35,18 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
     }
 
     @Override
-    public ClassroomExercisesStudentStatistics statisticsByClassroomExercisesId(String classroomExercisesId) {
+    public ClassroomExercisesStudentStatistics statisticsByClassroomExercisesId(Long classroomExercisesId) {
+        ClassroomExercisesStudentStatistics statistics = new ClassroomExercisesStudentStatistics();
+        List<ClassroomExercisesStudentAnswer> studentAnswerList = this.findByClassroomExercisesId(classroomExercisesId);
+        Integer answerStudentNum = 0;
+        Map<Integer,Integer> answerMap = new HashMap<>();
+        for (ClassroomExercisesStudentAnswer studentAnswer : studentAnswerList) {
+            if(answerMap.containsKey(studentAnswer.getTitleNumber())) {
+                answerMap.put(studentAnswer.getTitleNumber(), answerMap.get(studentAnswer.getTitleNumber()) + 1);
+            }else{
+                answerMap.put(studentAnswer.getTitleNumber(), 1);
+            }
+        }
         return null;
     }
 }

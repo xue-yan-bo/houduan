@@ -24,7 +24,7 @@ public class ClassroomExercisesStudentAnswerController {
      * 统计分析
      */
     @GetMapping("/statistics")
-    public ClassroomExercisesStudentStatistics getExercisesStudentStatistics(String classroomExercisesId) {
+    public ClassroomExercisesStudentStatistics getExercisesStudentStatistics(Long classroomExercisesId) {
         ClassroomExercisesStudentStatistics statistics = new ClassroomExercisesStudentStatistics();
         statistics = classroomExercisesStudentAnswerService.statisticsByClassroomExercisesId(classroomExercisesId);
 

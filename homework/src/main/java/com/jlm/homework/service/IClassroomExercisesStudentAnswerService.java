@@ -10,5 +10,5 @@ public interface IClassroomExercisesStudentAnswerService {
     ClassroomExercisesStudentAnswer findById(Long id);
     List<ClassroomExercisesStudentAnswer> findByClassroomExercisesId(Long classroomExercisesId);
 
-    ClassroomExercisesStudentStatistics statisticsByClassroomExercisesId(String classroomExercisesId);
+    ClassroomExercisesStudentStatistics statisticsByClassroomExercisesId(Long classroomExercisesId);
 }

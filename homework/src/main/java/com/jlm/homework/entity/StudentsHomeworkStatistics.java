@@ -26,7 +26,7 @@ public class StudentsHomeworkStatistics implements Serializable {
     /**
      * 班级ID
      */
-    @Column(name = "classId")
+    @Column(name = "class_id")
     private Long classId;
 
     /**
@@ -42,7 +42,7 @@ public class StudentsHomeworkStatistics implements Serializable {
     /**
      * 未提交作业人数
      */
-    @Column(name = "unsubmit_students_sum")
+    @Column(name = "unsubmit_student_num")
     private Integer unsubmitStudentNum;
     /**
      * 最快完成时长

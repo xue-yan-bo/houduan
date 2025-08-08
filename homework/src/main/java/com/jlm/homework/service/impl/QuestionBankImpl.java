@@ -8,6 +8,7 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 @Service
 public class QuestionBankImpl implements IQuestionBankService {
@@ -21,7 +22,11 @@ public class QuestionBankImpl implements IQuestionBankService {
 
     @Override
     public QuestionBank getById(Long id) {
-        return questionBankRepository.findById(id).get();
+        Optional<QuestionBank> optional=questionBankRepository.findById(id);
+        if(optional.isEmpty()){
+            return null;
+        }
+        return optional.get();
     }
 
     @Override

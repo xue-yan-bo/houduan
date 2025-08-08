@@ -18,8 +18,9 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     public List<WrongTitleBook> getWrongTitleBooks(Long homeworkPublishId, Long classId) {
         WrongTitleBook wrongTitleBook = new WrongTitleBook();
         wrongTitleBook.setHomeworkPublishId(homeworkPublishId);
+        wrongTitleBook.setClassId(classId);
         Example example = Example.of(wrongTitleBook);
-        List<WrongTitleBook> wrongTitleBooks=wrongTitleBookRepository.findAll();
+        List<WrongTitleBook> wrongTitleBooks=wrongTitleBookRepository.findAll(example);
         return wrongTitleBooks;
     }
 }

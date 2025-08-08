@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -43,14 +45,18 @@ public class ClassroomExercises {
      */
     @Column(name = "grade_name")
     private String gradeName;
-    @Transient
+    /**
+     * 班级
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "class_ids",columnDefinition = "JSON")
     private List<Long> classIds;
-
-    @Transient
+    /**
+     * 班级名称
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "class_names",columnDefinition = "JSON")
     private List<String> classNames;
-
-
-
 
     /**
      * 是否定时发布,1是、0否

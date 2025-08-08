@@ -28,12 +28,33 @@ public class ClassroomExercisesStudentAnswer {
     @Column(name = "student_name")
     private String studentName;
     /**
+     * 班级ID
+     */
+    @Column(name = "class_id")
+    private Long classId;
+    /**
+     * 班级名称
+     */
+    @Column(name = "class_name")
+    private String className;
+    /**
      * 随堂练习id
      */
     @Column(name = "classroom_exercises_id")
     private Long classroomExercisesId;
+
     /**
-     * v
+     * 练习问题id
+     */
+    @Column(name = "exercise_question_id")
+    private Long exerciseQuestionId;
+    /**
+     * 学生答题记录id
+     */
+    @Column(name = "exercises_student_record_id")
+    private Long exercisesStudentRecordId;
+    /**
+     * 题号
      */
     @Column(name = "title_number")
     private Integer titleNumber;
@@ -61,11 +82,16 @@ public class ClassroomExercisesStudentAnswer {
      * 正确标识
      */
     @Column(name = "right_flag")
-    private Long rightFlag;
+    private Integer rightFlag;
+    /**
+     *科目
+     */
+    @Column(name = "subject")
+    private String subject;
 
     /**
      * 创建时间
      */
     @Column(name = "create_time")
-    private Date create_time;
+    private Date createTime;
 }

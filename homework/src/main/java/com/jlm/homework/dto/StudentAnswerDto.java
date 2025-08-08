@@ -1,7 +1,9 @@
 package com.jlm.homework.dto;
 
-import java.util.Map;
+import lombok.Data;
 
+import java.util.Map;
+@Data
 public class StudentAnswerDto {
     /**
      * 题号

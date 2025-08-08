@@ -1,8 +1,10 @@
 package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.ClassroomExercisesStudentStatistics;
+import com.jlm.homework.dto.KnowledgePointAnalysis;
 import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.service.IClassroomExercisesStudentAnswerService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,11 +25,20 @@ public class ClassroomExercisesStudentAnswerController {
     /**
      * 统计分析
      */
-    @GetMapping("/statistics")
+    @GetMapping("/statistics-analysis")
+    @Operation(summary = "随堂检测的统计分析",description = "随堂检测的统计分析")
     public ClassroomExercisesStudentStatistics getExercisesStudentStatistics(Long classroomExercisesId) {
         ClassroomExercisesStudentStatistics statistics = new ClassroomExercisesStudentStatistics();
         statistics = classroomExercisesStudentAnswerService.statisticsByClassroomExercisesId(classroomExercisesId);
 
         return statistics;
+    }
+    /**
+     * 统计分析
+     */
+    @GetMapping("/knowledgePoint-analysis")
+    @Operation(summary = "知识点分析",description = "知识点分析")
+    public KnowledgePointAnalysis getKnowledgePointAnalysis(String subject, Long classId, String startDate, String endDate) {
+        return classroomExercisesStudentAnswerService.getKnowledgePointAnalysis(subject,classId,startDate,endDate);
     }
 }

@@ -19,7 +19,7 @@ public class ClassroomExercisesStudentStatistics {
     /**
      * 错误率最高的题目
      */
-    private Integer maxErrorRateQuestion;
+    private Integer maxWrongRateQuestion;
     /**
      * 答题概况(题号、答题率)
      */

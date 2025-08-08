@@ -28,6 +28,11 @@ public class WrongTitleBook implements Serializable {
     /**
      * 题图片路径
      */
+    @Column(name = "class_id")
+    private Long classId;
+    /**
+     * 题图片路径
+     */
     @Column(name = "title_image")
     private String titleImage;
     /**

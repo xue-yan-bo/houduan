@@ -20,6 +20,9 @@ public class StudentsHomeworkStatisticsServiceImpl implements IStudentsHomeworkS
         studentsHomeworkStatistics.setClassId(classId);
         Example<StudentsHomeworkStatistics> example=Example.of(studentsHomeworkStatistics);
         Optional<StudentsHomeworkStatistics> optional= studentsHomeworkStatisticsRepository.findOne(example);
+        if(optional.isEmpty()){
+            return studentsHomeworkStatistics;
+        }
         return optional.get();
     }
 

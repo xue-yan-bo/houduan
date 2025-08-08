@@ -5,6 +5,7 @@ import com.jlm.homework.entity.ClassroomExercisesQuestion;
 import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.service.IClassroomExercisesQuestionService;
 import com.jlm.homework.service.IClassroomExercisesService;
+import com.jlm.homework.service.UserService;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
@@ -19,9 +20,17 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
     private ClassroomExercisesRepository classroomExercisesRepository;
     @Autowired
     private IClassroomExercisesQuestionService classroomExercisesQuestionService;
+    @Autowired
+    private UserService userService;
     @Override
     public Long create(ClassroomExercises classroomExercises) {
-        return classroomExercisesRepository.save(classroomExercises).getId();
+        List<ClassroomExercisesQuestion> questionList=classroomExercises.getQuestionList();
+        if(classroomExercises.getSchoolId()==null){
+            classroomExercises.setSchoolId(userService.getCurrentSchoolIdSafely());
+        }
+        classroomExercises =classroomExercisesRepository.save(classroomExercises);
+        classroomExercisesQuestionService.saveQuestionList(classroomExercises.getId(),questionList);
+        return classroomExercises.getId();
     }
 
     @Override
@@ -36,7 +45,10 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
 
     @Override
     public ClassroomExercises update(ClassroomExercises classroomExercises) {
-        return classroomExercisesRepository.save(classroomExercises);
+        List<ClassroomExercisesQuestion> questionList=classroomExercises.getQuestionList();
+        classroomExercises = classroomExercisesRepository.save(classroomExercises);
+        classroomExercisesQuestionService.saveQuestionList(classroomExercises.getId(),questionList);
+        return classroomExercises;
     }
 
     @Override
@@ -45,7 +57,14 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
-        return classroomExercisesRepository.findAll(Example.of(classroomExercises),pageable);
+        Page<ClassroomExercises> page= classroomExercisesRepository.findAll(Example.of(classroomExercises),pageable);
+        List<ClassroomExercises> exercisesList=page.getContent();
+        for(ClassroomExercises item:exercisesList){
+            List<ClassroomExercisesQuestion> questionList=classroomExercisesQuestionService.selectQuestionList(item.getId());
+            item.setQuestionList(questionList);
+        }
+
+        return page;
     }
 
     @Override
@@ -57,8 +76,9 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
     public ClassroomExercises publish(ClassroomExercises classroomExercises) {
         classroomExercises.setPublishStatus(1);
         classroomExercises.setPublishTime(new Date());
+        List<ClassroomExercisesQuestion> questionList =classroomExercises.getQuestionList();
         classroomExercises = classroomExercisesRepository.save(classroomExercises);
-        classroomExercisesQuestionService.saveQuestionList(classroomExercises.getId(),classroomExercises.getQuestionList());
+        classroomExercisesQuestionService.saveQuestionList(classroomExercises.getId(),questionList);
         return classroomExercises;
     }
 }

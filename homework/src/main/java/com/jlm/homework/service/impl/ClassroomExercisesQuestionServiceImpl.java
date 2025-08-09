@@ -5,8 +5,8 @@ import com.jlm.homework.entity.ClassroomExercisesQuestion;
 import com.jlm.homework.entity.ClassroomExercisesStudentAnswer;
 import com.jlm.homework.entity.QuestionBank;
 import com.jlm.homework.repository.ClassroomExercisesQuestionRepository;
+import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.service.IClassroomExercisesQuestionService;
-import com.jlm.homework.service.IClassroomExercisesStudentAnswerService;
 import com.jlm.homework.service.IQuestionBankService;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -30,8 +30,8 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
     private ClassroomExercisesQuestionRepository classroomExercisesQuestionRepository;
     @Autowired
     private IQuestionBankService questionBankService;
-    @Autowired
-    private IClassroomExercisesStudentAnswerService classroomExercisesStudentAnswerService;
+    @Resource
+    private ClassroomExercisesStudentAnswerRepository classroomExercisesStudentAnswerRepository;
     @Override
     public void saveQuestionList(Long classroomExercisesId, List<ClassroomExercisesQuestion> questionList) {
         if(questionList==null||questionList.isEmpty()){
@@ -280,7 +280,7 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
             dayExerciseTypeNumList.add(dayExerciseTypeNum);
         }
         exerciseTypeAnalyse.setDayExerciseTypeNumList(dayExerciseTypeNumList);
-        List<ClassroomExercisesStudentAnswer> studentAnswerList =classroomExercisesStudentAnswerService.findByClassAndDate(classId,startDate,endDate);
+        List<ClassroomExercisesStudentAnswer> studentAnswerList = findByClassAndDate(classId, startDate, endDate);
         Map<String,Integer> studentAnswerMap = new HashMap<>();
         for (ClassroomExercisesStudentAnswer studentAnswer : studentAnswerList) {
             String key = studentAnswer.getStudentId()+":"+studentAnswer.getExerciseQuestionId();
@@ -294,5 +294,36 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
 
         }
         return exerciseTypeAnalyse;
+    }
+
+    // 私有方法：按班级与时间范围查询学生课堂练习作答记录，避免对其它 Service 的依赖，打破循环依赖
+    private List<ClassroomExercisesStudentAnswer> findByClassAndDate(Long classId, String startDate, String endDate) {
+        Specification<ClassroomExercisesStudentAnswer> specification = new Specification<ClassroomExercisesStudentAnswer>() {
+            @Override
+            public Predicate toPredicate(Root<ClassroomExercisesStudentAnswer> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                Predicate condition2;
+                if (classId != null) {
+                    condition2 = criteriaBuilder.equal(root.get("classId"), classId);
+                } else {
+                    condition2 = criteriaBuilder.conjunction();
+                }
+                Predicate condition3;
+                if (StringUtils.isNotEmpty(startDate) && StringUtils.isNotEmpty(endDate)) {
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                    try {
+                        Date startDate1 = sdf.parse(startDate);
+                        Date endDate1 = sdf.parse(endDate);
+                        condition3 = criteriaBuilder.between(root.get("createTime"), startDate1, endDate1);
+                    } catch (ParseException e) {
+                        throw new RuntimeException(e);
+                    }
+                } else {
+                    condition3 = criteriaBuilder.conjunction();
+                }
+                query.where(condition2, condition3);
+                return null;
+            }
+        };
+        return classroomExercisesStudentAnswerRepository.findAll(specification);
     }
 }

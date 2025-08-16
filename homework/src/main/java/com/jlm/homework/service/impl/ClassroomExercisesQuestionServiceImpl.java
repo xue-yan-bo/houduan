@@ -5,8 +5,8 @@ import com.jlm.homework.entity.ClassroomExercisesQuestion;
 import com.jlm.homework.entity.ClassroomExercisesStudentAnswer;
 import com.jlm.homework.entity.QuestionBank;
 import com.jlm.homework.repository.ClassroomExercisesQuestionRepository;
+import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.service.IClassroomExercisesQuestionService;
-import com.jlm.homework.service.IClassroomExercisesStudentAnswerService;
 import com.jlm.homework.service.IQuestionBankService;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -30,6 +30,8 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
     private ClassroomExercisesQuestionRepository classroomExercisesQuestionRepository;
     @Autowired
     private IQuestionBankService questionBankService;
+    @Resource
+    private ClassroomExercisesStudentAnswerRepository classroomExercisesStudentAnswerRepository;
     @Override
     public void saveQuestionList(Long classroomExercisesId, List<ClassroomExercisesQuestion> questionList) {
         if(questionList==null||questionList.isEmpty()){

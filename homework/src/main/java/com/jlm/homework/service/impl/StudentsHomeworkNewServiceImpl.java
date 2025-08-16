@@ -39,8 +39,6 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private ExerciseBookServer exerciseBookServer;
     @Autowired
     private UserService userService;
-    @Autowired
-    private JdbcAccessor jdbcAccessor;
 
     @Override
     public void createStudentsHomeworkByHomeworkPublish(HomeworkPublish homeworkPublish) {
@@ -256,7 +254,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }
                     Predicate condition1 = null;
                     if(classId!=null){
-                        condition1 =criteriaBuilder.like(root.get("classId"), "%"+classId+"%");
+                        condition1 =criteriaBuilder.like(root.get("classIds"), "%"+classId+"%");
                     }else {
                         condition1 = criteriaBuilder.conjunction();
                     }
@@ -271,7 +269,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         calendar.setTime(start);
 
                         Date end = sdf.parse(endDate);
-                        condition2 = criteriaBuilder.between(root.get("publishTime"),start,end);
+                        condition2 = criteriaBuilder.between(root.<Date>get("publishTime"),start,end);
                     }else {
                         condition2 = criteriaBuilder.conjunction();
                     }
@@ -361,19 +359,18 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
             @Override
             public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list =  new ArrayList<>();
 
-                Predicate condition1 = null;
                 if(StringUtils.isNotEmpty(subject)){
-                    condition1 = criteriaBuilder.equal(root.get("subject"), subject);
-                }else {
-                    condition1 = criteriaBuilder.conjunction();
+                    Predicate condition1 = criteriaBuilder.equal(root.get("subject"), subject);
+                    list.add(condition1);
                 }
-                Predicate condition2 = null;
+
                 if(classId!=null){
-                    condition2 = criteriaBuilder.equal(root.get("classesId"), classId);
-                }else {
-                    condition2 = criteriaBuilder.conjunction();
+                    Predicate condition2 = criteriaBuilder.equal(root.get("classesId"), classId);
+                    list.add(condition2);
                 }
+
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                 Calendar calendar = Calendar.getInstance();
 
@@ -382,25 +379,23 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
                         Date startDate1 = sdf.parse(startDate);
                         Date endDate1 = sdf.parse(endDate);
-                        condition3 = criteriaBuilder.between(root.get("createTime").as(Date.class),startDate1,endDate1);
-
-                    }else {
-                        condition3 = criteriaBuilder.conjunction();
+                        condition3 = criteriaBuilder.between(root.<Date>get("createTime"),startDate1,endDate1);
+                        list.add(condition3);
                     }
 
 
-                    query.where(condition1,condition2,condition3);
+
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
 
-
-                return null;
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
             }
 
 
         };
-        List<StudentsHomeworkNew> studentsHomeworkNewList=studentsHomeworkNewRepository.findAll();
+        List<StudentsHomeworkNew> studentsHomeworkNewList=studentsHomeworkNewRepository.findAll(specification);
 
         //班级平均正确率统计
         Map<String,Double> averageAccuracyMap =new  HashMap<>();
@@ -487,5 +482,147 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Override
     public StudentsHomeworkNew getById(Long id) {
         return studentsHomeworkNewRepository.findById(id).get();
+    }
+
+    @Override
+    public List<StudentChapterAccuracy> studentChapterStatistics(String subject, Long classId, String chapter) {
+        StudentsHomeworkNew homework= new StudentsHomeworkNew();
+        if(StringUtils.isNotEmpty(subject)){
+            homework.setSubject(subject);
+        }
+        if(StringUtils.isNotEmpty(chapter)){
+            homework.setChapter(chapter);
+        }
+        if(classId!=null){
+            homework.setClassesId(classId);
+        }
+
+
+        List<StudentChapterAccuracy>  studentChapterAccuracyList = new ArrayList<>();
+        List<StudentsHomeworkNew> homeworkNewList =studentsHomeworkNewRepository.findAll(Example.of(homework));
+        if(homeworkNewList==null||homeworkNewList.isEmpty()){
+            return  studentChapterAccuracyList;
+        }
+
+        Map<String,Double> studentAverageAccuracyMap =new  HashMap<>();
+        Map<String,Integer> studentNumMap1 =new HashMap<>();
+        Map<Long,String> classMap =new  HashMap<>();
+        Map<Long,String> studentMap =new  HashMap<>();
+        for(StudentsHomeworkNew studentsHomework:homeworkNewList){
+            String key = studentsHomework.getStudentId()+":"+studentsHomework.getChapter()+":"+studentsHomework.getClassesId();
+            if(studentAverageAccuracyMap.containsKey(key)&&studentsHomework.getAccuracy()!=null){
+                studentAverageAccuracyMap.put(key,studentAverageAccuracyMap.get(key)+studentsHomework.getAccuracy());
+            }else if(studentAverageAccuracyMap.containsKey(key)&&studentsHomework.getAccuracy()==null){
+
+            }else if(studentsHomework.getAccuracy()!=null){
+                studentAverageAccuracyMap.put(key,studentsHomework.getAccuracy());
+
+            }else {
+                studentAverageAccuracyMap.put(key,0.0d);
+            }
+            if (studentNumMap1.containsKey(key)) {
+                studentNumMap1.put(key,studentNumMap1.get(key)+1);
+            }else {
+                studentNumMap1.put(key,1);
+            }
+            classMap.put(studentsHomework.getClassesId(),studentsHomework.getClassesName());
+            studentMap.put(studentsHomework.getStudentId(),studentsHomework.getStudentName());
+        }
+        for(String key:studentAverageAccuracyMap.keySet()){
+            StudentChapterAccuracy studentChapterAccuracy = new StudentChapterAccuracy();
+            Long studentId = Long.parseLong(key.split(":")[0]);
+            String chapterStr = key.split(":")[1];
+            Long classIds = Long.parseLong(key.split(":")[2]);
+            studentChapterAccuracy.setStudentId(studentId);
+            studentChapterAccuracy.setStudentName(studentMap.get(studentId));
+            studentChapterAccuracy.setChapter(chapterStr);
+            studentChapterAccuracy.setClassId(classIds);
+            studentChapterAccuracy.setClassName(classMap.get(classIds));
+            Double averageAccuracy = studentAverageAccuracyMap.get(key)/studentNumMap1.get(key);
+            studentChapterAccuracy.setAccuracy(averageAccuracy);
+            studentChapterAccuracyList.add(studentChapterAccuracy);
+        }
+        return studentChapterAccuracyList;
+    }
+
+    @Override
+    public List<ChapterKnowledgeAccuracy> chapterKnowledgeAccuracy(String subject, Long classId, String startDate, String endDate) {
+        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
+
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list =  new ArrayList<>();
+
+                if(StringUtils.isNotEmpty(subject)){
+                    Predicate condition1 = criteriaBuilder.equal(root.get("subject"), subject);
+                    list.add(condition1);
+                }
+
+                if(classId!=null){
+                    Predicate condition2 = criteriaBuilder.equal(root.get("classesId"), classId);
+                    list.add(condition2);
+                }
+
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                Calendar calendar = Calendar.getInstance();
+
+                try {
+                    Predicate condition3 = null;
+                    if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
+                        Date startDate1 = sdf.parse(startDate);
+                        Date endDate1 = sdf.parse(endDate);
+                        condition3 = criteriaBuilder.between(root.<Date>get("createTime"),startDate1,endDate1);
+                        list.add(condition3);
+                    }
+
+
+
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+
+
+        };
+        List<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(specification);
+        List<ChapterKnowledgeAccuracy> chapterKnowledgeAccuracyList=new ArrayList<>();
+        if(studentsHomeworkList==null||studentsHomeworkList.isEmpty()){
+            return  chapterKnowledgeAccuracyList;
+        }
+        Map<String,Double> accuracyMap=new HashMap<>();
+        Map<String,Integer> studentNumMap=new HashMap<>();
+
+        for(StudentsHomeworkNew studentsHomework:studentsHomeworkList){
+            String key = studentsHomework.getChapter()+":"+studentsHomework.getKnowledgePoint();
+            if(accuracyMap.containsKey(key)&&studentsHomework.getAccuracy()!=null){
+                accuracyMap.put(key,accuracyMap.get(key)+studentsHomework.getAccuracy());
+            }else if(accuracyMap.containsKey(key)&&studentsHomework.getAccuracy()==null){
+
+            }else if(studentsHomework.getAccuracy()!=null){
+                accuracyMap.put(key,studentsHomework.getAccuracy());
+            }
+            else{
+                accuracyMap.put(key,0.0d);
+            }
+            if(studentNumMap.containsKey(key)){
+                studentNumMap.put(key,studentNumMap.get(key)+1);
+            }else {
+                studentNumMap.put(key,1);
+            }
+        }
+        for(String key:studentNumMap.keySet()){
+            String chapterStr = key.split(":")[0];
+            String knowledgePointStr = key.split(":")[1];
+            Double accuracy = accuracyMap.get(key)/studentNumMap.get(key);
+            ChapterKnowledgeAccuracy  chapterKnowledgeAccuracy = new ChapterKnowledgeAccuracy();
+            chapterKnowledgeAccuracy.setChapter(chapterStr);
+            chapterKnowledgeAccuracy.setKnowledgePoint(knowledgePointStr);
+            chapterKnowledgeAccuracy.setAccuracy(accuracy);
+            chapterKnowledgeAccuracyList.add(chapterKnowledgeAccuracy);
+        }
+        return chapterKnowledgeAccuracyList;
     }
 }

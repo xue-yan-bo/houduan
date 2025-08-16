@@ -1,5 +1,6 @@
 package com.jlm.homework.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -18,30 +19,47 @@ public class ClassroomExercisesStudentRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     /**
-     * 学生UUid
+     * 学生Id
      */
     @Column(name = "student_id")
-    private String studentId;
+    private Long studentId;
     /**
      * 学生姓名
      */
     @Column(name = "student_name")
     private String studentName;
+
+    /**
+     * 学生头像
+     */
+    @Column(name = "student_image")
+    private String studentImage;
     /**
      * 随堂练习id
      */
     @Column(name = "classroom_exercises_id")
     private Long classroomExercisesId;
-
+    /**
+     * 班级ID
+     */
+    @Column(name = "class_id")
+    private Long classId;
+    /**
+     * 班级名称
+     */
+    @Column(name = "class_name")
+    private String className;
     /**
      * 开始答题时间
      */
     @Column(name = "start_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date startTime;
     /**
      * 结束答题时间
      */
     @Column(name = "end_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date endTime;
     /**
      * 开始标记，0未开始、1已开始
@@ -54,8 +72,20 @@ public class ClassroomExercisesStudentRecord {
     @Column(name = "end_flag")
     private Integer endFlag;
     /**
+     * 做题时长，毫秒数
+     */
+    @Column(name = "answer_duration")
+    private Long answerDuration;
+    /**
      * 正确率
      */
     @Column(name = "accuracy")
     private Double accuracy;
+
+    /**
+     * 创建时间
+     */
+    @Column(name = "create_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date createTime;
 }

@@ -3,11 +3,10 @@ package com.jlm.homework.service.impl;
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
 import com.jlm.homework.feign.StudentFeginClient;
+import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.service.IClassroomExercisesService;
 import com.jlm.homework.service.IClassroomExercisesStudentAnswerService;
-import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
-import com.jlm.homework.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -19,6 +18,7 @@ import org.springframework.data.domain.Example;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -28,12 +28,12 @@ import java.util.*;
 public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExercisesStudentAnswerService {
     @Resource
     private ClassroomExercisesStudentAnswerRepository classroomExercisesStudentAnswerRepository;
+
     @Autowired
-    private IClassroomExercisesService classroomExercisesService;
+    private ClassroomExercisesRepository classroomExercisesRepository;
     @Autowired
     private StudentFeginClient studentFeginClient;
-    @Autowired
-    private UserService userService;
+
 
     @Override
     public ClassroomExercisesStudentAnswer save(ClassroomExercisesStudentAnswer studentAnswer) {
@@ -55,7 +55,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
     @Override
     public ClassroomExercisesStudentStatistics statisticsByClassroomExercisesId(Long classroomExercisesId) {
         ClassroomExercisesStudentStatistics statistics = new ClassroomExercisesStudentStatistics();
-        ClassroomExercises classroomExercises=classroomExercisesService.getById(classroomExercisesId);
+        ClassroomExercises classroomExercises=classroomExercisesRepository.getById(classroomExercisesId);
         List<ClassroomExercisesStudentAnswer> studentAnswerList = this.findByClassroomExercisesId(classroomExercisesId);
         Integer studentTotal = 0;
         List<Long> classIds=classroomExercises.getClassIds();
@@ -284,6 +284,21 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                 }
                 query.where(condition2,condition3);
                 return null;
+            }
+        };
+        return classroomExercisesStudentAnswerRepository.findAll(specification);
+    }
+
+    @Override
+    public List<ClassroomExercisesStudentAnswer> findByQuestionIdList(List<Long> typeQuestionIdList) {
+        Specification<ClassroomExercisesStudentAnswer> specification = new Specification<ClassroomExercisesStudentAnswer>() {
+
+            @Override
+            public Predicate toPredicate(Root<ClassroomExercisesStudentAnswer> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                list.add(criteriaBuilder.in(root.get("exerciseQuestionId")).value(typeQuestionIdList));
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
             }
         };
         return classroomExercisesStudentAnswerRepository.findAll(specification);

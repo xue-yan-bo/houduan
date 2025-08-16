@@ -2,6 +2,7 @@ package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.HomeworkPublishRequest;
 import com.jlm.homework.entity.ClassroomExercises;
+import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.service.IClassroomExercisesService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -78,5 +79,14 @@ public class ClassroomExercisesController {
     public void deleteById(@PathVariable Long id) {
         classroomExercisesService.deleteById(id);
 
+    }
+
+    /**
+     * 老师点击开始答题按钮
+     */
+    @GetMapping("/teacher-startAnswer")
+    @Operation(summary = "老师点击开始答题按钮")
+    public void teacherStartAnswer(Long classroomExercisesId,Long classId) throws Throwable {
+        classroomExercisesService.teacherStartAnswer(classroomExercisesId,classId);
     }
 }

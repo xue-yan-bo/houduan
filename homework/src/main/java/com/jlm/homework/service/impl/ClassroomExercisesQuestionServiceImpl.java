@@ -30,8 +30,6 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
     private ClassroomExercisesQuestionRepository classroomExercisesQuestionRepository;
     @Autowired
     private IQuestionBankService questionBankService;
-    @Autowired
-    private IClassroomExercisesStudentAnswerService classroomExercisesStudentAnswerService;
     @Override
     public void saveQuestionList(Long classroomExercisesId, List<ClassroomExercisesQuestion> questionList) {
         if(questionList==null||questionList.isEmpty()){
@@ -107,7 +105,7 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
                 }
                 Predicate condition2 = null;
                 if(classId!=null){
-                    condition2 = criteriaBuilder.like(root.get("classIds"),"%"+classId+"%");
+                    condition2 = criteriaBuilder.like(root.get("classIds").as(String.class),"%"+classId+"%");
                 }else {
                     condition2 = criteriaBuilder.conjunction();
                 }
@@ -213,8 +211,7 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
     }
 
     @Override
-    public ExerciseTypeAnalyse exerciseTypeAnalyse(Long classId, String startDate, String endDate) {
-        ExerciseTypeAnalyse exerciseTypeAnalyse =  new ExerciseTypeAnalyse();
+    public List<ClassroomExercisesQuestion> findQuestionList(Long classId, String startDate, String endDate) {
         Specification<ClassroomExercisesQuestion> specification = new Specification<ClassroomExercisesQuestion>() {
 
             @Override
@@ -222,7 +219,7 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
 
                 Predicate condition2 = null;
                 if(classId!=null){
-                    condition2 = criteriaBuilder.like(root.get("classIds"),"%"+classId+"%");
+                    condition2 = criteriaBuilder.like(root.get("classIds").as(String.class),"%"+classId+"%");
                 }else {
                     condition2 = criteriaBuilder.conjunction();
                 }
@@ -245,54 +242,9 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
             }
         };
         List<ClassroomExercisesQuestion> questionList=classroomExercisesQuestionRepository.findAll(specification);
-        Map<String,Integer> exerciseTypeMap = new HashMap<>();
-        Map<String,Integer> dayExerciseTypeMap = new HashMap<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-        Map<String,String> questionIdMap = new HashMap<>();
-        for(ClassroomExercisesQuestion question:questionList){
-            if (exerciseTypeMap.containsKey(question.getQuestionType())){
-                exerciseTypeMap.put(question.getQuestionType(),exerciseTypeMap.get(question.getQuestionType())+1);
-            }else {
-                exerciseTypeMap.put(question.getQuestionType(),1);
-            }
-            if (questionIdMap.containsKey(question.getQuestionType())){
-                questionIdMap.put(question.getQuestionType(),questionIdMap.get(question.getQuestionType())+","+question.getId());
-            }else{
-                questionIdMap.put(question.getQuestionType(),""+question.getId());
-            }
-            String day = sdf.format(question.getCreateTime());
-            String key = question.getQuestionType()+":"+day;
-            if (dayExerciseTypeMap.containsKey(key)){
-                dayExerciseTypeMap.put(key,dayExerciseTypeMap.get(key)+1);
-            }else {
-                dayExerciseTypeMap.put(key,1);
-            }
-        }
-        exerciseTypeAnalyse.setExerciseTypeMap(exerciseTypeMap);
-        List<DayExerciseTypeNum> dayExerciseTypeNumList = new ArrayList<>();
-        for(String key:dayExerciseTypeMap.keySet()){
-            String exerciseType = key.split(":")[0];
-            String day = key.split(":")[1];
-            DayExerciseTypeNum dayExerciseTypeNum = new DayExerciseTypeNum();
-            dayExerciseTypeNum.setDay(day);
-            dayExerciseTypeNum.setExerciseType(exerciseType);
-            dayExerciseTypeNum.setNum(dayExerciseTypeMap.get(key));
-            dayExerciseTypeNumList.add(dayExerciseTypeNum);
-        }
-        exerciseTypeAnalyse.setDayExerciseTypeNumList(dayExerciseTypeNumList);
-        List<ClassroomExercisesStudentAnswer> studentAnswerList =classroomExercisesStudentAnswerService.findByClassAndDate(classId,startDate,endDate);
-        Map<String,Integer> studentAnswerMap = new HashMap<>();
-        for (ClassroomExercisesStudentAnswer studentAnswer : studentAnswerList) {
-            String key = studentAnswer.getStudentId()+":"+studentAnswer.getExerciseQuestionId();
-            if(studentAnswerMap.containsKey(key)) {
+        return questionList;
 
-            }
-        }
-        Map<String,Integer> studentAnswerTypeMap = new HashMap<>();
-        for (String type:questionIdMap.keySet()) {
-            List<Long> typeQuestionIdList = Arrays.stream(questionIdMap.get(type).split(",")).map(Long::parseLong).collect(Collectors.toList());
-
-        }
-        return exerciseTypeAnalyse;
     }
+
+
 }

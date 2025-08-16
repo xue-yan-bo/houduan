@@ -6,4 +6,10 @@ import java.util.List;
 
 public interface IClassroomExercisesStudentRecordService {
     List<ClassroomExercisesStudentRecord> selectByClassroomExercisesId(Long classroomExercisesId);
+
+    ClassroomExercisesStudentRecord save(ClassroomExercisesStudentRecord studentRecord);
+
+    List<ClassroomExercisesStudentRecord> selectByClassroomExercisesIdAndClass(Long classroomExercisesId, Long classId);
+
+    void endAllAnswer(Long classroomExercisesId, Long classId);
 }

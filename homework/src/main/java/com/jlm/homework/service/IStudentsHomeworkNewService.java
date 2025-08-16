@@ -1,8 +1,6 @@
 package com.jlm.homework.service;
 
-import com.jlm.homework.dto.AccuracyDto;
-import com.jlm.homework.dto.AverageAccuracyDto;
-import com.jlm.homework.dto.StudentsHomeworkRequest;
+import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import org.springframework.data.domain.Page;
@@ -26,4 +24,8 @@ public interface IStudentsHomeworkNewService {
     AccuracyDto getAverageAccuracyStatistics(String subject, Long classId, String startDate, String endDate);
 
     StudentsHomeworkNew getById(Long id);
+
+    List<StudentChapterAccuracy> studentChapterStatistics(String subject, Long classId, String chapter);
+
+    List<ChapterKnowledgeAccuracy> chapterKnowledgeAccuracy(String subject, Long classId, String startDate, String endDate);
 }

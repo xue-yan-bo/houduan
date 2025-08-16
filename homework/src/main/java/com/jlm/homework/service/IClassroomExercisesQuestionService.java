@@ -19,5 +19,5 @@ public interface IClassroomExercisesQuestionService {
 
     TitleVolumeAnalyse titleVolumeAnalyse(String subject, Long classId, String startDate, String endDate);
 
-    ExerciseTypeAnalyse exerciseTypeAnalyse(Long classId, String startDate, String endDate);
+    List<ClassroomExercisesQuestion> findQuestionList(Long classId, String startDate, String endDate);
 }

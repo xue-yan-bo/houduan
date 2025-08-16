@@ -5,6 +5,7 @@ import com.jlm.homework.dto.TitleVolumeAnalyse;
 import com.jlm.homework.entity.ClassroomExercises;
 import com.jlm.homework.entity.ClassroomExercisesQuestion;
 import com.jlm.homework.service.IClassroomExercisesQuestionService;
+import com.jlm.homework.service.IClassroomExercisesService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,8 @@ import java.util.List;
 public class ClassroomExercisesQuestionController {
     @Autowired
     private IClassroomExercisesQuestionService classroomExercisesQuestionService;
+    @Autowired
+    private IClassroomExercisesService classroomExercisesService;
 
     /**
      * 组卷
@@ -65,6 +68,6 @@ public class ClassroomExercisesQuestionController {
     @GetMapping("/type-analyse")
     @Operation(summary = "练习类型分析" ,description = "课堂练习的练习类型分析")
     public ExerciseTypeAnalyse exerciseTypeAnalyse(Long classId, String startDate, String endDate) {
-        return  classroomExercisesQuestionService.exerciseTypeAnalyse(classId,startDate,endDate);
+        return  classroomExercisesService.exerciseTypeAnalyse(classId,startDate,endDate);
     }
 }

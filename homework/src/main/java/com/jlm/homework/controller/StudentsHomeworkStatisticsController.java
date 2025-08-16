@@ -1,7 +1,6 @@
 package com.jlm.homework.controller;
 
-import com.jlm.homework.dto.AccuracyDto;
-import com.jlm.homework.dto.AverageAccuracyDto;
+import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.entity.StudentsHomeworkStatistics;
 import com.jlm.homework.entity.WrongTitleBook;
@@ -66,4 +65,27 @@ public class StudentsHomeworkStatisticsController {
         studentsHomeworkNewList =studentsHomeworkNewService.getClassHomeworkStatistics(subject,classId,startDate,endDate);
         return studentsHomeworkNewList;
     }
+
+    /**
+     * 教材章节分析
+     * @param
+     * @return
+     */
+    @GetMapping("/homework-chapter-statistics")
+    public List<StudentChapterAccuracy> homeworkChapterStatistics(String subject, Long classId, String chapter) {
+        List<StudentChapterAccuracy> studentChapterAccuracyList = new ArrayList<>();
+        studentChapterAccuracyList=studentsHomeworkNewService.studentChapterStatistics(subject,classId,chapter);
+        return studentChapterAccuracyList;
+    }
+    /**
+     * 章节知识点掌握情况
+     * @param
+     * @return
+     */
+    @GetMapping("/chapter-knowledge-analyse")
+    public List<ChapterKnowledgeAccuracy> chapterKnowledgeAccuracy(String subject, Long classId, String startDate, String endDate){
+        List<ChapterKnowledgeAccuracy>  chapterKnowledgeAccuracyList = studentsHomeworkNewService.chapterKnowledgeAccuracy(subject,classId,startDate,endDate);
+        return  chapterKnowledgeAccuracyList;
+    }
+
 }

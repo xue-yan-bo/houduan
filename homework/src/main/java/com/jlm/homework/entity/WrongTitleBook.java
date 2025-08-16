@@ -26,6 +26,11 @@ public class WrongTitleBook implements Serializable {
     @Column(name = "homework_publish_id")
     private Long homeworkPublishId;
     /**
+     * 发布作业名称
+     */
+    @Column(name = "homework_publish_name")
+    private String homeworkPublishName;
+    /**
      * 题图片路径
      */
     @Column(name = "class_id")
@@ -70,4 +75,15 @@ public class WrongTitleBook implements Serializable {
      */
     @Column(name = "wrong_rate")
     private Double wrongRate;
+    /**
+     * 创建时间
+     */
+    @Column(name = "create_date")
+    private Double createDate;
+
+    /**
+     * 解析
+     */
+    @Column(name = "parse")
+    private String parse;
 }

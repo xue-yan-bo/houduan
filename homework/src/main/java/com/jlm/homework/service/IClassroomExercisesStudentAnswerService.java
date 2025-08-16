@@ -16,4 +16,6 @@ public interface IClassroomExercisesStudentAnswerService {
     KnowledgePointAnalysis getKnowledgePointAnalysis(String subject, Long classId, String startDate, String endDate);
 
     List<ClassroomExercisesStudentAnswer> findByClassAndDate(Long classId, String startDate, String endDate);
+
+    List<ClassroomExercisesStudentAnswer> findByQuestionIdList(List<Long> typeQuestionIdList);
 }

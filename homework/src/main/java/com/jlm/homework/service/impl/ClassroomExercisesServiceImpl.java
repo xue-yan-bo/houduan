@@ -171,13 +171,13 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
     }
 
     @Override
-    public void teacherStartAnswer(Long classroomExercisesId, Long classId) {
+    public void teacherStartAnswer(Long classroomExercisesId, Long classId ,Long schoolId) {
         ClassroomExercises classroomExercises = new ClassroomExercises();
-        Long schoolId = null;
-        if(classroomExercisesId==0){//老师黑板现场出题
+
+        if(classroomExercisesId==0&&schoolId==null){//老师黑板现场出题
             schoolId = userService.getCurrentSchoolIdSafely();
 
-        }else{
+        }else if(classroomExercisesId!=0&&schoolId==null){
             classroomExercises=classroomExercisesRepository.findById(classroomExercisesId).get();
             schoolId =  classroomExercises.getSchoolId();
         }

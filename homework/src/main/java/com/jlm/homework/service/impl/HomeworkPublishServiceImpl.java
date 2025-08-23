@@ -78,6 +78,18 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             };
             timer.schedule(task,homeworkPublish.getPublishTime());
         }
+        if(homeworkPublish.getDeadline()!=null){
+            Timer timer = new Timer();
+            TimerTask task1 = new TimerTask() {
+                @Override
+                public void run() {
+                    studentsHomeworkNewService.endStudentsHomework(homeworkPublish);
+                    homeworkPublish.setPublishStatus(2);
+                    homeworkPublishRepository.save(homeworkPublish);
+                }
+            };
+            timer.schedule(task1,homeworkPublish.getPublishTime());
+        }
         return homeworkPublish.getId().toString();
     }
 
@@ -117,6 +129,18 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 };
                 timer.schedule(task,homeworkPublish.getPublishTime());
             }
+        }
+        if(homeworkPublish.getDeadline()!=null){
+            Timer timer = new Timer();
+            TimerTask task1 = new TimerTask() {
+                @Override
+                public void run() {
+                    studentsHomeworkNewService.endStudentsHomework(homeworkPublish);
+                    homeworkPublish.setPublishStatus(2);
+                    homeworkPublishRepository.save(homeworkPublish);
+                }
+            };
+            timer.schedule(task1,homeworkPublish.getPublishTime());
         }
         String subject = null;
         if(homeworkPublish.getExerciseBookId() != null){

@@ -28,4 +28,6 @@ public interface IStudentsHomeworkNewService {
     List<StudentChapterAccuracy> studentChapterStatistics(String subject, Long classId, String chapter);
 
     List<ChapterKnowledgeAccuracy> chapterKnowledgeAccuracy(String subject, Long classId, String startDate, String endDate);
+
+    void endStudentsHomework(HomeworkPublish homeworkPublish);
 }

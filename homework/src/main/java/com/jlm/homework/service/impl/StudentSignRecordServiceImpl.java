@@ -1,12 +1,16 @@
 package com.jlm.homework.service.impl;
 
+import com.alibaba.fastjson.JSONObject;
 import com.jlm.homework.entity.StudentSignRecord;
 import com.jlm.homework.entity.TeacherAttendanceRecord;
 import com.jlm.homework.repository.StudentSignRecordRepository;
 import com.jlm.homework.repository.TeacherAttendanceRecordRepository;
 import com.jlm.homework.service.IStudentSignRecordService;
+import com.jlm.homework.util.SseManagerUtil;
 import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Date;
 
@@ -16,6 +20,8 @@ public class StudentSignRecordServiceImpl  implements IStudentSignRecordService 
     private StudentSignRecordRepository studentSignRecordRepository;
     @Resource
     private TeacherAttendanceRecordRepository teacherAttendanceRecordRepository;
+    @Resource
+    private SseManagerUtil sseManagerUtil;
     @Override
     public StudentSignRecord sign(StudentSignRecord studentSignRecord) {
         Date now = new Date();
@@ -32,6 +38,7 @@ public class StudentSignRecordServiceImpl  implements IStudentSignRecordService 
         attendanceRecord.setUnsignNum(unsignNum);
         studentSignRecord =studentSignRecordRepository.save(studentSignRecord);
         teacherAttendanceRecordRepository.save(attendanceRecord);
+        sseManagerUtil.sendMsgToClient("qiandao"+studentSignRecord.getAttendanceRecordId(), studentSignRecord.getStudentId().toString());
         return studentSignRecord;
     }
 }

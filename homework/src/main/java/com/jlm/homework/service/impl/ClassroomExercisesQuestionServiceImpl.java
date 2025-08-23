@@ -158,9 +158,7 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
                 }else {
                     knowledgeMap.put(knowledgeKey,1);
                 }
-            }else{
-
-
+            }else if(classIds!=null&&classIds.size()>0){
                 for(Long classId1 : classIds){
                     classMap.put(classId1,classNames.get(classIds.indexOf(classId1)));
                     String key = exercisesQuestion.getSubject()+":"+day+":"+classId1;

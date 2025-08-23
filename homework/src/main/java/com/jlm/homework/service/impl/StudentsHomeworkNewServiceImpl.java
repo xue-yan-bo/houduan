@@ -318,6 +318,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }else {
                         condition2 = criteriaBuilder.conjunction();
                     }
+                    Predicate condition4 = null;
+                    if(studentsHomework.getStudentId()!=null){
+                        condition4 = criteriaBuilder.equal(root.get("studentId"), studentsHomework.getStudentId());
+                    }else {
+                        condition4 = criteriaBuilder.conjunction();
+                    }
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                     Calendar calendar = Calendar.getInstance();
 
@@ -335,7 +341,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         }
 
 
-                        query.where(condition0,condition1,condition2,condition3);
+                        query.where(condition0,condition1,condition2,condition3,condition4);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -624,5 +630,18 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             chapterKnowledgeAccuracyList.add(chapterKnowledgeAccuracy);
         }
         return chapterKnowledgeAccuracyList;
+    }
+
+    @Override
+    public void endStudentsHomework(HomeworkPublish homeworkPublish) {
+        List<StudentsHomeworkNew> studentsHomeworkList = this.getByHomeworkPublishId(homeworkPublish.getId(),new StudentsHomeworkRequest());
+        if(studentsHomeworkList==null||studentsHomeworkList.isEmpty()){
+            return;
+        }
+        for(StudentsHomeworkNew studentsHomework:studentsHomeworkList){
+            studentsHomework.setDeadline(new Date());
+            studentsHomework.setSubmitStatus(2);
+            studentsHomeworkNewRepository.save(studentsHomework);
+        }
     }
 }

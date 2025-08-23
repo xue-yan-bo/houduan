@@ -19,5 +19,5 @@ public interface IClassroomExercisesService {
 
     ExerciseTypeAnalyse exerciseTypeAnalyse(Long classId, String startDate, String endDate);
 
-    void teacherStartAnswer(Long classroomExercisesId, Long classId);
+    void teacherStartAnswer(Long classroomExercisesId, Long classId,Long schoolId);
 }

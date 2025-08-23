@@ -86,7 +86,7 @@ public class ClassroomExercisesController {
      */
     @GetMapping("/teacher-startAnswer")
     @Operation(summary = "老师点击开始答题按钮")
-    public void teacherStartAnswer(Long classroomExercisesId,Long classId) throws Throwable {
-        classroomExercisesService.teacherStartAnswer(classroomExercisesId,classId);
+    public void teacherStartAnswer(Long classroomExercisesId,Long classId,Long schoolId) throws Throwable {
+        classroomExercisesService.teacherStartAnswer(classroomExercisesId,classId,schoolId);
     }
 }

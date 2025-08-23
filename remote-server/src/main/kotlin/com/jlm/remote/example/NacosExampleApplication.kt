@@ -52,7 +52,7 @@ fun main(args: Array<String>) {
     val nacosRemoteService = context.getBean(NacosRemoteService::class.java)
     
     runBlocking {
-        println("\n=== 额外的演示代码 ===")
+        println("\n== 额外的演示代码 ==")
         
         // 演示服务发现
         val services = listOf("user-service", "order-service", "product-service")

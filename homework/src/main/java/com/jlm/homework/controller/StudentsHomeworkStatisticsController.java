@@ -3,10 +3,11 @@ package com.jlm.homework.controller;
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.entity.StudentsHomeworkStatistics;
-import com.jlm.homework.entity.WrongTitleBook;
+import com.jlm.homework.entity.WrongTitleStatistics;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.service.IStudentsHomeworkStatisticsService;
-import com.jlm.homework.service.IWrongTitleBookService;
+import com.jlm.homework.service.IWrongTitleStatisticsService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +27,7 @@ public class StudentsHomeworkStatisticsController {
     @Autowired
     private IStudentsHomeworkStatisticsService studentsHomeworkStatisticsService;
     @Autowired
-    private IWrongTitleBookService wrongTitleBookService;
+    private IWrongTitleStatisticsService wrongTitleStatisticsService;
     @Autowired
     private IStudentsHomeworkNewService studentsHomeworkNewService;
 
@@ -39,8 +40,8 @@ public class StudentsHomeworkStatisticsController {
     @GetMapping("/correct-homework-statistics/{homeworkPublishId}")
     public StudentsHomeworkStatistics getStudentsHomeworkStatistics(@PathVariable Long homeworkPublishId,Long classId){
         StudentsHomeworkStatistics studentsHomeworkStatistics= studentsHomeworkStatisticsService.getStudentsHomeworkStatistics(homeworkPublishId,classId);
-        List<WrongTitleBook> wrongTitleBooks =  wrongTitleBookService.getWrongTitleBooks(homeworkPublishId,classId);
-        studentsHomeworkStatistics.setWrongTitleBooks(wrongTitleBooks);
+        List<WrongTitleStatistics> wrongTitleStatisticses =  wrongTitleStatisticsService.getWrongTitleStatisticses(homeworkPublishId,classId);
+        studentsHomeworkStatistics.setWrongTitleStatisticses(wrongTitleStatisticses);
         return studentsHomeworkStatistics;
     }
 
@@ -86,6 +87,25 @@ public class StudentsHomeworkStatisticsController {
     public List<ChapterKnowledgeAccuracy> chapterKnowledgeAccuracy(String subject, Long classId, String startDate, String endDate){
         List<ChapterKnowledgeAccuracy>  chapterKnowledgeAccuracyList = studentsHomeworkNewService.chapterKnowledgeAccuracy(subject,classId,startDate,endDate);
         return  chapterKnowledgeAccuracyList;
+    }
+    /**
+     * 学生家长可以查看单次作业的分析结果
+     * @param
+     * @return
+     */
+    @GetMapping("/student-wrongTitle-analyse")
+    @Operation(summary = "学生家长可以查看单次作业的分析结果")
+    public StudentsWrongTitleAnalyse studentsWrongTitleAnalyse(Long homeworkPublishId,Long classId,Long studentId){
+        StudentsWrongTitleAnalyse  studentsWrongTitleAnalyse = new StudentsWrongTitleAnalyse();
+        StudentsHomeworkStatistics studentsHomeworkStatistics= studentsHomeworkStatisticsService.getStudentsHomeworkStatistics(homeworkPublishId,classId);
+        studentsWrongTitleAnalyse.setTitleTotal(studentsHomeworkStatistics.getTitleTotal());
+        studentsWrongTitleAnalyse.setWrongTitleNum(studentsHomeworkStatistics.getWrongTitleNum());
+        studentsWrongTitleAnalyse.setAverageCorrectness(studentsHomeworkStatistics.getAverageCorrectness());
+        studentsWrongTitleAnalyse.setMaxCorrectness(studentsHomeworkStatistics.getMaxCorrectness());
+        studentsWrongTitleAnalyse.setMinCorrectness(studentsHomeworkStatistics.getMinCorrectness());
+        List<WrongTitleStatistics> wrongTitleBooks =  wrongTitleStatisticsService.getWrongTitleStatisticses(homeworkPublishId,classId);
+        studentsWrongTitleAnalyse.setWrongTitleBooks(wrongTitleBooks);
+        return studentsWrongTitleAnalyse;
     }
 
 }

@@ -70,7 +70,7 @@ class RemoteServiceExample(
      */
     fun nacosExample() = runBlocking {
         nacosRemoteService?.let { service ->
-            println("=== Nacos服务调用示例 ===")
+            println("== Nacos服务调用示例 ==")
 
             try {
                 // 检查服务可用性
@@ -100,7 +100,7 @@ class RemoteServiceExample(
      * 综合使用示例
      */
     fun combinedExample() = runBlocking {
-        println("=== Remote Server 功能演示 ===")
+        println("== Remote Server 功能演示 ==")
 
         try {
             httpExample()

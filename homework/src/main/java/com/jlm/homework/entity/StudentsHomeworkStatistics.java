@@ -118,5 +118,5 @@ public class StudentsHomeworkStatistics implements Serializable {
      * 错题本
      */
     @Transient
-    private List<WrongTitleBook>  wrongTitleBooks;
+    private List<WrongTitleStatistics>  wrongTitleStatisticses;
 }

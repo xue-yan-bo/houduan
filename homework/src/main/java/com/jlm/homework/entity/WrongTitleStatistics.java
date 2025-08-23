@@ -10,8 +10,8 @@ import java.io.Serializable;
  */
 @Data
 @Entity
-@Table(name = "wrong_title_book")
-public class WrongTitleBook implements Serializable {
+@Table(name = "wrong_title_statistics")
+public class WrongTitleStatistics implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

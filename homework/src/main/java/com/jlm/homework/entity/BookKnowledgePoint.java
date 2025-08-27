@@ -21,9 +21,6 @@ public class BookKnowledgePoint {
     private Long exerciseBookChapterId;
     @Column(name = "knowledge_point")
     private String knowledgePoint;
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "image_urls", columnDefinition = "JSON")
-    private List<String> imageUrls;
-    @Transient
-    private List<ExerciseBookQuestion> questionList;
+
+
 }

@@ -31,28 +31,29 @@ public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterServi
         chapter.setExerciseBookId(list.get(0).getExerciseBookId());
         exerciseBookChapterRepository.delete(chapter);
         for (ExerciseBookChapter exerciseBookChapter : list) {
-
-            exerciseBookChapter =exerciseBookChapterRepository.save(exerciseBookChapter);
+            List<ExerciseBookQuestion> questionList =exerciseBookChapter.getQuestionList();
             List<BookKnowledgePoint> knowledgePointList=exerciseBookChapter.getKnowledgePointList();
+            exerciseBookChapter =exerciseBookChapterRepository.save(exerciseBookChapter);
             BookKnowledgePoint point=new BookKnowledgePoint();
             point.setExerciseBookChapterId(exerciseBookChapter.getId());
+            String knowledgePoints = "";
             bookKnowledgePointRepository.delete(point);
             for (BookKnowledgePoint bookKnowledgePoint : knowledgePointList) {
                 bookKnowledgePoint.setExerciseBookChapterId(exerciseBookChapter.getId());
                 bookKnowledgePoint.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
                 bookKnowledgePoint =bookKnowledgePointRepository.save(bookKnowledgePoint);
-                ExerciseBookQuestion question=new ExerciseBookQuestion();
-                question.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
-                question.setExerciseBookChapterId(exerciseBookChapter.getId());
-                exerciseBookQuestionRepository.delete(question);
-                List<ExerciseBookQuestion> questionList =bookKnowledgePoint.getQuestionList();
-                for (ExerciseBookQuestion exerciseBookQuestion : questionList) {
-                    exerciseBookQuestion.setExerciseBookChapterId(exerciseBookChapter.getId());
-                    exerciseBookQuestion.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
-                    exerciseBookQuestion.setBookKnowledgePointId(bookKnowledgePoint.getId());
-                    exerciseBookQuestion.setKnowledgePoint(bookKnowledgePoint.getKnowledgePoint());
-                    exerciseBookQuestionRepository.save(exerciseBookQuestion);
-                }
+                knowledgePoints = bookKnowledgePoint.getKnowledgePoint()+",";
+            }
+            ExerciseBookQuestion question=new ExerciseBookQuestion();
+            question.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
+            question.setExerciseBookChapterId(exerciseBookChapter.getId());
+            exerciseBookQuestionRepository.delete(question);
+            for (ExerciseBookQuestion exerciseBookQuestion : questionList) {
+                exerciseBookQuestion.setExerciseBookChapterId(exerciseBookChapter.getId());
+                exerciseBookQuestion.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
+                exerciseBookQuestion.setKnowledgePoint(knowledgePoints);
+                exerciseBookQuestion.setKnowledgePoint(exerciseBookChapter.getKnowledgePointList().toString());
+                exerciseBookQuestionRepository.save(exerciseBookQuestion);
             }
         }
     }
@@ -67,15 +68,14 @@ public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterServi
             point.setExerciseBookChapterId(exerciseBookChapter.getId());
             point.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
             List<BookKnowledgePoint> pointList = bookKnowledgePointRepository.findAll(Example.of(point));
-            for (BookKnowledgePoint bookKnowledgePoint : pointList) {
-                ExerciseBookQuestion question = new ExerciseBookQuestion();
-                question.setBookKnowledgePointId(bookKnowledgePoint.getId());
-                question.setExerciseBookChapterId(exerciseBookChapter.getId());
-                question.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
-                List<ExerciseBookQuestion> questionList=exerciseBookQuestionRepository.findAll(Example.of(question));
-                bookKnowledgePoint.setQuestionList(questionList);
-            }
             exerciseBookChapter.setKnowledgePointList(pointList);
+
+            ExerciseBookQuestion question = new ExerciseBookQuestion();
+            question.setExerciseBookChapterId(exerciseBookChapter.getId());
+            question.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
+            List<ExerciseBookQuestion> questionList=exerciseBookQuestionRepository.findAll(Example.of(question));
+            exerciseBookChapter.setQuestionList(questionList);
+
         }
         return chapterList;
     }

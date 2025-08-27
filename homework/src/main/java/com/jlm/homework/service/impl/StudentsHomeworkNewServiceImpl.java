@@ -55,7 +55,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 }
                 try {
                     Long schoolId=homeworkPublish.getSchoolId();
-                    Result<Student> result = studentFeginClient.getStudentList(1,100,schoolId,classId,0);
+                    Result<Student> result = studentFeginClient.getStudentList(1,100,schoolId,null,classId,"0");
                     if(result.getCode()!=200){
                         throw new RuntimeException(result.getMsg());
                     }
@@ -75,6 +75,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         studentsHomework.setSubmitStatus(0);
                         studentsHomework.setAuditStatus("0");
                         studentsHomework.setSubject(subject);
+                        studentsHomework.setTopicImagesStr(homeworkPublish.getTopicImagesStr());
                         studentsHomework.setDeadline(homeworkPublish.getDeadline());
                         studentsHomeworkNewRepository.save(studentsHomework);
                     }

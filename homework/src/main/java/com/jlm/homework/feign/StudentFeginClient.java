@@ -21,6 +21,7 @@ public interface StudentFeginClient {
                 @RequestParam("pageNum") Integer pageNum,
                 @RequestParam("pageSize") Integer pageSize,
                 @RequestParam("schoolId") Long schoolId,
+                @RequestParam("gradeId") Long gradeId,
                 @RequestParam("classesId") Long classesId,
-                @RequestParam("studentStatus") Integer studentStatus);
+                @RequestParam("studentStatus") String studentStatus);
 }

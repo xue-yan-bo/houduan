@@ -32,11 +32,6 @@ public class ExerciseBookQuestion implements Serializable {
     private Long exerciseBookChapterId;
 
     /**
-     * 知识点ID
-     */
-    @Column(name = "book_knowledge_point_id")
-    private Long bookKnowledgePointId;
-    /**
      * 知识点
      */
     @Column(name = "knowledge_point")

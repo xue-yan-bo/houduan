@@ -2,6 +2,10 @@
 server:
   port: ${SERVER_PORT:18080}
 
+# Socket服务配置
+socket:
+  server:
+    port: 6000
 # 开发环境数据库配置覆盖
 spring:
   datasource:

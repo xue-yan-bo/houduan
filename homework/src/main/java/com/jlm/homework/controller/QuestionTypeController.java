@@ -24,8 +24,8 @@ public class QuestionTypeController {
 
     @GetMapping("/{id}")
     public QuestionType getById(@PathVariable Long id) {
-        QuestionType homeworkPublish = questionTypeService.getById(id);
-        return homeworkPublish;
+        QuestionType questionType = questionTypeService.getById(id);
+        return questionType;
     }
 
     /**
@@ -41,7 +41,7 @@ public class QuestionTypeController {
 
     /**
      * 分页查询
-     * @param QuestionType
+     * @param questionType
      * @return
      */
     @GetMapping("/queryList")

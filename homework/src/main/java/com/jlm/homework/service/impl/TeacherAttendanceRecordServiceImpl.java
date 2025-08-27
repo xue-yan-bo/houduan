@@ -44,7 +44,7 @@ public class TeacherAttendanceRecordServiceImpl implements ITeacherAttendanceRec
             }
             Date now = new Date();
             record.setCreateTime(now);
-            Result<Student> result = studentFeginClient.getStudentList(1,200,schoolId,classId,0);
+            Result<Student> result = studentFeginClient.getStudentList(1,200,schoolId,null,classId,"0");
             if(result.getCode()!=200){
                 throw new RuntimeException(result.getMsg());
             }

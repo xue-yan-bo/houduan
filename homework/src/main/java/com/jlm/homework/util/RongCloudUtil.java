@@ -21,8 +21,8 @@ import java.util.List;
 import static org.apache.commons.codec.digest.DigestUtils.sha1;
 
 public class RongCloudUtil {
-    private static final String App_Key = "p5tvi9dspctn4";
-    private static final String App_Secret = "euPM0qGaA44";
+    private static final String App_Key = "c9kqb3rdcfkyj";
+    private static final String App_Secret = "A8Me8tGPonV2k";
     private static final String AppSecret = "sk-AQ1wNXR2aTlkc3BjdG40c7E3g_yWJ1vtloFr";
     private static final String TIMESTAMP = "RC-Timestamp";
     private static final String userUrl = "https://api.rong-api.com/user/info.json";
@@ -67,7 +67,7 @@ public class RongCloudUtil {
     private static HttpClient getHttpClient(HttpPost httpPost) {
         String timestamp = String.valueOf(System.currentTimeMillis() / 1000);//时间戳，从 1970 年 1 月 1 日 0 点 0 分 0 秒开始到现在的秒数。
         String nonce = String.valueOf(Math.floor(Math.random() * 1000000));//随机数，无长度限制。
-        String signature = sha1(AppSecret + nonce + timestamp).toString();//数据签名。
+        String signature = sha1(App_Secret + nonce + timestamp).toString();//数据签名。
         //Logger.i(Signature);
         HttpClient httpClient = new DefaultHttpClient();
 

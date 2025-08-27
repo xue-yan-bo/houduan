@@ -3,6 +3,8 @@ package com.jlm.homework.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.List;
 
@@ -24,6 +26,12 @@ public class ExerciseBookChapter {
     private Long chapterId;
     @Column(name = "chapter_name")
     private String chapterName;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "image_urls", columnDefinition = "JSON")
+    private List<String> imageUrls;
+    @Transient
+    private List<ExerciseBookQuestion> questionList;
+
     @Transient
     private List<BookKnowledgePoint> knowledgePointList;
 

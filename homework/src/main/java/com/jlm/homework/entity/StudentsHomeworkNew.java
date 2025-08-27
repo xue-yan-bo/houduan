@@ -7,12 +7,14 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import jakarta.persistence.*;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Type;
 import org.hibernate.type.SqlTypes;
 
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -207,4 +209,55 @@ public class StudentsHomeworkNew implements Serializable {
      */
     @Column(name = "knowledge_point")
     private String knowledgePoint;
+
+    @Transient
+    private List<String> topicImages;
+    /**
+     * 题目图片
+     */
+    @Column(name = "topic_images")
+    private String topicImagesStr;
+
+    public List<String> getTopicImages() {
+        if(!StringUtils.isEmpty(topicImagesStr)){
+            topicImages = Arrays.asList(topicImagesStr.split(" ,"));
+        }
+        return topicImages;
+    }
+    public void setTopicImagesStr(String topicImagesStr) {
+        if(!topicImages.isEmpty()){
+            this.topicImagesStr = String.join(" ,", topicImages);
+        }else{
+            this.topicImagesStr = topicImagesStr;
+        }
+    }
+
+    /**
+     * 学生2次写作业坐标
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "students_coordinate2", columnDefinition = "JSON")
+    private List<StudentsCoordinate> studentsCoordinate2;
+    /**
+     * 老师2次审批标识坐标
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "audit_logo_coordinate2", columnDefinition = "JSON")
+    private List<AuditLogoCoordinate> auditLogoCoordinate2;
+    /**
+     * 老师2次审批坐标
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "audit_coordinate2", columnDefinition = "JSON")
+    private List<AuditLogoCoordinate> auditCoordinate2;
+
+    /**
+     * 老师2次批注坐标
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "comments_coordinate2", columnDefinition = "JSON")
+    private List<CommentsCoordinate> commentsCoordinate2;
+
+
+
 }

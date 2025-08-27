@@ -186,7 +186,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             throw new RuntimeException("此随堂练习和班级不对应，请检测！");
         }
         Date now = new Date();
-        Result<Student> result = studentFeginClient.getStudentList(1,200,schoolId,classId,0);
+        Result<Student> result = studentFeginClient.getStudentList(1,200,schoolId,null,classId,"0");
         if(result.getCode()!=200){
             throw new RuntimeException(result.getMsg());
         }

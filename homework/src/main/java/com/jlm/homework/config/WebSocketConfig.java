@@ -24,11 +24,20 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.enableSimpleBroker("/topic", "/queue");
-        registry.setApplicationDestinationPrefixes("/app");
+        registry.setApplicationDestinationPrefixes("/ws");
     }
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry){
-        registry.addEndpoint("/websocket").withSockJS();
+        registry.addEndpoint("/websocket")
+                .setAllowedOrigins(
+                "http://localhost",
+                "http://192.168.1.129",
+                "ws://192.168.1.129",
+                "http://127.0.0.1",
+                "http://192.168.1.135",  // 添加您的IP地址
+                "ws://192.168.1.135",
+                "http://49.232.159.98:9000"  // 添加 Vue 应用的地址
+        ).withSockJS();
     }
 
 }

@@ -60,8 +60,8 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
         Integer studentTotal = 0;
         List<Long> classIds=classroomExercises.getClassIds();
         for(Long classId:classIds){
-            Result<Student> result = studentFeginClient.getStudentList(1,150,classroomExercises.getSchoolId(),classId,0);
-            studentTotal = studentTotal+result.getTotal();
+            Result<Student> result = studentFeginClient.getStudentList(1,150,classroomExercises.getSchoolId(),null,classId,"0");
+            studentTotal = studentTotal+result.getRows().size();
         }
         Map<Integer,Integer> answerNumMap = new HashMap<>();
         Map<Integer,Integer> answerRightMap = new HashMap<>();

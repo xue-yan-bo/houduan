@@ -4,8 +4,11 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * 课堂练习学生答题记录 实体类
@@ -88,4 +91,11 @@ public class ClassroomExercisesStudentRecord {
     @Column(name = "create_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
+
+    /**
+     * 学生写作记录
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "students_wriite_record", columnDefinition = "JSON")
+    private List<StudentsWriiteRecord> studentsWriiteRecords;
 }

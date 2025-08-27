@@ -1,11 +1,9 @@
 package com.jlm.homework.socket;
 
 import com.jlm.homework.entity.SmartDeviceUserRelation;
-import com.jlm.homework.exception.ParameterNewException;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.util.ParseTcpDataUtil;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.io.IOException;

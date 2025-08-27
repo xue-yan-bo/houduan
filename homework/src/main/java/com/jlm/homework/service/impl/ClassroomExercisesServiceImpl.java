@@ -1,9 +1,6 @@
 package com.jlm.homework.service.impl;
 
-import com.jlm.homework.dto.DayExerciseTypeNum;
-import com.jlm.homework.dto.ExerciseTypeAnalyse;
-import com.jlm.homework.dto.ExerciseTypeErrorRate;
-import com.jlm.homework.dto.Result;
+import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
 import com.jlm.homework.feign.StudentFeginClient;
 import com.jlm.homework.repository.ClassroomExercisesRepository;
@@ -213,6 +210,13 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             record.setStartFlag(1);
             classroomExercisesStudentRecordRepository.save(record);
         }
+    }
+
+    @Override
+    public TeacherClassroomData getTeacherClassroomData(String startDate, String endDate) {
+        TeacherClassroomData classroomData =new TeacherClassroomData();
+
+        return classroomData;
     }
 
 

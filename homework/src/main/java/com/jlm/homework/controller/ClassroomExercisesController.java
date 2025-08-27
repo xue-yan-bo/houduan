@@ -1,6 +1,7 @@
 package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.HomeworkPublishRequest;
+import com.jlm.homework.dto.TeacherClassroomData;
 import com.jlm.homework.entity.ClassroomExercises;
 import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
 import com.jlm.homework.entity.HomeworkPublish;
@@ -88,5 +89,15 @@ public class ClassroomExercisesController {
     @Operation(summary = "老师点击开始答题按钮")
     public void teacherStartAnswer(Long classroomExercisesId,Long classId,Long schoolId) throws Throwable {
         classroomExercisesService.teacherStartAnswer(classroomExercisesId,classId,schoolId);
+    }
+
+    /**
+     * 课堂数据
+     */
+    @GetMapping("/classroom-data")
+    @Operation(summary = "课堂数据")
+    public TeacherClassroomData getTeacherClassroomData(String startDate,String endDate) throws Throwable {
+        TeacherClassroomData classroomData=classroomExercisesService.getTeacherClassroomData(startDate,endDate);
+        return classroomData;
     }
 }

@@ -246,5 +246,46 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
 
     }
 
+    @Override
+    public List<ClassroomExercisesData> classroomExercisesData(Long classroomExercisesId, Long classId) {
+        List<ClassroomExercisesData> exercisesDataList = new ArrayList<>();
+        ClassroomExercisesQuestion quation = new ClassroomExercisesQuestion();
+        quation.setClassroomExercisesId(classroomExercisesId);
+        quation.setClassIds(Arrays.asList(classId));
+        List<ClassroomExercisesQuestion> questionList=classroomExercisesQuestionRepository.findAll(Example.of(quation));
+        for(ClassroomExercisesQuestion classroomExercisesQuestion:questionList){
+            ClassroomExercisesData  classroomExercisesData = new ClassroomExercisesData();
+            classroomExercisesData.setTitleNumber(classroomExercisesQuestion.getTitleNumber());
+            classroomExercisesData.setAnswer(classroomExercisesQuestion.getAnswer());
+            ClassroomExercisesStudentAnswer studentAnswer = new ClassroomExercisesStudentAnswer();
+            studentAnswer.setClassId(classId);
+            studentAnswer.setExerciseQuestionId(classroomExercisesQuestion.getId());
+            studentAnswer.setTitleNumber(classroomExercisesQuestion.getTitleNumber());
+            List<ClassroomExercisesStudentAnswer> studentAnswerList=classroomExercisesStudentAnswerRepository.findAll(Example.of(studentAnswer));
+            Integer answerNum=0;
+            Integer unAnswerNum=0;
+            Integer rightNum=0;
+            Integer errorNum=0;
+            for(ClassroomExercisesStudentAnswer studentAnswer1:studentAnswerList){
+                if(StringUtils.isNotEmpty(studentAnswer1.getStudentAnswer())){
+                    answerNum++;
+                    if(studentAnswer1.getStudentAnswer().equals(studentAnswer1.getAnswer())){
+                        rightNum++;
+                    }else{
+                        errorNum++;
+                    }
+                }else{
+                    unAnswerNum++;
+                }
+            }
+            classroomExercisesData.setAnswerNum(answerNum);
+            classroomExercisesData.setUnAnswerNum(unAnswerNum);
+            classroomExercisesData.setRightNum(rightNum);
+            classroomExercisesData.setErrorNum(errorNum);
+            exercisesDataList.add(classroomExercisesData);
+        }
+        return exercisesDataList;
+    }
+
 
 }

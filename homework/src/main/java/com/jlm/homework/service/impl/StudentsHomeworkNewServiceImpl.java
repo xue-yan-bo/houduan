@@ -1,10 +1,9 @@
 package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.*;
-import com.jlm.homework.entity.ExerciseBookEntity;
-import com.jlm.homework.entity.HomeworkPublish;
-import com.jlm.homework.entity.Student;
-import com.jlm.homework.entity.StudentsHomeworkNew;
+import com.jlm.homework.entity.*;
+import com.jlm.homework.feign.School;
+import com.jlm.homework.feign.SchoolFeginClient;
 import com.jlm.homework.feign.StudentFeginClient;
 import com.jlm.homework.repository.HomeworkPublishRepository;
 import com.jlm.homework.repository.StudentsHomeworkNewRepository;
@@ -23,6 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.jdbc.support.JdbcAccessor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -35,6 +35,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private HomeworkPublishRepository homeworkPublishRepository;
     @Autowired
     private StudentFeginClient studentFeginClient;
+    @Autowired
+    private SchoolFeginClient schoolFeginClient;
     @Autowired
     private ExerciseBookServer exerciseBookServer;
     @Autowired
@@ -159,7 +161,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
         StudentsHomeworkNew newSerach=new StudentsHomeworkNew();
         newSerach.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
-        newSerach.setAuditStatus("1");
+        newSerach.setAuditStatus("2");
         Example<StudentsHomeworkNew> example = Example.of(studentsHomework);
         long count =studentsHomeworkNewRepository.count(example);
         if(count==0){
@@ -644,5 +646,370 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             studentsHomework.setSubmitStatus(2);
             studentsHomeworkNewRepository.save(studentsHomework);
         }
+    }
+
+    @Override
+    public SchoolHomeworkData getSchoolHomeworkData(Long schoolId) {
+        SchoolHomeworkData schoolHomeworkData= new SchoolHomeworkData();
+        StudentsHomeworkNew homeworkNew = new StudentsHomeworkNew();
+        homeworkNew.setSchoolId(schoolId);
+        List<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(Example.of(homeworkNew));
+        if(studentsHomeworkList==null||studentsHomeworkList.isEmpty()){
+            return schoolHomeworkData;
+        }
+
+        Integer totleNum=0;
+        Integer submittedNum=0;
+        Integer unsubmittedNum=0;
+        Map<String,Integer> gradeSubmitMap=new HashMap<>();
+        Map<String,Integer> gradeUnSubmitMap=new HashMap<>();
+        Map<String,Integer> gradeTotalMap=new HashMap<>();
+        Map<Integer,Integer> homeworkNumMap = new HashMap<>();
+        Map<Integer,Integer> auditNumMap = new HashMap<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String today = sdf.format(new Date());
+        Map<String,Integer> classTotalMap = new HashMap<>();
+        Map<String,Integer> classSubmitMap = new HashMap<>();
+        List<Long> publishHomeworkIdList=new ArrayList<>();
+
+        for(StudentsHomeworkNew studentsHomework:studentsHomeworkList){
+            totleNum++;
+            if(gradeTotalMap.containsKey(studentsHomework.getGrade())){
+                gradeTotalMap.put(studentsHomework.getGrade(),gradeTotalMap.get(studentsHomework.getGrade())+1);
+            }else {
+                gradeTotalMap.put(studentsHomework.getGrade(),1);
+            }
+            if(studentsHomework.getSubmitStatus()!=null&&1==studentsHomework.getSubmitStatus()){
+                submittedNum++;
+                if(gradeSubmitMap.containsKey(studentsHomework.getGrade())){
+                    gradeSubmitMap.put(studentsHomework.getGrade(),gradeSubmitMap.get(studentsHomework.getGrade())+1);
+                }else {
+                    gradeSubmitMap.put(studentsHomework.getGrade(),1);
+                }
+            }else{
+                unsubmittedNum++;
+                if(gradeUnSubmitMap.containsKey(studentsHomework.getGrade())){
+                    gradeUnSubmitMap.put(studentsHomework.getGrade(),gradeUnSubmitMap.get(studentsHomework.getGrade())+1);
+                }else {
+                    gradeUnSubmitMap.put(studentsHomework.getGrade(),1);
+                }
+            }
+            if(studentsHomework.getSubmitTime()!=null){
+                Integer m = Math.toIntExact((studentsHomework.getSubmitTime().getTime() - studentsHomework.getCreateTime().getTime()) / 1000 / 60);
+                if(m<=10){
+                    if(homeworkNumMap.containsKey(10)){
+                        homeworkNumMap.put(10,homeworkNumMap.get(10)+1);
+                    }else{
+                        homeworkNumMap.put(10,1);
+                    }
+                }else if(m<=30){
+                    if(homeworkNumMap.containsKey(30)){
+                        homeworkNumMap.put(30,homeworkNumMap.get(30)+1);
+                    }else{
+                        homeworkNumMap.put(30,1);
+                    }
+                }else if(m<=60){
+                    if(homeworkNumMap.containsKey(60)){
+                        homeworkNumMap.put(60,homeworkNumMap.get(30)+1);
+                    }else{
+                        homeworkNumMap.put(60,1);
+                    }
+                }else if(m<=90){
+                    if(homeworkNumMap.containsKey(90)){
+                        homeworkNumMap.put(90,homeworkNumMap.get(90)+1);
+                    }else{
+                        homeworkNumMap.put(90,1);
+                    }
+                }else if(m<=120){
+                    if(homeworkNumMap.containsKey(120)){
+                        homeworkNumMap.put(120,homeworkNumMap.get(120)+1);
+                    }else{
+                        homeworkNumMap.put(120,1);
+                    }
+                }
+            }
+            if(studentsHomework.getSubmitTime()!=null&&studentsHomework.getAuditTime()!=null){
+                Integer m = Math.toIntExact((studentsHomework.getAuditTime().getTime() - studentsHomework.getSubmitTime().getTime()) / 1000 / 60);
+                if(m<=10){
+                    if(auditNumMap.containsKey(10)){
+                        auditNumMap.put(10,auditNumMap.get(10)+1);
+                    }else{
+                        auditNumMap.put(10,1);
+                    }
+                }else if(m<=30){
+                    if(auditNumMap.containsKey(30)){
+                        auditNumMap.put(30,auditNumMap.get(30)+1);
+                    }else{
+                        auditNumMap.put(30,1);
+                    }
+                }else if(m<=60){
+                    if(auditNumMap.containsKey(60)){
+                        auditNumMap.put(60,auditNumMap.get(30)+1);
+                    }else{
+                        auditNumMap.put(60,1);
+                    }
+                }else if(m<=90){
+                    if(auditNumMap.containsKey(90)){
+                        auditNumMap.put(90,auditNumMap.get(90)+1);
+                    }else{
+                        auditNumMap.put(90,1);
+                    }
+                }else if(m<=120){
+                    if(auditNumMap.containsKey(120)){
+                        auditNumMap.put(120,auditNumMap.get(120)+1);
+                    }else{
+                        auditNumMap.put(120,1);
+                    }
+                }
+
+                //今日
+                String createDate = sdf.format(studentsHomework.getCreateTime());
+                String className = studentsHomework.getClassesName();
+                if(today.equals(createDate)){
+                    if(classTotalMap.containsKey(className)){
+                        classTotalMap.put(className,classTotalMap.get(className) + 1);
+                    }else {
+                        classTotalMap.put(className,1);
+                    }
+                }
+                if(studentsHomework.getSubmitTime()!=null){
+                    String day = sdf.format(studentsHomework.getSubmitTime());
+                    if(day.equals(today)){
+                        if(classSubmitMap.containsKey(className)){
+                            classSubmitMap.put(className,classSubmitMap.get(className)+1);
+                        }else{
+                            classSubmitMap.put(className,1);
+                        }
+                    }
+                }
+
+            }
+            if(studentsHomework.getAuditTime()!=null){
+                String auditDate = sdf.format(studentsHomework.getAuditTime());
+                if(auditDate.equals(today)&&!publishHomeworkIdList.contains(studentsHomework.getHomeworkPublishId())){
+                    publishHomeworkIdList.add(studentsHomework.getHomeworkPublishId());
+                }
+            }
+
+        }
+        //作业提交
+        Map<String,Double> homeworkSubmitSituation = new HashMap<>();
+        Double totalSubmitRate = BigDecimal.valueOf(submittedNum).divide(BigDecimal.valueOf(totleNum),4,BigDecimal.ROUND_HALF_UP)
+                .multiply(BigDecimal.valueOf(100)).doubleValue();
+        homeworkSubmitSituation.put("已提交",totalSubmitRate);
+        Double totalUnsubmitRate = BigDecimal.valueOf(unsubmittedNum).divide(BigDecimal.valueOf(totleNum),4,BigDecimal.ROUND_HALF_UP)
+                .multiply(BigDecimal.valueOf(100)).doubleValue();
+        homeworkSubmitSituation.put("未提交",totalUnsubmitRate);
+        schoolHomeworkData.setHomeworkSubmitSituation(homeworkSubmitSituation);
+        List<GradeHomeworkSubmit> gradeSubmitSituation = new ArrayList<>();
+        for(String grade:gradeTotalMap.keySet()){
+            GradeHomeworkSubmit  gradeHomeworkSubmit = new GradeHomeworkSubmit();
+            gradeHomeworkSubmit.setGrade(grade);
+            Double gradeSubmitRate = BigDecimal.valueOf(gradeSubmitMap.get(grade)).divide(BigDecimal.valueOf(gradeTotalMap.get(grade)),4,BigDecimal.ROUND_HALF_UP)
+                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+            gradeHomeworkSubmit.setSubmitRate(gradeSubmitRate);
+            Double gradeUnsubmitRate = BigDecimal.valueOf(gradeUnSubmitMap.get(grade)).divide(BigDecimal.valueOf(gradeTotalMap.get(grade)),4,BigDecimal.ROUND_HALF_UP)
+                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+            gradeHomeworkSubmit.setUnSubmitRate(gradeUnsubmitRate);
+            gradeSubmitSituation.add(gradeHomeworkSubmit);
+        }
+        schoolHomeworkData.setGradeSubmitSituation(gradeSubmitSituation);
+        schoolHomeworkData.setHomeworkNumMap(homeworkNumMap);
+        schoolHomeworkData.setTeacherAuditMap(auditNumMap);
+        //今日提交
+        List<TodayHomeworkSubmit>  todayHomeworkSubmit = new ArrayList<>();
+        for(String className : classTotalMap.keySet()){
+            TodayHomeworkSubmit homeworkSubmit = new TodayHomeworkSubmit();
+            homeworkSubmit.setClassName(className);
+            homeworkSubmit.setStudentNum(classTotalMap.get(className));
+            homeworkSubmit.setSubmitNum(classSubmitMap.get(className));
+            Double submitRate = BigDecimal.valueOf(classSubmitMap.get(className))
+                    .divide(BigDecimal.valueOf(classTotalMap.get(className)),4,BigDecimal.ROUND_HALF_UP)
+                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+            homeworkSubmit.setSubmitRate(submitRate);
+            todayHomeworkSubmit.add(homeworkSubmit);
+        }
+        schoolHomeworkData.setTodayHomeworkSubmit(todayHomeworkSubmit);
+        //今日审批
+        Specification<HomeworkPublish> specification = new Specification<HomeworkPublish>() {
+
+            @Override
+            public Predicate toPredicate(Root<HomeworkPublish> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                if(!publishHomeworkIdList.isEmpty()){
+                    Predicate predicate = criteriaBuilder.in(root.get("id").in(publishHomeworkIdList));
+                    list.add(predicate);
+                }
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        List<HomeworkPublish> publishList=homeworkPublishRepository.findAll(specification);
+        schoolHomeworkData.setTodayHomeworkAuditList(publishList);
+        ExerciseBookRequest exerciseBookRequest = new ExerciseBookRequest();
+        exerciseBookRequest.setSchoolId(schoolId);
+        Page<ExerciseBookEntity> page=exerciseBookServer.searchExerciseBooks(exerciseBookRequest);
+        //练习册使用情况
+        ExerciseBookUseDate exerciseBookUse = new ExerciseBookUseDate();
+        exerciseBookUse.setExerciseBookNum(page.getNumberOfElements());
+        HomeworkPublish schoolHomeworkPublish = new HomeworkPublish();
+        schoolHomeworkPublish.setSchoolId(schoolId);
+        List<HomeworkPublish> publishList1=homeworkPublishRepository.findAll(Example.of(schoolHomeworkPublish));
+        Map<String,Integer> map = new HashMap<>();
+        for(HomeworkPublish homeworkPublish1:publishList1){
+            if(map.containsKey(homeworkPublish1.getExerciseBookName())){
+                map.put(homeworkPublish1.getExerciseBookName(),map.get(homeworkPublish1.getExerciseBookName())+1);
+            }else {
+                map.put(homeworkPublish1.getExerciseBookName(),1);
+            }
+        }
+        exerciseBookUse.setExerciseBookUsedum(map.keySet().size());
+        String maxUsedBookName="";
+        String minUsedBookName="";
+        int maxUsedBookNum=0;
+        int minUsedBookNum=0;
+        for(String key:map.keySet()){
+            if(map.get(key)>=maxUsedBookNum){
+                maxUsedBookName=key;
+            }
+            if(map.get(key)<=minUsedBookNum){
+                minUsedBookName = key;
+            }
+        }
+        exerciseBookUse.setMaxUsedBookName(maxUsedBookName);
+        exerciseBookUse.setMinUsedBookName(minUsedBookName);
+        schoolHomeworkData.setExerciseBookUse(exerciseBookUse);
+        return schoolHomeworkData;
+    }
+
+    @Override
+    public EducHomeworkData getEducHomeworkData(Long educOrgId) {
+        EducHomeworkData educHomeworkData=new  EducHomeworkData();
+        List<SysSchool> schoolList=schoolFeginClient.getInfoByEducOrg(educOrgId,null);
+        List<Long> schoolIdList =schoolList.stream().map(SysSchool::getSchoolId).toList();
+        educHomeworkData.setSchoolNum(schoolList.size());
+        Integer studentNum=0;
+        List<SchoolHomeworkNum> schoolHomeworkNumList = new ArrayList<>();
+        for(SysSchool school:schoolList){
+            SchoolHomeworkNum  schoolHomeworkNum=new SchoolHomeworkNum();
+            schoolHomeworkNum.setSchoolId(school.getSchoolId());
+            schoolHomeworkNum.setSchoolName(school.getSchoolName());
+
+            Result<Student> result = studentFeginClient.getStudentList(1,100,school.getSchoolId(),null,null,"0");
+            if(result!=null&result.getRows()!=null){
+                studentNum += result.getRows().size();
+                schoolHomeworkNum.setStudentNum(result.getRows().size());
+            }
+            schoolHomeworkNumList.add(schoolHomeworkNum);
+        }
+        Specification<HomeworkPublish> specification = new Specification<HomeworkPublish>() {
+
+            @Override
+            public Predicate toPredicate(Root<HomeworkPublish> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                if(!schoolIdList.isEmpty()){
+                    Predicate predicate = criteriaBuilder.in(root.get("schoolId").in(schoolIdList));
+                    list.add(predicate);
+                }
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        List<HomeworkPublish> homeworkPublishList=homeworkPublishRepository.findAll(specification);
+        educHomeworkData.setStudentNum(studentNum);
+        educHomeworkData.setHomeworkNum(homeworkPublishList.size());
+        Specification<StudentsHomeworkNew> stuSpecification = new Specification<StudentsHomeworkNew>() {
+
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                if(!schoolIdList.isEmpty()){
+                    Predicate predicate = criteriaBuilder.in(root.get("schoolId").in(schoolIdList));
+                    list.add(predicate);
+                }
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        Sort sort = Sort.by(Sort.Direction.DESC,"submitTime");
+        List<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(stuSpecification,sort);
+        Integer homeworkNum=0;
+        Long homeworkTime=0l;
+        Map<Long,Integer> schoolHomeworkNumMap=new HashMap<>();
+        Map<Long,Long> schoolHomeworkTimeMap=new HashMap<>();
+        Map<String,Long> gradeDayTimeMap=new HashMap<>();
+        Map<String,Integer> gradeDayNumMap=new HashMap<>();
+        SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd");
+        Map<String,Long> dayTimeMap=new HashMap<>();
+        Map<String,Integer> dayNumMap=new HashMap<>();
+        for(StudentsHomeworkNew studentsHomework:studentsHomeworkList){
+            if(studentsHomework.getSubmitTime()!=null){
+                if(schoolHomeworkNumMap.containsKey(studentsHomework.getSchoolId())){
+                    schoolHomeworkNumMap.put(studentsHomework.getSchoolId(),schoolHomeworkNumMap.get(studentsHomework.getSchoolId())+1);
+                }else {
+                    schoolHomeworkNumMap.put(studentsHomework.getSchoolId(),1);
+                }
+                Long time=studentsHomework.getSubmitTime().getTime()-studentsHomework.getCreateTime().getTime();
+                if(schoolHomeworkTimeMap.containsKey(studentsHomework.getSchoolId())){
+                    schoolHomeworkTimeMap.put(studentsHomework.getSchoolId(),schoolHomeworkTimeMap.get(studentsHomework.getSchoolId())+time);
+                }else {
+                    schoolHomeworkTimeMap.put(studentsHomework.getSchoolId(),time);
+                }
+                homeworkNum++;
+                homeworkTime += time;
+                //年级
+                String gradeDay = studentsHomework.getGrade()+":"+sdf.format(studentsHomework.getSubmitTime());
+                if(gradeDayTimeMap.containsKey(gradeDay)){
+                    gradeDayTimeMap.put(gradeDay,gradeDayTimeMap.get(gradeDay)+time);
+                }else {
+                    gradeDayTimeMap.put(gradeDay,time);
+                }
+                if(gradeDayNumMap.containsKey(gradeDay)){
+                    gradeDayNumMap.put(gradeDay,gradeDayNumMap.get(gradeDay)+1);
+                }else {
+                    gradeDayNumMap.put(gradeDay,1);
+                }
+                String day = sdf.format(studentsHomework.getSubmitTime());
+                if(dayTimeMap.containsKey(day)){
+                    dayTimeMap.put(day,dayTimeMap.get(day)+time);
+                }else {
+                    dayTimeMap.put(day,time);
+                }
+                if(dayNumMap.containsKey(day)){
+                    dayNumMap.put(day,dayNumMap.get(day)+1);
+                }else {
+                    dayNumMap.put(day,1);
+                }
+            }
+        }
+
+        Double averageDuration = Double.valueOf(homeworkTime/1000l/60/homeworkNum);
+        educHomeworkData.setHomeworkAverageDuration(averageDuration);
+        for(SchoolHomeworkNum schoolHomeworkNum:schoolHomeworkNumList) {
+            schoolHomeworkNum.setHomeworkNum(schoolHomeworkNumMap.get(schoolHomeworkNum.getSchoolId()));
+
+            schoolHomeworkNum.setHomeworkAverageDuration(Double.valueOf(schoolHomeworkTimeMap.get(schoolHomeworkNum.getSchoolId())/1000l/60/schoolHomeworkNumMap.get(schoolHomeworkNum.getSchoolId())));
+        }
+        educHomeworkData.setSchoolHomeworkNumList(schoolHomeworkNumList);
+        List<DurationStatistics>  durationStatisticsList = new ArrayList<>();
+        for(String gradeDay:gradeDayTimeMap.keySet()){
+            String grade = gradeDay.split(":")[0];
+            String day = gradeDay.split(":")[1];
+
+            DurationStatistics durationStatistics= new DurationStatistics();
+            durationStatistics.setGrade(grade);
+            durationStatistics.setDay(day);
+
+            durationStatistics.setDuration(Double.valueOf(gradeDayTimeMap.get(gradeDay)/gradeDayNumMap.get(gradeDay)/1000/60));
+            durationStatisticsList.add(durationStatistics);
+        }
+        educHomeworkData.setDurationStatisticsList(durationStatisticsList);
+        educHomeworkData.setStudentsHomeworkNewList(studentsHomeworkList.subList(0,10));
+        Map<String,Double> dayAverageDuration =  new HashMap<>();
+        for (String day:dayTimeMap.keySet()) {
+            dayAverageDuration.put(day,Double.valueOf(dayTimeMap.get(day)/dayNumMap.get(day)/1000/60));
+        }
+        educHomeworkData.setDayAverageDuration(dayAverageDuration);
+        return educHomeworkData;
     }
 }

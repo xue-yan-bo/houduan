@@ -30,4 +30,8 @@ public interface IStudentsHomeworkNewService {
     List<ChapterKnowledgeAccuracy> chapterKnowledgeAccuracy(String subject, Long classId, String startDate, String endDate);
 
     void endStudentsHomework(HomeworkPublish homeworkPublish);
+
+    SchoolHomeworkData getSchoolHomeworkData(Long schoolId);
+
+    EducHomeworkData getEducHomeworkData(Long educOrgId);
 }

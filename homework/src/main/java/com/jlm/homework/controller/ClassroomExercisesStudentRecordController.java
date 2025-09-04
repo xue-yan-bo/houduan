@@ -1,5 +1,6 @@
 package com.jlm.homework.controller;
 
+import com.jlm.homework.dto.ExerciseWriteData;
 import com.jlm.homework.entity.ClassroomExercises;
 import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
 import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
@@ -62,10 +63,10 @@ public class ClassroomExercisesStudentRecordController {
     /**
      * 老师结束所有答题
      */
-    @GetMapping("/end-all-answer")
+    @PostMapping("/end-all-answer")
     @Operation(summary = "老师结束所有答题")
-    public void endAllAnswer(Long classroomExercisesId,Long classId ){
-        classroomExercisesStudentRecordService.endAllAnswer(classroomExercisesId,classId);
+    public void endAllAnswer(@RequestBody ExerciseWriteData exerciseWriteData ){
+        classroomExercisesStudentRecordService.endAllAnswer(exerciseWriteData);
 
     }
 }

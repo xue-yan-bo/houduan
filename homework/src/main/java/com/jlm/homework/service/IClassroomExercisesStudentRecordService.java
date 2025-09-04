@@ -1,5 +1,6 @@
 package com.jlm.homework.service;
 
+import com.jlm.homework.dto.ExerciseWriteData;
 import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
 
 import java.util.List;
@@ -11,5 +12,5 @@ public interface IClassroomExercisesStudentRecordService {
 
     List<ClassroomExercisesStudentRecord> selectByClassroomExercisesIdAndClass(Long classroomExercisesId, Long classId);
 
-    void endAllAnswer(Long classroomExercisesId, Long classId);
+    void endAllAnswer(ExerciseWriteData exerciseWriteData);
 }

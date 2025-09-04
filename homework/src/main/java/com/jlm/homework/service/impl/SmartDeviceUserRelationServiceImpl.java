@@ -125,7 +125,11 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
     public SmartDeviceUserRelation selectByDeviceCode(String mac) {
         SmartDeviceUserRelation relation=new SmartDeviceUserRelation();
         relation.setDeviceCode(mac);
-        SmartDeviceUserRelation deviceUserRelation=smartDeviceUserRelationRepository.findOne(Example.of(relation)).get();
+        Optional<SmartDeviceUserRelation> optional=smartDeviceUserRelationRepository.findOne(Example.of(relation));
+        SmartDeviceUserRelation deviceUserRelation= null;
+        if(optional!=null&&!optional.isEmpty()){
+            deviceUserRelation =  optional.get();
+        }
         return deviceUserRelation;
     }
 

@@ -1,16 +1,19 @@
 package com.jlm.homework.service.impl;
 
-import com.jlm.homework.entity.ClassroomExercisesStudentAnswer;
-import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
-import com.jlm.homework.entity.StudentsHomeworkNew;
+import com.jlm.homework.dto.ExerciseWriteData;
+import com.jlm.homework.dto.StudentWriteDto;
+import com.jlm.homework.entity.*;
+import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentRecordRepository;
 import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
+import com.jlm.homework.service.IClassroomStudentWriteDataService;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -26,7 +29,11 @@ import java.util.List;
 @Service
 public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExercisesStudentRecordService {
     @Resource
+    private ClassroomExercisesRepository classroomExercisesRepository;
+    @Resource
     private ClassroomExercisesStudentRecordRepository classroomExercisesStudentRecordRepository;
+    @Autowired
+    private IClassroomStudentWriteDataService classroomStudentWriteDataService;
     @Override
     public List<ClassroomExercisesStudentRecord> selectByClassroomExercisesId(Long classroomExercisesId) {
         ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
@@ -40,7 +47,16 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         if(studentRecord.getId()==null){
             studentRecord.setCreateTime(new Date());
         }
-        return classroomExercisesStudentRecordRepository.save(studentRecord);
+        ClassroomExercisesStudentRecord exercisesStudentRecord=classroomExercisesStudentRecordRepository.save(studentRecord);
+        if(studentRecord.getStudentWriteDataList()!=null&&studentRecord.getStudentWriteDataList().size()>0){
+            List<ClassroomStudentWriteData> studentWriteDataList=studentRecord.getStudentWriteDataList();
+            for(ClassroomStudentWriteData studentWriteData:studentWriteDataList){
+                studentWriteData.setStudentRecordId(studentRecord.getId());
+                classroomStudentWriteDataService.save(studentWriteData);
+            }
+
+        }
+        return exercisesStudentRecord;
     }
 
     @Override
@@ -49,18 +65,33 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         record.setClassroomExercisesId(classroomExercisesId);
         record.setClassId(classId);
         Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration","createTime");
-        return classroomExercisesStudentRecordRepository.findAll(Example.of(record),sort);
+        List<ClassroomExercisesStudentRecord> recordList=classroomExercisesStudentRecordRepository.findAll(Example.of(record),sort);
+        for(ClassroomExercisesStudentRecord studentRecord:recordList){
+            List<ClassroomStudentWriteData> writeDataList=classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
+            studentRecord.setStudentWriteDataList(writeDataList);
+        }
+        return recordList;
     }
 
     @Override
-    public void endAllAnswer(Long classroomExercisesId, Long classId) {
+    public void endAllAnswer(ExerciseWriteData exerciseWriteData) {
         Date now = new Date();
         List<ClassroomExercisesStudentRecord> recordList = new ArrayList<>();
+        Long classroomExercisesId = exerciseWriteData.getClassroomExercisesId();
+        Long classId = exerciseWriteData.getClassId();
         if(classroomExercisesId == 0){
+            ClassroomExercises exercises = new ClassroomExercises();
+            exercises.setId(classId);
+            Sort sort = Sort.by(Sort.Direction.DESC, "publishTime","createTime");
+            List<ClassroomExercises> exercisesList=classroomExercisesRepository.findAll(Example.of(exercises),sort);
+            if(exercisesList.size()>0){
+                classroomExercisesId =  exercisesList.get(0).getId();
+            }
             recordList = selectByClassAndDate(classroomExercisesId, classId,now);
         }else  {
             recordList = selectByClassroomExercisesIdAndClass(classroomExercisesId, classId);
         }
+        List<StudentWriteDto> writeDtos = exerciseWriteData.getStudentWriteList();
         for (ClassroomExercisesStudentRecord record : recordList) {
             if(record.getEndFlag()==null||record.getEndFlag().equals("0")){
                 record.setEndFlag(1);
@@ -68,8 +99,18 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 if(record.getStartTime()!=null){
                     record.setAnswerDuration(now.getTime() - record.getStartTime().getTime());
                 }
+                for(StudentWriteDto studentWriteDto : writeDtos){
+                    if(studentWriteDto.getStudentId()==record.getStudentId()){
+                        record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordlist());
+                    }
+                }
                 classroomExercisesStudentRecordRepository.save(record);
             }
+        }
+        if(exerciseWriteData.getTeacherWriteRecords()!=null&&exerciseWriteData.getTeacherWriteRecords().size()>0){
+            ClassroomExercises exercises=classroomExercisesRepository.findById(exerciseWriteData.getClassroomExercisesId()).get();
+            exercises.setTeacherWriteRecords(exerciseWriteData.getTeacherWriteRecords());
+            classroomExercisesRepository.save(exercises);
         }
     }
 

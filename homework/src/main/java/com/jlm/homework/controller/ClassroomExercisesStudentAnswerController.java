@@ -2,6 +2,7 @@ package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.ClassroomExercisesStudentStatistics;
 import com.jlm.homework.dto.KnowledgePointAnalysis;
+import com.jlm.homework.entity.ClassroomExercisesStudentAnswer;
 import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.service.IClassroomExercisesStudentAnswerService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,6 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClassroomExercisesStudentAnswerController {
     @Autowired
     private IClassroomExercisesStudentAnswerService classroomExercisesStudentAnswerService;
+
+    @PostMapping("/update")
+    public ClassroomExercisesStudentAnswer update(ClassroomExercisesStudentAnswer studentAnswer){
+        return classroomExercisesStudentAnswerService.save(studentAnswer);
+    }
     /**
      * 统计分析
      */

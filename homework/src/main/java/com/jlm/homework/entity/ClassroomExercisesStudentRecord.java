@@ -95,7 +95,6 @@ public class ClassroomExercisesStudentRecord {
     /**
      * 学生写作记录
      */
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "students_wriite_record", columnDefinition = "JSON")
-    private List<StudentsWriiteRecord> studentsWriiteRecords;
+    @Transient
+    private List<ClassroomStudentWriteData> studentWriteDataList;
 }

@@ -134,10 +134,26 @@ public class ClientHandler implements Runnable {
                             }
 
                             if(8==result.getButton()){//确定
+                                if(StringUtils.isNotEmpty(relation.getUserId())) {
+                                    messagingTemplate.convertAndSend("/topic/endWrite", relation.getUserId());
+                                }
+                            }
+                            if(1==result.getButton()){//菜单
 
                             }
                             if(2==result.getButton()){//返回
 
+                            }
+                            if(4==result.getButton()){//清除
+                                if(StringUtils.isNotEmpty(relation.getUserId())) {
+                                    messagingTemplate.convertAndSend("/topic/clean", relation.getUserId());
+                                }
+                            }
+                            if(1024==result.getButton()){//上一页
+
+                            }
+                            if(2048==result.getButton()){//下一页
+                                messagingTemplate.convertAndSend("/topic/nextPage", relation.getUserId());
                             }
                         }
 
@@ -153,7 +169,10 @@ public class ClientHandler implements Runnable {
                         }else {
                             System.out.println(result.getMac()+"设备还未绑定学生，请检查！");
                             // 设备绑定学生
-                            messagingTemplate.convertAndSend("/topic/bindStudent", result.getMac());
+                            deviceUserRelation = new SmartDeviceUserRelation();
+                            deviceUserRelation.setIpAddress(clientAddress);
+                            deviceUserRelation.setDeviceCode(result.getMac().toString());
+                            messagingTemplate.convertAndSend("/topic/bindStudent", deviceUserRelation);
                         }
                     }
                     

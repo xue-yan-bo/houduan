@@ -61,6 +61,11 @@ public class StudentsHomeworkNew implements Serializable {
     @Column(name = "school_id")
     private Long schoolId;
     /**
+     * 年级
+     */
+    @Column(name = "grade")
+    private String grade;
+    /**
      * 班级Id
      */
     @Column(name = "classes_id")

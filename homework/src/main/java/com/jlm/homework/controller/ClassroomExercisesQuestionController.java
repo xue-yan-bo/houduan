@@ -1,5 +1,6 @@
 package com.jlm.homework.controller;
 
+import com.jlm.homework.dto.ClassroomExercisesData;
 import com.jlm.homework.dto.ExerciseTypeAnalyse;
 import com.jlm.homework.dto.TitleVolumeAnalyse;
 import com.jlm.homework.entity.ClassroomExercises;
@@ -69,5 +70,14 @@ public class ClassroomExercisesQuestionController {
     @Operation(summary = "练习类型分析" ,description = "课堂练习的练习类型分析")
     public ExerciseTypeAnalyse exerciseTypeAnalyse(Long classId, String startDate, String endDate) {
         return  classroomExercisesService.exerciseTypeAnalyse(classId,startDate,endDate);
+    }
+
+    /**
+     * 课堂练习答题数据
+     */
+    @GetMapping("/classroom-data")
+    @Operation(summary = "课堂练习答题数据" ,description = "课堂练习的练习类型分析")
+    public List<ClassroomExercisesData> classroomExercisesData(Long classroomExercisesId, Long classId) {
+        return  classroomExercisesQuestionService.classroomExercisesData(classroomExercisesId,classId);
     }
 }

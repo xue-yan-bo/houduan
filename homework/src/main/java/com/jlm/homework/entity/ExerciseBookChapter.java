@@ -28,7 +28,7 @@ public class ExerciseBookChapter {
     private String chapterName;
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "image_urls", columnDefinition = "JSON")
-    private List<String> imageUrls;
+    private List<String> chapterDirectImages;
     @Transient
     private List<ExerciseBookQuestion> questionList;
 

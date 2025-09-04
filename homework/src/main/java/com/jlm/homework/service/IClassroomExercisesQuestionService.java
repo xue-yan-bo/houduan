@@ -1,5 +1,6 @@
 package com.jlm.homework.service;
 
+import com.jlm.homework.dto.ClassroomExercisesData;
 import com.jlm.homework.dto.ExerciseTypeAnalyse;
 import com.jlm.homework.dto.TitleVolumeAnalyse;
 import com.jlm.homework.entity.ClassroomExercisesQuestion;
@@ -20,4 +21,6 @@ public interface IClassroomExercisesQuestionService {
     TitleVolumeAnalyse titleVolumeAnalyse(String subject, Long classId, String startDate, String endDate);
 
     List<ClassroomExercisesQuestion> findQuestionList(Long classId, String startDate, String endDate);
+
+    List<ClassroomExercisesData> classroomExercisesData(Long classroomExercisesId, Long classId);
 }

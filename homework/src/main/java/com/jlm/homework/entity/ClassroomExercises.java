@@ -116,4 +116,18 @@ public class ClassroomExercises {
 
     @Transient
     List<ClassroomExercisesQuestion> questionList;
+
+    /**
+     * 学生写作记录
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "teacher_write_record", columnDefinition = "JSON")
+    private List<TeacherWriteRecord> teacherWriteRecords;
+
+    /**
+     * 发布时间
+     */
+    @Column(name = "create_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date createTime;
 }

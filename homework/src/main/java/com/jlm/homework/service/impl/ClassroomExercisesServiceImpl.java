@@ -46,6 +46,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         if(classroomExercises.getSchoolId()==null){
             classroomExercises.setSchoolId(userService.getCurrentSchoolIdSafely());
         }
+        classroomExercises.setCreateTime(new Date());
         classroomExercises =classroomExercisesRepository.save(classroomExercises);
         classroomExercisesQuestionService.saveQuestionList(classroomExercises.getId(),questionList);
         return classroomExercises.getId();
@@ -193,7 +194,17 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         }
         String className = null;
         if(classroomExercisesId == 0){
-            className = userService.getCurrentUserInfo().getTeacherName();
+            String teacherName = userService.getCurrentUserInfo().getTeacherName();
+            ClassroomExercises exercises = new ClassroomExercises();
+            exercises.setClassIds(Arrays.asList(classId));
+            exercises.setSchoolId(schoolId);
+            exercises.setClassNames(Arrays.asList(className));
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+            exercises.setHomeworkName(teacherName+sdf.format(new Date())+"堂课互动");
+            exercises.setCreateTime(new Date());
+            exercises =classroomExercisesRepository.save(exercises);
+            classroomExercisesId = exercises.getId();
         }else {
             className = classroomExercises.getClassNames().get(classroomExercises.getClassIds().indexOf(classId));
         }
@@ -203,7 +214,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             record.setStudentName(student.getStudentName());
             record.setStudentImage(student.getStudentImage());
             record.setClassId(classId);
-            record.setClassName(className);
+            record.setClassName(student.getClassesName());
             record.setCreateTime(now);
             record.setClassroomExercisesId(classroomExercisesId);
             record.setStartTime(now);
@@ -215,7 +226,72 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
     @Override
     public TeacherClassroomData getTeacherClassroomData(String startDate, String endDate) {
         TeacherClassroomData classroomData =new TeacherClassroomData();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Specification<ClassroomExercises> specification = new Specification<ClassroomExercises>() {
+            @Override
+            public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                try {
+                    Predicate condition = null;
+                    if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
+                        Date startDate1 = sdf.parse(startDate);
+                        Date endDate1 = sdf.parse(endDate);
+                        condition = criteriaBuilder.between(root.<Date>get("publishTime"),startDate1,endDate1);
+                        list.add(condition);
+                    }
 
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        List<ClassroomExercises> exercisesList =classroomExercisesRepository.findAll(specification);
+
+        classroomData.setClassesNum(exercisesList.size());
+        classroomData.setClassroomExercisesNum(exercisesList.size());
+        Specification<ClassroomExercisesStudentRecord> specification1 = new Specification<ClassroomExercisesStudentRecord>() {
+            @Override
+            public Predicate toPredicate(Root<ClassroomExercisesStudentRecord> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                try {
+                    Predicate condition = null;
+                    if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
+                        Date startDate1 = sdf.parse(startDate);
+                        Date endDate1 = sdf.parse(endDate);
+                        condition = criteriaBuilder.between(root.<Date>get("createTime"),startDate1,endDate1);
+                        list.add(condition);
+                    }
+
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        List<ClassroomExercisesStudentRecord> exercisesStudentRecordList=classroomExercisesStudentRecordRepository.findAll(specification1);
+        int purePenPlowNum = 0;
+        for(ClassroomExercisesStudentRecord record:exercisesStudentRecordList){
+            if(record.getStudentWriteDataList()!=null&&record.getStudentWriteDataList().size()>0){
+                purePenPlowNum++;
+            }
+        }
+        classroomData.setPurePenPlowNum(purePenPlowNum);
+        classroomData.setClassroomInteractionNum(exercisesStudentRecordList.size());
+        Map<String,Integer> dayClassroomUseNumMap = new HashMap<>();
+        for(ClassroomExercises exercises:exercisesList){
+            String day = sdf.format(exercises.getPublishTime());
+            if(dayClassroomUseNumMap.containsKey(day)){
+                dayClassroomUseNumMap.put(day,dayClassroomUseNumMap.get(day)+1);
+            }else {
+                dayClassroomUseNumMap.put(day,1);
+            }
+        }
+        classroomData.setDayClassroomUseNumMap(dayClassroomUseNumMap);
         return classroomData;
     }
 

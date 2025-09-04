@@ -108,4 +108,30 @@ public class StudentsHomeworkStatisticsController {
         return studentsWrongTitleAnalyse;
     }
 
+    /**
+     * 校级智慧作业大数据
+     * @param schoolId
+     * @return
+     */
+    @GetMapping("/school-homework-data")
+    @Operation(summary = "校级智慧作业大数据")
+    public SchoolHomeworkData schoolHomeworkData(Long schoolId){
+        SchoolHomeworkData schoolHomeworkData = new SchoolHomeworkData();
+        schoolHomeworkData =studentsHomeworkNewService.getSchoolHomeworkData(schoolId);
+        return schoolHomeworkData;
+    }
+    /**
+     * 教育局作业大数据
+     * @param educOrgId
+     * @return
+     */
+    @GetMapping("/educ-homework-data")
+    @Operation(summary = "教育局作业大数据")
+    public EducHomeworkData educHomeworkData(Long educOrgId){
+        EducHomeworkData educHomeworkData = new EducHomeworkData();
+        educHomeworkData = studentsHomeworkNewService.getEducHomeworkData(educOrgId);
+        return educHomeworkData;
+    }
+
+
 }

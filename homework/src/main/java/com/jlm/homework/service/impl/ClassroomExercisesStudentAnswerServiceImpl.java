@@ -37,6 +37,10 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
 
     @Override
     public ClassroomExercisesStudentAnswer save(ClassroomExercisesStudentAnswer studentAnswer) {
+        if(StringUtils.isNotEmpty(studentAnswer.getStudentAnswer())
+        &&studentAnswer.getStudentAnswer().equals(studentAnswer.getAnswer())){
+            studentAnswer.setRightFlag(1);
+        }
         return classroomExercisesStudentAnswerRepository.save(studentAnswer);
     }
 

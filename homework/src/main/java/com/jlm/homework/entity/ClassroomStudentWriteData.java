@@ -31,16 +31,19 @@ public class ClassroomStudentWriteData {
     @Column(name = "student_id")
     private Long studentId;
 
+    @Transient
+    private String studentName;
+
     /**
      * 页数
      */
     @Column(name = "page_num")
-    private Integer pageNum=0;
+    private Integer pageNum;
     /**
      * 下标
      */
     @Column(name = "index_n")
-    private Integer indexN=0;
+    private Integer indexN;
 
     /**
      * 学生写作记录

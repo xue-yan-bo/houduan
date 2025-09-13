@@ -2,7 +2,6 @@ package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
-import com.jlm.homework.feign.School;
 import com.jlm.homework.feign.SchoolFeginClient;
 import com.jlm.homework.feign.StudentFeginClient;
 import com.jlm.homework.repository.HomeworkPublishRepository;
@@ -79,6 +78,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         studentsHomework.setSubject(subject);
                         studentsHomework.setTopicImagesStr(homeworkPublish.getTopicImagesStr());
                         studentsHomework.setDeadline(homeworkPublish.getDeadline());
+                        studentsHomework.setGrade(student.getGradeName());
                         studentsHomeworkNewRepository.save(studentsHomework);
                     }
                 } catch (Exception e) {
@@ -181,7 +181,13 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
             @Override
             public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                Predicate condition0 = criteriaBuilder.equal(root.get("homeworkPublishId"), homeworkPublishId);
+                Predicate condition0 = null;
+                if(homeworkPublishId!=null){
+                    condition0 = criteriaBuilder.equal(root.get("homeworkPublishId"), homeworkPublishId);
+                }else{
+                    condition0 = criteriaBuilder.conjunction();
+                }
+
                 if(studentsHomeworkRequest!=null){
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                     Calendar calendar = Calendar.getInstance();
@@ -193,7 +199,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }
                     Predicate condition2 = null;
                     if(studentsHomeworkRequest.getSubmitStatus()!=null){
-                        condition2 =criteriaBuilder.equal(root.get("submitStatus").as(String.class), studentsHomeworkRequest.getSubmitStatus());
+                        condition2 =criteriaBuilder.equal(root.get("submitStatus"), studentsHomeworkRequest.getSubmitStatus());
                     }else {
                         condition2 = criteriaBuilder.conjunction();
                     }
@@ -695,7 +701,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 }
             }
             if(studentsHomework.getSubmitTime()!=null){
-                Integer m = Math.toIntExact((studentsHomework.getSubmitTime().getTime() - studentsHomework.getCreateTime().getTime()) / 1000 / 60);
+                Integer m = Math.toIntExact((studentsHomework.getSubmitTime().getTime() - studentsHomework.getStartTime().getTime()) / 1000 / 60);
                 if(m<=10){
                     if(homeworkNumMap.containsKey(10)){
                         homeworkNumMap.put(10,homeworkNumMap.get(10)+1);
@@ -802,14 +808,22 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         homeworkSubmitSituation.put("未提交",totalUnsubmitRate);
         schoolHomeworkData.setHomeworkSubmitSituation(homeworkSubmitSituation);
         List<GradeHomeworkSubmit> gradeSubmitSituation = new ArrayList<>();
-        for(String grade:gradeTotalMap.keySet()){
-            GradeHomeworkSubmit  gradeHomeworkSubmit = new GradeHomeworkSubmit();
+        for(String grade:gradeTotalMap.keySet()) {
+            GradeHomeworkSubmit gradeHomeworkSubmit = new GradeHomeworkSubmit();
             gradeHomeworkSubmit.setGrade(grade);
-            Double gradeSubmitRate = BigDecimal.valueOf(gradeSubmitMap.get(grade)).divide(BigDecimal.valueOf(gradeTotalMap.get(grade)),4,BigDecimal.ROUND_HALF_UP)
-                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+            Double gradeSubmitRate = 0.0d;
+            if (gradeTotalMap != null && gradeTotalMap.get(grade) != null
+                &&gradeSubmitMap !=null && gradeSubmitMap.get(grade) != null){
+                gradeSubmitRate = BigDecimal.valueOf(gradeSubmitMap.get(grade)).divide(BigDecimal.valueOf(gradeTotalMap.get(grade)), 4, BigDecimal.ROUND_HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).doubleValue();
+            }
             gradeHomeworkSubmit.setSubmitRate(gradeSubmitRate);
-            Double gradeUnsubmitRate = BigDecimal.valueOf(gradeUnSubmitMap.get(grade)).divide(BigDecimal.valueOf(gradeTotalMap.get(grade)),4,BigDecimal.ROUND_HALF_UP)
-                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+            Double gradeUnsubmitRate = 0.0d;
+            if (gradeTotalMap != null && gradeTotalMap.containsKey(grade)
+                && gradeUnSubmitMap!=null && gradeUnSubmitMap.get(grade) != null) {
+                gradeUnsubmitRate = BigDecimal.valueOf(gradeUnSubmitMap.get(grade)).divide(BigDecimal.valueOf(gradeTotalMap.get(grade)), 4, BigDecimal.ROUND_HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).doubleValue();
+            }
             gradeHomeworkSubmit.setUnSubmitRate(gradeUnsubmitRate);
             gradeSubmitSituation.add(gradeHomeworkSubmit);
         }
@@ -823,9 +837,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             homeworkSubmit.setClassName(className);
             homeworkSubmit.setStudentNum(classTotalMap.get(className));
             homeworkSubmit.setSubmitNum(classSubmitMap.get(className));
-            Double submitRate = BigDecimal.valueOf(classSubmitMap.get(className))
+            Double submitRate = 0.0d;
+            if(classSubmitMap.containsKey(className)&&classSubmitMap.get(className) != null){
+                submitRate = BigDecimal.valueOf(classSubmitMap.get(className))
                     .divide(BigDecimal.valueOf(classTotalMap.get(className)),4,BigDecimal.ROUND_HALF_UP)
                     .multiply(BigDecimal.valueOf(100)).doubleValue();
+            }
             homeworkSubmit.setSubmitRate(submitRate);
             todayHomeworkSubmit.add(homeworkSubmit);
         }
@@ -883,9 +900,15 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public EducHomeworkData getEducHomeworkData(Long educOrgId) {
+    public EducHomeworkData getEducHomeworkData(Long educOrgId,Long schoolId,String schoolType ) {
+        if(educOrgId==null&&schoolId!=null){
+            ResultDto<SysSchool> resultDto= schoolFeginClient.getInfo(schoolId);
+            if(resultDto!=null&&resultDto.getData()!=null){
+                educOrgId = resultDto.getData().getEducOrgId();
+            }
+        }
         EducHomeworkData educHomeworkData=new  EducHomeworkData();
-        List<SysSchool> schoolList=schoolFeginClient.getInfoByEducOrg(educOrgId,null);
+        List<SysSchool> schoolList=schoolFeginClient.getInfoByEducOrg(educOrgId,schoolType);
         List<Long> schoolIdList =schoolList.stream().map(SysSchool::getSchoolId).toList();
         educHomeworkData.setSchoolNum(schoolList.size());
         Integer studentNum=0;
@@ -894,7 +917,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             SchoolHomeworkNum  schoolHomeworkNum=new SchoolHomeworkNum();
             schoolHomeworkNum.setSchoolId(school.getSchoolId());
             schoolHomeworkNum.setSchoolName(school.getSchoolName());
-
+            schoolHomeworkNum.setSchoolAdress(school.getAddress());
             Result<Student> result = studentFeginClient.getStudentList(1,100,school.getSchoolId(),null,null,"0");
             if(result!=null&result.getRows()!=null){
                 studentNum += result.getRows().size();
@@ -908,9 +931,21 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             public Predicate toPredicate(Root<HomeworkPublish> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 List<Predicate> list = new ArrayList<>();
                 if(!schoolIdList.isEmpty()){
-                    Predicate predicate = criteriaBuilder.in(root.get("schoolId").in(schoolIdList));
-                    list.add(predicate);
+                    CriteriaBuilder.In<Object> in = criteriaBuilder.in(root.get("schoolId"));
+                    for(Long schoolId:schoolIdList){
+                        in.value(schoolId);
+                    }
+                    list.add(criteriaBuilder.and(in));
                 }
+                Predicate cond= null;
+                if("初中".equals(schoolType)){
+                    cond= criteriaBuilder.like(root.get("gradeName"),"%初%");
+                }else if("高中".equals(schoolType)){
+                    cond= criteriaBuilder.like(root.get("gradeName"),"%高%");
+                }else {
+                    cond= criteriaBuilder.like(root.get("gradeName"),"%年级%");
+                }
+                list.add(cond);
                 Predicate[] p =  new Predicate[list.size()];
                 return criteriaBuilder.and(list.toArray(p));
             }
@@ -924,9 +959,21 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 List<Predicate> list = new ArrayList<>();
                 if(!schoolIdList.isEmpty()){
-                    Predicate predicate = criteriaBuilder.in(root.get("schoolId").in(schoolIdList));
-                    list.add(predicate);
+                    CriteriaBuilder.In<Object> in = criteriaBuilder.in(root.get("schoolId"));
+                    for(Long schoolId:schoolIdList){
+                        in.value(schoolId);
+                    }
+                    list.add(criteriaBuilder.and(in));
                 }
+                Predicate cond= null;
+                if("初中".equals(schoolType)){
+                    cond= criteriaBuilder.like(root.get("grade"),"%初%");
+                }else if("高中".equals(schoolType)){
+                    cond= criteriaBuilder.like(root.get("grade"),"%高%");
+                }else {
+                    cond= criteriaBuilder.like(root.get("grade"),"%年级%");
+                }
+                list.add(cond);
                 Predicate[] p =  new Predicate[list.size()];
                 return criteriaBuilder.and(list.toArray(p));
             }
@@ -949,7 +996,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 }else {
                     schoolHomeworkNumMap.put(studentsHomework.getSchoolId(),1);
                 }
-                Long time=studentsHomework.getSubmitTime().getTime()-studentsHomework.getCreateTime().getTime();
+                Long time=studentsHomework.getSubmitTime().getTime()-studentsHomework.getStartTime().getTime();
                 if(schoolHomeworkTimeMap.containsKey(studentsHomework.getSchoolId())){
                     schoolHomeworkTimeMap.put(studentsHomework.getSchoolId(),schoolHomeworkTimeMap.get(studentsHomework.getSchoolId())+time);
                 }else {
@@ -982,13 +1029,22 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 }
             }
         }
-
-        Double averageDuration = Double.valueOf(homeworkTime/1000l/60/homeworkNum);
+        Double averageDuration = 0.0d;
+        if(homeworkNum!=0) {
+            averageDuration = Double.valueOf(homeworkTime / 1000l / 60 / homeworkNum);
+        }
         educHomeworkData.setHomeworkAverageDuration(averageDuration);
-        for(SchoolHomeworkNum schoolHomeworkNum:schoolHomeworkNumList) {
-            schoolHomeworkNum.setHomeworkNum(schoolHomeworkNumMap.get(schoolHomeworkNum.getSchoolId()));
-
-            schoolHomeworkNum.setHomeworkAverageDuration(Double.valueOf(schoolHomeworkTimeMap.get(schoolHomeworkNum.getSchoolId())/1000l/60/schoolHomeworkNumMap.get(schoolHomeworkNum.getSchoolId())));
+        if(schoolHomeworkNumList==null||schoolHomeworkNumList.isEmpty()){
+            schoolHomeworkNumList = new ArrayList<>();
+        }else {
+            for (SchoolHomeworkNum schoolHomeworkNum : schoolHomeworkNumList) {
+                schoolHomeworkNum.setHomeworkNum(schoolHomeworkNumMap.get(schoolHomeworkNum.getSchoolId()));
+                if(schoolHomeworkNumMap.get(schoolHomeworkNum.getSchoolId())!=null&&schoolHomeworkNumMap.get(schoolHomeworkNum.getSchoolId())!=0) {
+                    schoolHomeworkNum.setHomeworkAverageDuration(Double.valueOf(schoolHomeworkTimeMap.get(schoolHomeworkNum.getSchoolId()) / 1000l / 60 / schoolHomeworkNumMap.get(schoolHomeworkNum.getSchoolId())));
+                }else {
+                    schoolHomeworkNum.setHomeworkAverageDuration(0.0d);
+                }
+            }
         }
         educHomeworkData.setSchoolHomeworkNumList(schoolHomeworkNumList);
         List<DurationStatistics>  durationStatisticsList = new ArrayList<>();
@@ -999,17 +1055,241 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             DurationStatistics durationStatistics= new DurationStatistics();
             durationStatistics.setGrade(grade);
             durationStatistics.setDay(day);
-
-            durationStatistics.setDuration(Double.valueOf(gradeDayTimeMap.get(gradeDay)/gradeDayNumMap.get(gradeDay)/1000/60));
+            if(gradeDayNumMap.get(gradeDay)!=0){
+                durationStatistics.setDuration(Double.valueOf(gradeDayTimeMap.get(gradeDay)/gradeDayNumMap.get(gradeDay)/1000/60));
+            }
             durationStatisticsList.add(durationStatistics);
         }
         educHomeworkData.setDurationStatisticsList(durationStatisticsList);
-        educHomeworkData.setStudentsHomeworkNewList(studentsHomeworkList.subList(0,10));
+        int maxNum = studentsHomeworkList.size()>10?10:studentsHomeworkList.size();
+        educHomeworkData.setStudentsHomeworkNewList(studentsHomeworkList.subList(0,maxNum));
         Map<String,Double> dayAverageDuration =  new HashMap<>();
         for (String day:dayTimeMap.keySet()) {
-            dayAverageDuration.put(day,Double.valueOf(dayTimeMap.get(day)/dayNumMap.get(day)/1000/60));
+            if(dayTimeMap.get(day)!=0) {
+                dayAverageDuration.put(day,Double.valueOf(dayTimeMap.get(day)/dayNumMap.get(day)/1000/60));
+            }
         }
         educHomeworkData.setDayAverageDuration(dayAverageDuration);
         return educHomeworkData;
+    }
+
+    @Override
+    public HomeworkStatisticsDto getHomeworkStatistics(String startDate, String endDate) {
+        HomeworkStatisticsDto statisticsDto = new HomeworkStatisticsDto();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
+
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                try {
+
+                    Calendar calendar = Calendar.getInstance();
+                    Predicate condition = null;
+                    if(StringUtils.isNotEmpty(startDate)){
+                        Date start = sdf.parse(startDate);
+                        calendar.setTime(start);
+                        Date end = sdf.parse(endDate);
+                        condition = criteriaBuilder.between(root.<Date>get("createTime"),start,end);
+                    }else {
+                        condition = criteriaBuilder.conjunction();
+                    }
+                    query.where(condition);
+                } catch (ParseException e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            }
+        };
+        List<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(specification);
+        if(studentsHomeworkList==null||studentsHomeworkList.size()<=0){
+            return statisticsDto;
+        }
+        Integer homeworkNum=studentsHomeworkList.size();
+        statisticsDto.setHomeworkNum(homeworkNum);
+        Integer submitNum=0;
+        Long totalTime=0L;
+        Double totalAccuracy=0.0;
+        Map<String,Double> gradeDayAccuracyMap = new HashMap<>();
+        Map<String,Integer> gradeDayNum= new HashMap<>();
+        Map<String,Integer> subjectTimeNumMap = new HashMap<>();
+        Map<String,Integer> gradeDayAuditNum= new HashMap<>();
+        Map<String,Integer> subjectNumMap = new HashMap<>();
+        for (StudentsHomeworkNew homework : studentsHomeworkList) {
+            long time = 0;
+            if(homework.getSubmitTime()!=null){
+                submitNum++;
+                if(homework.getStartTime()!=null){
+                    time =homework.getSubmitTime().getTime()- homework.getStartTime().getTime();
+
+                }
+            }
+            totalTime += time;
+            String gradeday = homework.getGrade()+":"+sdf.format(homework.getCreateTime());
+            //前期为了有数据，准确度设置为0
+            if(homework.getAccuracy()==null){
+                homework.setAccuracy(0.0);
+            }
+            if (homework.getAccuracy()!=null){
+                totalAccuracy += homework.getAccuracy();
+                if(gradeDayAccuracyMap.containsKey(gradeday)){
+                    gradeDayAccuracyMap.put(gradeday,gradeDayAccuracyMap.get(gradeday)+homework.getAccuracy());
+                }else{
+                    gradeDayAccuracyMap.put(gradeday,homework.getAccuracy());
+                }
+                if(gradeDayNum.containsKey(gradeday)){
+                    gradeDayNum.put(gradeday,gradeDayNum.get(gradeday)+1);
+                }else {
+                    gradeDayNum.put(gradeday,1);
+                }
+            }
+            if(time!=0) {
+                String key;
+                if (time > 0 && time <= 10) {
+                    key = homework.getSubject() + ":10";
+
+                } else if (time > 10 && time <= 20) {
+                    key = homework.getSubject() + ":20";
+                } else if (time > 20 && time <= 30) {
+                    key = homework.getSubject() + ":30";
+                } else if (time > 30 && time <= 40) {
+                    key = homework.getSubject() + ":40";
+                } else {
+                    key = homework.getSubject() + ":50";
+                }
+                if (subjectTimeNumMap.containsKey(key)) {
+                    subjectTimeNumMap.put(key, subjectTimeNumMap.get(key) + 1);
+                } else {
+                    subjectTimeNumMap.put(key, 1);
+                }
+            }
+
+            if(homework.getAuditTime()!=null){
+                String gradeDayAudit = homework.getGrade()+":"+sdf.format(homework.getAuditTime());
+                if(gradeDayAuditNum.containsKey(gradeDayAudit)){
+                    gradeDayAuditNum.put(gradeDayAudit,gradeDayAuditNum.get(gradeDayAudit)+1);
+                }else{
+                    gradeDayAuditNum.put(gradeDayAudit,1);
+                }
+            }
+            if(subjectNumMap.containsKey(homework.getSubject())){
+                subjectNumMap.put(homework.getSubject(),subjectNumMap.get(homework.getSubject())+1);
+            }else{
+                subjectNumMap.put(homework.getSubject(),1);
+            }
+
+        }
+        BigDecimal compleRate = BigDecimal.ZERO;
+        if(submitNum!=0) {
+            compleRate = BigDecimal.valueOf(submitNum / homeworkNum).setScale(4, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100));
+        }
+        statisticsDto.setCompleRate(compleRate);
+        Double averageDuration = Double.valueOf(totalTime / homeworkNum);
+        statisticsDto.setAverageDuration(averageDuration);
+        Double averageAccuracy = totalAccuracy/homeworkNum;
+        statisticsDto.setAverageAccuracy(averageAccuracy);
+
+        List<GradeDayAccuracy> gradeDayAccuracyList = new ArrayList<>();
+        for(String gradeDay:gradeDayAccuracyMap.keySet()){
+            GradeDayAccuracy gradeDayAccuracy = new GradeDayAccuracy();
+            String grade = gradeDay.split(":")[0];
+            String day = gradeDay.split(":")[1];
+            gradeDayAccuracy.setGrade(grade);
+            gradeDayAccuracy.setDay(day);
+            if(gradeDayNum.get(gradeDay)!=0){
+                Double accuracy = gradeDayAccuracyMap.get(gradeDay)/gradeDayNum.get(gradeDay);
+                gradeDayAccuracy.setAccuracy(accuracy);
+            }else{
+                gradeDayAccuracy.setAccuracy(0.0);
+            }
+            gradeDayAccuracyList.add(gradeDayAccuracy);
+        }
+        statisticsDto.setGradeDayAccuracyList(gradeDayAccuracyList);
+        /**
+         * 作业散点图
+         */
+        List<SubjectTimeNum> subjectTimeNumList = new ArrayList<>();
+        for (String key : subjectTimeNumMap.keySet()) {
+            SubjectTimeNum  subjectTimeNum = new SubjectTimeNum();
+            String subject = key.split(":")[0];
+            String durStr=key.split(":")[1];
+            Integer duration = Integer.parseInt(durStr);
+            subjectTimeNum.setSubject(subject);
+            subjectTimeNum.setDuration(duration);
+            subjectTimeNum.setNumber(subjectTimeNumMap.get(key));
+            subjectTimeNumList.add(subjectTimeNum);
+        }
+        statisticsDto.setSubjectTimeNumList(subjectTimeNumList);
+        /**
+         * 作业正批阅比率
+         */
+        List<GradeAuditRate> gradeAuditRateList =new ArrayList<>();
+        for(String gradeDay:gradeDayAuditNum.keySet()){
+            GradeAuditRate gradeAuditRate =  new GradeAuditRate();
+            String grade = gradeDay.split(":")[0];
+            String day = gradeDay.split(":")[1];
+            gradeAuditRate.setGrade(grade);
+            gradeAuditRate.setDay(day);
+            BigDecimal auditRate = BigDecimal.ZERO;
+            if(gradeDayAuditNum.containsKey(gradeDay)&&gradeDayNum.containsKey(gradeDay)) {
+                auditRate = BigDecimal.valueOf(gradeDayAuditNum.get(gradeDay) / gradeDayNum.get(gradeDay))
+                        .setScale(4, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100));
+            }
+            gradeAuditRate.setAuditRate(auditRate);
+            gradeAuditRateList.add(gradeAuditRate);
+        }
+        statisticsDto.setGradeAuditRateList(gradeAuditRateList);
+        statisticsDto.setSubjectNumMap(subjectNumMap);
+        return statisticsDto;
+    }
+
+    @Override
+    public List<HomeWork2Board> getHomeWork2Board(String subject, String date, Long studentId) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
+
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                try {
+                    Predicate condition = null;
+                    if(StringUtils.isEmpty(subject)){
+                        condition = criteriaBuilder.equal(root.get("subject").as(String.class),subject);
+                    }else {
+                        condition = criteriaBuilder.conjunction();
+                    }
+                    Calendar calendar = Calendar.getInstance();
+                    Predicate condition1 = null;
+                    if(StringUtils.isNotEmpty(subject)){
+                        Date start = sdf.parse(date);
+                        calendar.setTime(start);
+                        calendar.add(Calendar.DATE, 1);
+                        Date end = calendar.getTime();
+                        condition1 = criteriaBuilder.between(root.<Date>get("createTime"),start,end);
+                    }else {
+                        condition1 = criteriaBuilder.conjunction();
+                    }
+                    Predicate condition2= null;
+                    if(studentId!=null){
+                        condition2 = criteriaBuilder.equal(root.get("studentId").as(Long.class),studentId);
+                    }else{
+                        condition2 = criteriaBuilder.conjunction();
+                    }
+                    query.where(condition,condition1,condition2);
+                } catch (ParseException e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            }
+        };
+        List<StudentsHomeworkNew> homeworkList=studentsHomeworkNewRepository.findAll(specification);
+        List<HomeWork2Board> homeWork2Boards =  new ArrayList<>();
+        for(StudentsHomeworkNew homework:homeworkList){
+            HomeWork2Board homeWork2Board = new HomeWork2Board();
+            homeWork2Board.setHomeworkId(homework.getHomeworkPublishId());
+            homeWork2Board.setHomeworkName(homework.getHomeworkPublishName());
+            homeWork2Board.setSubject(homework.getSubject());
+            homeWork2Board.setPageSize(homework.getTopicImages().size());
+            homeWork2Boards.add(homeWork2Board);
+        }
+        return homeWork2Boards;
     }
 }

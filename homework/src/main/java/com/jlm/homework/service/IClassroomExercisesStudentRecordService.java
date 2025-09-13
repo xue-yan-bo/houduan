@@ -1,6 +1,7 @@
 package com.jlm.homework.service;
 
 import com.jlm.homework.dto.ExerciseWriteData;
+import com.jlm.homework.dto.StudentWriteDto;
 import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
 
 import java.util.List;
@@ -13,4 +14,8 @@ public interface IClassroomExercisesStudentRecordService {
     List<ClassroomExercisesStudentRecord> selectByClassroomExercisesIdAndClass(Long classroomExercisesId, Long classId);
 
     void endAllAnswer(ExerciseWriteData exerciseWriteData);
+
+    List<StudentWriteDto> getLiveStreamtRecord(Long classroomExercisesId, Long classId);
+
+    List<ClassroomExercisesStudentRecord> getClassInteractRecord(Long classroomExercisesId, Long classId);
 }

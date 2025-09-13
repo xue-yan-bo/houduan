@@ -17,7 +17,7 @@ import java.util.List;
 
 @Service
 public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWriteDataService {
-    private static Integer StudentWriteData_Size=200;
+    private static Integer StudentWriteData_Size=500;
     @Resource
     private ClassroomStudentWriteDataRepository classroomStudentWriteDataRepository;
     @Resource
@@ -27,7 +27,7 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
         if(classroomStudentWriteData.getStudentRecordId()==null||classroomStudentWriteData.getStudentRecordId()==0){
             Long studentId =classroomStudentWriteData.getStudentId();
             ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
-            record.setClassId(studentId);
+            record.setStudentId(studentId);
             Sort sort = Sort.by(Sort.Direction.DESC,"startTime","createTime");
             List<ClassroomExercisesStudentRecord> recordList=classroomExercisesStudentRecordRepository.findAll(Example.of(record),sort);
             if(recordList!=null&&recordList.size()>0){
@@ -63,10 +63,10 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
     public List<ClassroomStudentWriteData> findByStudentRecordId(Long studentRecordId) {
         ClassroomStudentWriteData data=new ClassroomStudentWriteData();
         data.setStudentRecordId(studentRecordId);
-        Sort sort = Sort.by(Sort.Direction.ASC,"pageNum","index");
-        List<ClassroomStudentWriteData> list=classroomStudentWriteDataRepository.findAll(Example.of(data));
+        Sort sort = Sort.by(Sort.Direction.ASC,"pageNum","indexN");
+        List<ClassroomStudentWriteData> list=classroomStudentWriteDataRepository.findAll(Example.of(data),sort);
         List<ClassroomStudentWriteData> dataList=new ArrayList<>();
-        int pageNum=0;
+        int pageNum=1;
         ClassroomStudentWriteData  studentWriteData= null;
         List<StudentsWriteRecord> studentsWriteRecords = new ArrayList<>();
         for(ClassroomStudentWriteData writeData:list){
@@ -90,6 +90,7 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
                 studentWriteData.setPageNum(pageNum);
                 studentsWriteRecords = new ArrayList<>();
                 studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
+                studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
             }
             //最后一个元素，list增加
             if(list.indexOf(writeData)==list.size()-1){

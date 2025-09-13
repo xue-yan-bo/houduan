@@ -1,7 +1,11 @@
 package com.jlm.homework.socket;
 
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.nacos.shaded.com.google.gson.JsonArray;
+import com.jlm.homework.dto.HomeWork2Board;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
+import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.util.ParseTcpDataUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -11,6 +15,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 // 客户端处理线程
@@ -18,12 +24,14 @@ public class ClientHandler implements Runnable {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
+    private IStudentsHomeworkNewService studentsHomeworkNewService;
     private final Socket clientSocket;
 
-    public ClientHandler(Socket socket,SimpMessagingTemplate messagingTemplate,ISmartDeviceUserRelationService  smartDeviceUserRelationService) {
+    public ClientHandler(Socket socket,SimpMessagingTemplate messagingTemplate,ISmartDeviceUserRelationService  smartDeviceUserRelationService,IStudentsHomeworkNewService studentsHomeworkNewService) {
         this.clientSocket = socket;
         this.messagingTemplate = messagingTemplate;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
+        this.studentsHomeworkNewService = studentsHomeworkNewService;
     }
 
     @Override
@@ -150,7 +158,7 @@ public class ClientHandler implements Runnable {
                                 }
                             }
                             if(1024==result.getButton()){//上一页
-
+                                messagingTemplate.convertAndSend("/topic/lastPage", relation.getUserId());
                             }
                             if(2048==result.getButton()){//下一页
                                 messagingTemplate.convertAndSend("/topic/nextPage", relation.getUserId());
@@ -174,6 +182,16 @@ public class ClientHandler implements Runnable {
                             deviceUserRelation.setDeviceCode(result.getMac().toString());
                             messagingTemplate.convertAndSend("/topic/bindStudent", deviceUserRelation);
                         }
+                    }else if (dataType == 0x04) { // 屏幕显示
+                        SubjectParseResult result = ParseTcpDataUtil.parseSubjectTcpPacket(fullPacketBuffer);
+                        System.out.println("作业科目解析结果：" + result.toString());
+                        String subject = result.getSubject();
+                        Long studentId = Long.parseLong(relation.getUserId());
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                        String day =sdf.format(new Date());
+                        List<HomeWork2Board>  work2Boards=studentsHomeworkNewService.getHomeWork2Board(result.getSubject(),day,studentId);
+                        String jsonStr = JSONObject.toJSONString(work2Boards);
+                        out.write(jsonStr.getBytes());
                     }
                     
                     // 回显接收到的数据

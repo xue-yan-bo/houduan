@@ -80,10 +80,24 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         Long classroomExercisesId = exerciseWriteData.getClassroomExercisesId();
         Long classId = exerciseWriteData.getClassId();
         if(classroomExercisesId == 0){
-            ClassroomExercises exercises = new ClassroomExercises();
-            exercises.setId(classId);
+            Specification<ClassroomExercises> specification = new Specification<ClassroomExercises>() {
+                @Override
+                public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                    List<Predicate> list =  new ArrayList<>();
+                    if(classId!=null){
+                        Predicate condition1 = criteriaBuilder.like(root.get("classIds").as(String.class), "%"+classId+"%");
+                        list.add(condition1);
+                    }
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+                    Predicate condition2 = criteriaBuilder.like(root.get("homeworkName").as(String.class), "%"+sdf.format(new Date())+"堂课互动"+"%");
+                    list.add(condition2);
+                    Predicate[] p =  new Predicate[list.size()];
+                    return criteriaBuilder.and(list.toArray(p));
+                }
+            };
             Sort sort = Sort.by(Sort.Direction.DESC, "publishTime","createTime");
-            List<ClassroomExercises> exercisesList=classroomExercisesRepository.findAll(Example.of(exercises),sort);
+            List<ClassroomExercises> exercisesList=classroomExercisesRepository.findAll(specification,sort);
             if(exercisesList.size()>0){
                 classroomExercisesId =  exercisesList.get(0).getId();
             }
@@ -102,6 +116,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 for(StudentWriteDto studentWriteDto : writeDtos){
                     if(studentWriteDto.getStudentId()==record.getStudentId()){
                         record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordlist());
+
+                        this.save(record);
                     }
                 }
                 classroomExercisesStudentRecordRepository.save(record);
@@ -112,6 +128,44 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             exercises.setTeacherWriteRecords(exerciseWriteData.getTeacherWriteRecords());
             classroomExercisesRepository.save(exercises);
         }
+    }
+
+    @Override
+    public List<StudentWriteDto> getLiveStreamtRecord(Long classroomExercisesId, Long classId) {
+        ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
+        record.setClassroomExercisesId(classroomExercisesId);
+        if(classId!=null){
+            record.setClassId(classId);
+        }
+
+        Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration","createTime");
+        List<ClassroomExercisesStudentRecord> recordList=classroomExercisesStudentRecordRepository.findAll(Example.of(record),sort);
+        List<StudentWriteDto> studentWriteDtoList = new ArrayList<>();
+        for(ClassroomExercisesStudentRecord studentRecord:recordList){
+            StudentWriteDto  studentWriteDto = new StudentWriteDto();
+            studentWriteDto.setStudentId(studentRecord.getStudentId());
+            studentWriteDto.setStudentName(studentRecord.getStudentName());
+            List<ClassroomStudentWriteData> writeDataList=classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
+            studentWriteDto.setStudentWriteRecordlist(writeDataList);
+            studentWriteDtoList.add(studentWriteDto);
+        }
+        return studentWriteDtoList;
+    }
+
+    @Override
+    public List<ClassroomExercisesStudentRecord> getClassInteractRecord(Long classroomExercisesId, Long classId) {
+        ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
+        record.setClassroomExercisesId(classroomExercisesId);
+        if(classId!=null){
+            record.setClassId(classId);
+        }
+        Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration","createTime");
+        List<ClassroomExercisesStudentRecord> recordList=classroomExercisesStudentRecordRepository.findAll(Example.of(record),sort);
+        for(ClassroomExercisesStudentRecord studentRecord:recordList){
+            List<ClassroomStudentWriteData> writeDataList=classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
+            studentRecord.setStudentWriteDataList(writeDataList);
+        }
+        return recordList;
     }
 
     public List<ClassroomExercisesStudentRecord> selectByClassAndDate(Long classroomExercisesId, Long classId, Date date) {

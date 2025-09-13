@@ -32,13 +32,4 @@ public class SchoolHomeworkData {
 
 }
 
-//作业正确率
-class HomeworkRightRate{
-    private String className;
-    private Integer totalNum;
-    private Integer rightNum;
-    private Double rightRate;
-    private Integer errorNum;
-    private Double errorRate;
-}
 

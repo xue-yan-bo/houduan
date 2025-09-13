@@ -33,5 +33,9 @@ public interface IStudentsHomeworkNewService {
 
     SchoolHomeworkData getSchoolHomeworkData(Long schoolId);
 
-    EducHomeworkData getEducHomeworkData(Long educOrgId);
+    EducHomeworkData getEducHomeworkData(Long educOrgId,Long schoolId,String schoolType);
+
+    HomeworkStatisticsDto getHomeworkStatistics(String startDate, String endDate);
+
+    List<HomeWork2Board> getHomeWork2Board(String subject,String date,Long studentId);
 }

@@ -130,4 +130,9 @@ public class ClassroomExercises {
     @Column(name = "create_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
+    /**
+     * 练习类型，1随堂检测、2课堂互动、3纸笔直播
+     */
+    @Column(name = "exercises_type")
+    private Integer exercisesType;
 }

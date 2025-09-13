@@ -1,8 +1,10 @@
 package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.ExerciseWriteData;
+import com.jlm.homework.dto.StudentWriteDto;
 import com.jlm.homework.entity.ClassroomExercises;
 import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
+import com.jlm.homework.entity.ClassroomStudentWriteData;
 import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +30,9 @@ public class ClassroomExercisesStudentRecordController {
     @PostMapping("/startAnswer")
     @Operation(summary = "开始答题")
     public ClassroomExercisesStudentRecord startAnswer(@RequestBody ClassroomExercisesStudentRecord studentRecord) throws Throwable {
+        if(studentRecord.getStudentId()==null){
+            throw new RuntimeException("学生ID不能为空！");
+        }
         studentRecord.setStartFlag(1);
         studentRecord.setStartTime(new Date());
         studentRecord.setEndFlag(0);
@@ -41,6 +46,9 @@ public class ClassroomExercisesStudentRecordController {
     @PostMapping("/endAnswer")
     @Operation(summary = "结束答题")
     public ClassroomExercisesStudentRecord endAnswer(@RequestBody ClassroomExercisesStudentRecord studentRecord) throws Throwable {
+        if(studentRecord.getStudentId()==null){
+            throw new RuntimeException("学生ID不能为空！");
+        }
         studentRecord.setEndFlag(1);
         Date now = new Date();
         studentRecord.setEndTime(now);
@@ -68,5 +76,23 @@ public class ClassroomExercisesStudentRecordController {
     public void endAllAnswer(@RequestBody ExerciseWriteData exerciseWriteData ){
         classroomExercisesStudentRecordService.endAllAnswer(exerciseWriteData);
 
+    }
+    /**
+     * 获取课堂互动记录
+     */
+    @GetMapping("/classInteractRecord")
+    @Operation(summary = "获取课堂互动记录")
+    public List<ClassroomExercisesStudentRecord> getClassInteractRecord(Long classroomExercisesId,Long classId ){
+        List<ClassroomExercisesStudentRecord> recordList= classroomExercisesStudentRecordService.getClassInteractRecord(classroomExercisesId,classId);
+        return recordList;
+    }
+    /**
+     * 获取学生直播记录
+     */
+    @GetMapping("/liveStreamtRecord")
+    @Operation(summary = "获取学生直播记录")
+    public List<StudentWriteDto> getLiveStreamtRecord(Long classroomExercisesId,Long classId ){
+        List<StudentWriteDto> recordList= classroomExercisesStudentRecordService.getLiveStreamtRecord(classroomExercisesId,classId);
+        return recordList;
     }
 }

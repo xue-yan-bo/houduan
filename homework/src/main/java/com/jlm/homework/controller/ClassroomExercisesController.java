@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.Date;
 
 @Tag(name = "随堂检测", description = "随堂检测发布的创建、查询、更新、删除等操作")
@@ -70,7 +71,7 @@ public class ClassroomExercisesController {
             @RequestParam(defaultValue = "1")Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             ClassroomExercises classroomExercises) {
-
+        classroomExercises.setExercisesType(1);
         Page<ClassroomExercises> list = classroomExercisesService.selectList(pageNum,pageSize, classroomExercises);
 
         return list;
@@ -87,8 +88,8 @@ public class ClassroomExercisesController {
      */
     @GetMapping("/teacher-startAnswer")
     @Operation(summary = "老师点击开始答题按钮")
-    public void teacherStartAnswer(Long classroomExercisesId,Long classId,Long schoolId) throws Throwable {
-        classroomExercisesService.teacherStartAnswer(classroomExercisesId,classId,schoolId);
+    public void teacherStartAnswer(Long classroomExercisesId,Long classId,Long schoolId, Integer exercisesType) throws Throwable {
+        classroomExercisesService.teacherStartAnswer(classroomExercisesId,classId,schoolId,exercisesType);
     }
 
     /**
@@ -99,5 +100,49 @@ public class ClassroomExercisesController {
     public TeacherClassroomData getTeacherClassroomData(String startDate,String endDate) throws Throwable {
         TeacherClassroomData classroomData=classroomExercisesService.getTeacherClassroomData(startDate,endDate);
         return classroomData;
+    }
+
+
+    /**
+     * 课堂互动分页查询
+     * @param classId
+     * @return
+     */
+    @GetMapping("/classInteractList")
+    @Operation(summary = "课堂互动分页查询")
+    public Page<ClassroomExercises> classInteractList(
+            @RequestParam(defaultValue = "1")Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            Long classId) {
+        ClassroomExercises classroomExercises =new ClassroomExercises();
+        if(classId!=null){
+            classroomExercises.setClassIds(Arrays.asList(classId));
+        }
+
+        classroomExercises.setExercisesType(2);
+        Page<ClassroomExercises> list = classroomExercisesService.selectList(pageNum,pageSize, classroomExercises);
+
+        return list;
+    }
+
+    /**
+     * 纸笔直播分页查询
+     * @param classId
+     * @return
+     */
+    @GetMapping("/liveStreamtList")
+    @Operation(summary = "纸笔直播分页查询")
+    public Page<ClassroomExercises> liveStreamtList(
+            @RequestParam(defaultValue = "1")Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            Long classId) {
+        ClassroomExercises classroomExercises =new ClassroomExercises();
+        if(classId!=null){
+            classroomExercises.setClassIds(Arrays.asList(classId));
+        }
+        classroomExercises.setExercisesType(3);
+        Page<ClassroomExercises> list = classroomExercisesService.selectList(pageNum,pageSize, classroomExercises);
+
+        return list;
     }
 }

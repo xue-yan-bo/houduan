@@ -1,6 +1,7 @@
 package com.jlm.homework.socket;
 
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
+import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.util.ParseTcpDataUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +20,8 @@ public class SocketService implements SmartLifecycle {
     private SimpMessagingTemplate messagingTemplate;
     @Autowired
     private ISmartDeviceUserRelationService smartDeviceUserRelationService;
+    @Autowired
+    private IStudentsHomeworkNewService studentsHomeworkNewService;
     private ServerSocket serverSocket;
     private boolean running = false;
     
@@ -40,7 +43,8 @@ public class SocketService implements SmartLifecycle {
                     System.out.println("New client connected");
                     
                     // 创建新线程处理连接
-                    Thread thread = new Thread(new ClientHandler(socket,messagingTemplate,smartDeviceUserRelationService));
+                    Thread thread = new Thread(new ClientHandler(socket,messagingTemplate,
+                            smartDeviceUserRelationService,studentsHomeworkNewService));
                     thread.start();
                 }
             } catch (IOException e) {

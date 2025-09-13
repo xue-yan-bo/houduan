@@ -12,10 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -122,16 +119,31 @@ public class StudentsHomeworkStatisticsController {
     }
     /**
      * 教育局作业大数据
-     * @param educOrgId
+     * @param educSearch
      * @return
      */
-    @GetMapping("/educ-homework-data")
+    @PostMapping("/educ-homework-data")
     @Operation(summary = "教育局作业大数据")
-    public EducHomeworkData educHomeworkData(Long educOrgId){
+    public EducHomeworkData educHomeworkData(@RequestBody  EducSearch educSearch){
         EducHomeworkData educHomeworkData = new EducHomeworkData();
-        educHomeworkData = studentsHomeworkNewService.getEducHomeworkData(educOrgId);
+        Long educOrgId =educSearch.getEducOrgId();
+        Long schoolId =educSearch.getSchoolId();
+        String schoolType =educSearch.getSchoolType();
+        educHomeworkData = studentsHomeworkNewService.getEducHomeworkData(educOrgId,schoolId,schoolType);
         return educHomeworkData;
     }
 
+    /**
+     * 作业统计
+     * @param
+     * @return
+     */
+    @GetMapping("/homework-statistics")
+    @Operation(summary = "作业统计")
+    public HomeworkStatisticsDto getHomeworkStatistics(String startDate,String endDate){
+        HomeworkStatisticsDto statisticsDto= new HomeworkStatisticsDto();
+        statisticsDto =studentsHomeworkNewService.getHomeworkStatistics(startDate,endDate);
+        return statisticsDto;
+    }
 
 }

@@ -3,6 +3,7 @@ package com.jlm.homework.util;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.jlm.homework.dto.RongMsgResult;
+import com.jlm.homework.exception.ParameterNewException;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
@@ -11,6 +12,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -21,12 +23,18 @@ import java.util.List;
 import static org.apache.commons.codec.digest.DigestUtils.sha1;
 
 public class RongCloudUtil {
-    private static final String App_Key = "c9kqb3rdcfkyj";
-    private static final String App_Secret = "A8Me8tGPonV2k";
-    private static final String AppSecret = "sk-AQ1wNXR2aTlkc3BjdG40c7E3g_yWJ1vtloFr";
+    //private static final String App_Key = "c9kqb3rdcfkyj";
+    @Value("${rongcloud.App_Key:p5tvi9dspctn4}")
+    private static final String App_Key = "p5tvi9dspctn4";
+    //private static final String App_Key ="sk-AQ1wNXR2aTlkc3BjdG40c7E3g_yWJ1vtloFr";
+    //private static final String App_Secret = "A8Me8tGPonV2k";
+    @Value("${rongcloud.App_Secret:euPM0qGaA44}")
+    private static final String App_Secret ="euPM0qGaA44";
+    //private static final String App_Secret = "sk-AQ1wNXR2aTlkc3BjdG40c7E3g_yWJ1vtloFr";
     private static final String TIMESTAMP = "RC-Timestamp";
+
     private static final String userUrl = "https://api.rong-api.com/user/info.json";
-    private static final String tokenUrl = "https://api.rong-api.com/user/getToken.json";
+    private static final String tokenUrl = "https://api-cn.ronghub.com/user/getToken.json";
     private static final String publishMsgUrl="https://api.rong-api.com/message/private/publish.json";
     private static final String historyMsgUrl="https://api.rong-api.com/message/history.json";
 
@@ -55,6 +63,9 @@ public class RongCloudUtil {
         String  token = "";
         if(res.indexOf("token")>0){
             JSONObject jsonObject = JSON.parseObject(res.toString());
+            if (jsonObject.getInteger("code") != 200) {
+                throw new ParameterNewException(jsonObject.getString("errorMessage"));
+            }
             token =jsonObject.getString("token");
         }
 

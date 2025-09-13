@@ -98,6 +98,13 @@ public class StudentsHomeworkNew implements Serializable {
     private String submitFileUrl;
 
     /**
+     * 开始做作业时间
+     */
+    @Column(name = "start_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date startTime;
+
+    /**
      * 提交状态
      */
     @Column(name = "submit_status")

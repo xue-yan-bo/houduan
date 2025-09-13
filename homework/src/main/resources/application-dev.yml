@@ -40,3 +40,7 @@ logging:
 
 # 开发环境特定配置
 debug: true
+
+rongcloud:
+  App_Key: p5tvi9dspctn4
+  App_Secret: euPM0qGaA44

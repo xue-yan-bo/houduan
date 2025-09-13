@@ -2,7 +2,8 @@ package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
-import com.jlm.homework.feign.StudentFeginClient;
+import com.jlm.homework.feign.StudentFeignClient;
+import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentRecordRepository;
 import com.jlm.homework.service.*;
@@ -36,7 +37,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
     @Autowired
     private UserService userService;
     @Autowired
-    private StudentFeginClient studentFeginClient;
+    private StudentFeignClient studentFeignClient;
     @Override
     public Long create(ClassroomExercises classroomExercises) {
         List<ClassroomExercisesQuestion> questionList=classroomExercises.getQuestionList();
@@ -179,7 +180,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         }
 
         Date now = new Date();
-        Result<Student> result = studentFeginClient.getStudentList(1,200,schoolId,null,classId,"0");
+        Result<Student> result = studentFeignClient.getStudentList(1,200,schoolId,null,classId,"0");
         if(result.getCode()!=200){
             throw new RuntimeException(result.getMsg());
         }

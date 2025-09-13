@@ -14,7 +14,7 @@ import java.util.List;
         configuration = FeignConfiguration.class
         )*/
 @FeignClient(value = "jlm-student",configuration = FeignConfiguration.class)
-public interface StudentFeginClient {
+public interface StudentFeignClient {
 
         @GetMapping("/student/list")
         public Result<Student> getStudentList(

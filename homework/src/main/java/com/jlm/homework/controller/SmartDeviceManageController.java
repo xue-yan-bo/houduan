@@ -4,8 +4,6 @@ import com.jlm.homework.dto.StudentVo;
 import com.jlm.homework.entity.QuestionType;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.entity.Student;
-import com.jlm.homework.feign.StudentFeginClient;
-import com.jlm.homework.repository.SmartDeviceUserRelationRepository;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

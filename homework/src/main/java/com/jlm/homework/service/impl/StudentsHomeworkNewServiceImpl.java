@@ -2,8 +2,8 @@ package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
-import com.jlm.homework.feign.SchoolFeginClient;
-import com.jlm.homework.feign.StudentFeginClient;
+import com.jlm.homework.feign.SchoolFeignClient;
+import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.HomeworkPublishRepository;
 import com.jlm.homework.repository.StudentsHomeworkNewRepository;
 import com.jlm.homework.service.ExerciseBookServer;
@@ -33,9 +33,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Resource
     private HomeworkPublishRepository homeworkPublishRepository;
     @Autowired
-    private StudentFeginClient studentFeginClient;
+    private StudentFeignClient studentFeignClient;
     @Autowired
-    private SchoolFeginClient schoolFeginClient;
+    private SchoolFeignClient schoolFeignClient;
     @Autowired
     private ExerciseBookServer exerciseBookServer;
     @Autowired
@@ -56,7 +56,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 }
                 try {
                     Long schoolId=homeworkPublish.getSchoolId();
-                    Result<Student> result = studentFeginClient.getStudentList(1,100,schoolId,null,classId,"0");
+                    Result<Student> result = studentFeignClient.getStudentList(1,100,schoolId,null,classId,"0");
                     if(result.getCode()!=200){
                         throw new RuntimeException(result.getMsg());
                     }
@@ -902,13 +902,13 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Override
     public EducHomeworkData getEducHomeworkData(Long educOrgId,Long schoolId,String schoolType ) {
         if(educOrgId==null&&schoolId!=null){
-            ResultDto<SysSchool> resultDto= schoolFeginClient.getInfo(schoolId);
+            ResultDto<SysSchool> resultDto= schoolFeignClient.getInfo(schoolId);
             if(resultDto!=null&&resultDto.getData()!=null){
                 educOrgId = resultDto.getData().getEducOrgId();
             }
         }
         EducHomeworkData educHomeworkData=new  EducHomeworkData();
-        List<SysSchool> schoolList=schoolFeginClient.getInfoByEducOrg(educOrgId,schoolType);
+        List<SysSchool> schoolList=schoolFeignClient.getInfoByEducOrg(educOrgId,schoolType);
         List<Long> schoolIdList =schoolList.stream().map(SysSchool::getSchoolId).toList();
         educHomeworkData.setSchoolNum(schoolList.size());
         Integer studentNum=0;
@@ -918,7 +918,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             schoolHomeworkNum.setSchoolId(school.getSchoolId());
             schoolHomeworkNum.setSchoolName(school.getSchoolName());
             schoolHomeworkNum.setSchoolAdress(school.getAddress());
-            Result<Student> result = studentFeginClient.getStudentList(1,100,school.getSchoolId(),null,null,"0");
+            Result<Student> result = studentFeignClient.getStudentList(1,100,school.getSchoolId(),null,null,"0");
             if(result!=null&result.getRows()!=null){
                 studentNum += result.getRows().size();
                 schoolHomeworkNum.setStudentNum(result.getRows().size());

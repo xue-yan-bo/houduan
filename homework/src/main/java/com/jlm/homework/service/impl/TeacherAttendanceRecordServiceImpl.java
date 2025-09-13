@@ -4,7 +4,7 @@ import com.jlm.homework.dto.Result;
 import com.jlm.homework.entity.Student;
 import com.jlm.homework.entity.StudentSignRecord;
 import com.jlm.homework.entity.TeacherAttendanceRecord;
-import com.jlm.homework.feign.StudentFeginClient;
+import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.StudentSignRecordRepository;
 import com.jlm.homework.repository.TeacherAttendanceRecordRepository;
 import com.jlm.homework.service.CurrentUserInfo;
@@ -26,7 +26,7 @@ public class TeacherAttendanceRecordServiceImpl implements ITeacherAttendanceRec
     @Resource
     private StudentSignRecordRepository  studentSignRecordRepository;
     @Autowired
-    private StudentFeginClient studentFeginClient;
+    private StudentFeignClient studentFeignClient;
     @Autowired
     private UserService userService;
     @Override
@@ -44,7 +44,7 @@ public class TeacherAttendanceRecordServiceImpl implements ITeacherAttendanceRec
             }
             Date now = new Date();
             record.setCreateTime(now);
-            Result<Student> result = studentFeginClient.getStudentList(1,200,schoolId,null,classId,"0");
+            Result<Student> result = studentFeignClient.getStudentList(1,200,schoolId,null,classId,"0");
             if(result.getCode()!=200){
                 throw new RuntimeException(result.getMsg());
             }

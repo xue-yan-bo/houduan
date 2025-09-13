@@ -5,7 +5,7 @@ import com.jlm.homework.dto.StudentVo;
 import com.jlm.homework.entity.QuestionType;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.entity.Student;
-import com.jlm.homework.feign.StudentFeginClient;
+import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.SmartDeviceUserRelationRepository;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.service.UserService;
@@ -24,7 +24,7 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
     @Resource
     private SmartDeviceUserRelationRepository smartDeviceUserRelationRepository;
     @Autowired
-    private StudentFeginClient studentFeginClient;
+    private StudentFeignClient studentFeignClient;
     @Autowired
     private UserService userService;
     @Override
@@ -71,7 +71,7 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
             //student.setSchoolId(userService.getCurrentSchoolIdSafely());
             student.setSchoolId(224l);
         }
-        Result<Student> result= studentFeginClient.getStudentList(pageNum,pageSize,student.getSchoolId(),student.getGradeId(),student.getClassesId(),student.getStudentStatus());
+        Result<Student> result= studentFeignClient.getStudentList(pageNum,pageSize,student.getSchoolId(),student.getGradeId(),student.getClassesId(),student.getStudentStatus());
         List<Student> studentList=result.getRows();
         List<StudentVo> studentVoList=new ArrayList<>();
         Pageable pageable = pageable = PageRequest.of(pageNum, pageSize);
@@ -105,7 +105,7 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
 
     @Override
     public Page<StudentVo> wxBindList(Integer pageNum, Integer pageSize, Student student) {
-        Result<Student> result= studentFeginClient.getStudentList(pageNum,pageSize,student.getSchoolId(),student.getGradeId(),student.getClassesId(),student.getStudentStatus());
+        Result<Student> result= studentFeignClient.getStudentList(pageNum,pageSize,student.getSchoolId(),student.getGradeId(),student.getClassesId(),student.getStudentStatus());
         List<Student> studentList=result.getRows();
         List<StudentVo> studentVoList=new ArrayList<>();
         Pageable pageable = pageable = PageRequest.of(pageNum, pageSize);

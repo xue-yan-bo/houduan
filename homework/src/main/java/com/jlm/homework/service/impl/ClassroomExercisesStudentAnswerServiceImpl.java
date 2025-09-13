@@ -2,7 +2,7 @@ package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
-import com.jlm.homework.feign.StudentFeginClient;
+import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.service.IClassroomExercisesService;
@@ -32,7 +32,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
     @Autowired
     private ClassroomExercisesRepository classroomExercisesRepository;
     @Autowired
-    private StudentFeginClient studentFeginClient;
+    private StudentFeignClient studentFeignClient;
 
 
     @Override
@@ -64,7 +64,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
         Integer studentTotal = 0;
         List<Long> classIds=classroomExercises.getClassIds();
         for(Long classId:classIds){
-            Result<Student> result = studentFeginClient.getStudentList(1,150,classroomExercises.getSchoolId(),null,classId,"0");
+            Result<Student> result = studentFeignClient.getStudentList(1,150,classroomExercises.getSchoolId(),null,classId,"0");
             studentTotal = studentTotal+result.getRows().size();
         }
         Map<Integer,Integer> answerNumMap = new HashMap<>();

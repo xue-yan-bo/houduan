@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.jlm.homework.dto.RequestConditionChecker
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import java.time.LocalDateTime
@@ -120,7 +121,7 @@ class ExerciseBookRequestTest {
         val request: ExerciseBookRequest = objectMapper.readValue(json)
 
         // 验证搜索条件检测
-        assertTrue(request.hasSearchConditions())
+        assertTrue(RequestConditionChecker.hasSearchConditions(request))
     }
 
     @Test
@@ -138,7 +139,7 @@ class ExerciseBookRequestTest {
         // 验证空数组处理
         assertNull(request.parsedCreatedStartTime)
         assertNull(request.parsedCreatedEndTime)
-        assertFalse(request.hasSearchConditions())
+        assertFalse(RequestConditionChecker.hasSearchConditions(request))
     }
 
     @Test

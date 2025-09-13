@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-@FeignClient(value = "jlm-educ-collaborator",configuration = FeignConfiguration.class)
+@FeignClient(value = "jlm-educ-collaborator",configuration = com.jlm.homework.feign.FeignConfiguration.class)
 public interface SchoolFeginClient {
 
     @GetMapping("/school/educOrg")

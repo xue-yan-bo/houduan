@@ -13,7 +13,7 @@ import java.util.List;
         name = "jlm-student",
         configuration = FeignConfiguration.class
         )*/
-@FeignClient(value = "jlm-student",configuration = FeignConfiguration.class)
+@FeignClient(value = "jlm-student",configuration = com.jlm.homework.feign.FeignConfiguration.class)
 public interface StudentFeginClient {
 
         @GetMapping("/student/list")

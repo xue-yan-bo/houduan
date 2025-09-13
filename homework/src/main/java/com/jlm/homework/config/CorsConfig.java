@@ -29,6 +29,9 @@ public class CorsConfig {
         config.addAllowedOrigin("http://192.168.1.135:18080");
         config.addAllowedOrigin("http://49.232.159.98:9000");
         config.addAllowedOrigin("http://49.232.159.98");
+        config.addAllowedOrigin("http://192.168.1.251");
+        config.addAllowedOrigin("http://192.168.1.29");
+        config.addAllowedOrigin("http://192.168.1.29:99");
         
         // 允许的方法
         config.addAllowedMethod("*");

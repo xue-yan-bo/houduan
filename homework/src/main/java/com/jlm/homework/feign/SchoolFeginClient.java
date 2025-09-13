@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 @FeignClient(value = "jlm-educ-collaborator",configuration = FeignConfiguration.class)
-public interface SchoolFeginClient {
+public interface SchoolFeignClient {
 
     @GetMapping("/school/educOrg")
     public List<SysSchool> getInfoByEducOrg(

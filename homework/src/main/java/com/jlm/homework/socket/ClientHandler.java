@@ -1,26 +1,26 @@
 package com.jlm.homework.socket;
 
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.nacos.shaded.com.google.gson.JsonArray;
 import com.jlm.homework.dto.HomeWork2Board;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
+import com.jlm.homework.socket.boardmenu.MenuItemT;
+import com.jlm.homework.socket.boardmenu.MenuT;
 import com.jlm.homework.util.ParseTcpDataUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 // 客户端处理线程
 public class ClientHandler implements Runnable {
+    static MenuT pCurrentMenu = null;
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
@@ -93,6 +93,18 @@ public class ClientHandler implements Runnable {
                 System.out.println("收到 [" + clientAddress + "] TCP数据包: " + java.util.Arrays.toString(fullPacketBuffer));
                 
                 try {
+                    boolean menuKeydownflag = false;
+                    boolean backKeydownflag = false;
+                    boolean confirmKeydownflag = false;
+                    boolean upKeydownflag = false;
+                    boolean downKeydownflag = false;
+                    List<MenuItemT> mainItems = new ArrayList<>();
+                    mainItems.add(new MenuItemT(1,"语文", null));
+                    mainItems.add(new MenuItemT(2,"数学", null));
+                    mainItems.add(new MenuItemT(3,"英语", null));
+                    mainItems.add(new MenuItemT(4,"科学", null));
+                    mainItems.add(new MenuItemT(5,"美术", null));
+                    MenuT mainMenu = new MenuT(null,mainItems,0,0,0,5);
                     // 根据数据类型进行解析
                     if (dataType == 0x01) { // 手写数据
                         List<HandwritingParseResult> results = ParseTcpDataUtil.parseHandwritingTcpPackets(fullPacketBuffer);
@@ -145,12 +157,14 @@ public class ClientHandler implements Runnable {
                                 if(StringUtils.isNotEmpty(relation.getUserId())) {
                                     messagingTemplate.convertAndSend("/topic/endWrite", relation.getUserId());
                                 }
+                                confirmKeydownflag = true;
                             }
                             if(1==result.getButton()){//菜单
-
+                                menuKeydownflag = true;
+                                writer.println("作业模式");
                             }
                             if(2==result.getButton()){//返回
-
+                                backKeydownflag = true;
                             }
                             if(4==result.getButton()){//清除
                                 if(StringUtils.isNotEmpty(relation.getUserId())) {
@@ -159,9 +173,53 @@ public class ClientHandler implements Runnable {
                             }
                             if(1024==result.getButton()){//上一页
                                 messagingTemplate.convertAndSend("/topic/lastPage", relation.getUserId());
+                                upKeydownflag = true;
                             }
                             if(2048==result.getButton()){//下一页
                                 messagingTemplate.convertAndSend("/topic/nextPage", relation.getUserId());
+                                downKeydownflag = true;
+                            }
+
+                            //按键松开
+                            if(0==result.getButton()){
+                                if(menuKeydownflag){
+                                    menuKeydownflag = false;
+                                    pCurrentMenu = mainMenu;
+                                    pCurrentMenu.setShowStartItem(0);
+                                    pCurrentMenu.setShowEndItem(3);
+                                    pCurrentMenu.setSelectItem(0);
+                                    MenuUtil.nMenuUpdate(out);
+                                }
+                                if(downKeydownflag){
+                                    downKeydownflag =  false;
+                                    if(pCurrentMenu.getSelectItem()<pCurrentMenu.getShowEndItem()){
+                                        Integer selectItem = pCurrentMenu.getSelectItem();
+                                        selectItem = selectItem+1;
+                                        pCurrentMenu.setSelectItem(selectItem);
+                                        MenuUtil.nMenuUpdate(out);
+                                    }else{
+                                        if(pCurrentMenu.getSelectItem()<pCurrentMenu.getMaxItems()-1){
+                                            pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem()+1);
+                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem()+1);
+                                            pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem()+1);
+                                        }
+                                    }
+                                }
+                                if(upKeydownflag){
+                                    upKeydownflag =  false;
+                                    if(pCurrentMenu.getSelectItem()>pCurrentMenu.getShowStartItem()){
+                                        Integer selectItem = pCurrentMenu.getSelectItem();
+                                        selectItem = selectItem-1;
+                                        pCurrentMenu.setSelectItem(selectItem);
+                                        MenuUtil.nMenuUpdate(out);
+                                    }else{
+                                        if(pCurrentMenu.getSelectItem()>0){
+                                            pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem()-1);
+                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem()-1);
+                                            pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem()-1);
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -183,15 +241,25 @@ public class ClientHandler implements Runnable {
                             messagingTemplate.convertAndSend("/topic/bindStudent", deviceUserRelation);
                         }
                     }else if (dataType == 0x04) { // 屏幕显示
-                        SubjectParseResult result = ParseTcpDataUtil.parseSubjectTcpPacket(fullPacketBuffer);
-                        System.out.println("作业科目解析结果：" + result.toString());
-                        String subject = result.getSubject();
-                        Long studentId = Long.parseLong(relation.getUserId());
-                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                        String day =sdf.format(new Date());
-                        List<HomeWork2Board>  work2Boards=studentsHomeworkNewService.getHomeWork2Board(result.getSubject(),day,studentId);
-                        String jsonStr = JSONObject.toJSONString(work2Boards);
-                        out.write(jsonStr.getBytes());
+                        try {
+                            SubjectParseResult result = ParseTcpDataUtil.parseSubjectTcpPacket(fullPacketBuffer);
+                            System.out.println("屏幕显示数据解析结果：" + result.toString());
+                            String displayString = result.getSubject();
+                            
+                            // 这里可以添加对显示字符串的处理逻辑
+                            // 例如，如果需要查询相关作业数据
+                            if (relation != null) {
+                                Long studentId = Long.parseLong(relation.getUserId());
+                                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                                String day = sdf.format(new Date());
+                                List<HomeWork2Board> work2Boards = studentsHomeworkNewService.getHomeWork2Board(displayString, day, studentId);
+                                String jsonStr = JSONObject.toJSONString(work2Boards);
+                                out.write(jsonStr.getBytes());
+                            }
+                        } catch (UnsupportedEncodingException e) {
+                            System.err.println("解析屏幕显示数据失败：" + e.getMessage());
+                            writer.println("解析屏幕显示数据失败：" + e.getMessage());
+                        }
                     }
                     
                     // 回显接收到的数据

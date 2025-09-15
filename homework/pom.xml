@@ -147,6 +147,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <mainClass>com.jlm.homework.HomeworkApplicationKt</mainClass>
                     <image>
                         <name>jlm/${project.artifactId}:${project.version}</name>
                     </image>
@@ -180,7 +181,7 @@
                     </execution>
                     <execution>
                         <id>compile-java</id>
-                        <phase>process-sources</phase>
+                        <phase>compile</phase>
                         <goals>
                             <goal>compile</goal>
                         </goals>
@@ -218,7 +219,7 @@
                 <executions>
                     <execution>
                         <id>compile</id>
-                        <phase>compile</phase>
+                        <phase>process-sources</phase>
                         <goals>
                             <goal>compile</goal>
                         </goals>

@@ -2,8 +2,9 @@ package com.jlm.homework.util;
 
 import com.jlm.homework.socket.*;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -296,6 +297,60 @@ public class ParseTcpDataUtil {
 
         return result;
     }
+    
+    /**
+     * 解析LCD显示字符串TCP数据包
+     * @param data 待解析的TCP包数据
+     * @return 解析结果对象
+     * @throws IllegalArgumentException 数据异常时抛出
+     * @throws UnsupportedEncodingException 编码异常
+     */
+    public static LCDDisplayParseResult parseLcdDisplayTcpPacket(byte[] data) throws UnsupportedEncodingException {
+        // 基础合法性校验
+        if (data == null || data.length < 5) {
+            throw new IllegalArgumentException("数据长度异常，至少需为5字节");
+        }
+
+        // 解析Header
+        byte header0 = data[0];
+        byte header1 = data[1];
+        if (header0 != 0x55 || header1 != 0x56) {
+            throw new IllegalArgumentException("包头不匹配，协议要求包头为0x55、0x56");
+        }
+
+        // 解析Length和Type
+        int length = data[2] & 0xFF;
+        byte type = data[3];
+        if (type != 0x04) {
+            throw new IllegalArgumentException("数据类型异常，需为0x04（LCD显示字符串）");
+        }
+
+        // 验证总长度
+        if (data.length != length + 4) {
+            throw new IllegalArgumentException("数据总长度与Length字段不匹配");
+        }
+
+        // 解析Checksum
+        byte checksum = data[data.length - 1];
+        int calculatedChecksum = calculateChecksum(data, 0, data.length - 1);
+        boolean checksumValid = (calculatedChecksum & 0xFF) == (checksum & 0xFF);
+
+        // 提取Packet数据（显示字符串）
+        byte[] packet = Arrays.copyOfRange(data, 4, data.length - 1);
+        // 使用UTF-16LE解码（unicode编码）
+        String displayString = new String(packet, "UTF-16LE");
+
+        // 封装结果
+        LCDDisplayParseResult result = new LCDDisplayParseResult();
+        result.setHeader(new byte[]{header0, header1});
+        result.setLength(length);
+        result.setType(type);
+        result.setDisplayString(displayString);
+        result.setChecksum(checksum);
+        result.setChecksumValid(checksumValid);
+
+        return result;
+    }
     /**
      * 计算指定字节数组范围内的累加和（协议校验和计算逻辑）
      * @param data 待计算数组
@@ -346,5 +401,32 @@ public class ParseTcpDataUtil {
             number |= (byteArray[i] & 0xff) << (i * 8);
         }
         return number;
+    }
+    
+    /**
+     * 发送LCD显示数据到设备（C++函数void tep send(SOCKET s, char* p_data, uint8_t length)的Java翻译版本）
+     * @param outputStream 输出流，用于发送数据
+     * @param data 要发送的数据
+     * @param length 数据长度
+     * @throws IOException 发送异常
+     */
+    public static void sendLcdDisplayData(OutputStream outputStream, byte[] data, int length) throws IOException {
+        // 创建缓冲区，最大259字节
+        byte[] buff = new byte[259];
+        // 设置包头
+        buff[0] = 0x55;
+        buff[1] = 0x56;
+        // 设置长度字段：length + 1（数据长度+1）
+        buff[2] = (byte)(length + 1);
+        // 设置数据类型为0x04（LCD显示字符串）
+        buff[3] = 0x04;
+        // 复制数据到缓冲区
+        System.arraycopy(data, 0, buff, 4, length);
+        // 计算并设置校验和
+        int checksum = calculateChecksum(buff, 0, 4 + length - 1);
+        buff[4 + length] = (byte)(checksum & 0xFF);
+        // 发送整个数据包
+        outputStream.write(buff, 0, length + 5);
+        outputStream.flush();
     }
 }

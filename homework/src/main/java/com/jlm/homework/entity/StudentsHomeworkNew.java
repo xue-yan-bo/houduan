@@ -1,17 +1,12 @@
 package com.jlm.homework.entity;
 
-import com.alibaba.nacos.shaded.javax.annotation.meta.TypeQualifierDefault;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import jakarta.persistence.*;
-import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.Type;
 import org.hibernate.type.SqlTypes;
-
 
 import java.io.Serializable;
 import java.util.Arrays;

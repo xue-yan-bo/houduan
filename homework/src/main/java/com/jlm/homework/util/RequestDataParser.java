@@ -7,7 +7,6 @@ import com.jlm.homework.entity.ExerciseBookImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 public class RequestDataParser {
     private static final ObjectMapper objectMapper = new ObjectMapper();

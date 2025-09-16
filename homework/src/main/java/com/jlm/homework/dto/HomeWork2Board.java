@@ -1,6 +1,5 @@
 package com.jlm.homework.dto;
 
-import com.jlm.homework.socket.SubjectParseResult;
 import lombok.Data;
 
 import java.io.Serializable;

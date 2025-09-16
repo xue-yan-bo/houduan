@@ -1,12 +1,9 @@
 package com.jlm.homework.service;
 
-import com.jlm.homework.dto.ClassroomExercisesData;
 import com.jlm.homework.dto.ExerciseTypeAnalyse;
 import com.jlm.homework.dto.TeacherClassroomData;
 import com.jlm.homework.entity.ClassroomExercises;
 import org.springframework.data.domain.Page;
-
-import java.util.List;
 
 public interface IClassroomExercisesService {
     Long create(ClassroomExercises classroomExercises);

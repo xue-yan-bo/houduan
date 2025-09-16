@@ -2,7 +2,6 @@ package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.Result;
 import com.jlm.homework.dto.StudentVo;
-import com.jlm.homework.entity.QuestionType;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.entity.Student;
 import com.jlm.homework.feign.StudentFeginClient;

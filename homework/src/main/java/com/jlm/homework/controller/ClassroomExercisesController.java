@@ -1,10 +1,7 @@
 package com.jlm.homework.controller;
 
-import com.jlm.homework.dto.HomeworkPublishRequest;
 import com.jlm.homework.dto.TeacherClassroomData;
 import com.jlm.homework.entity.ClassroomExercises;
-import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
-import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.service.IClassroomExercisesService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,7 +10,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
-import java.util.Date;
 
 @Tag(name = "随堂检测", description = "随堂检测发布的创建、查询、更新、删除等操作")
 @RestController

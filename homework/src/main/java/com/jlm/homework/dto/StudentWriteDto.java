@@ -1,7 +1,6 @@
 package com.jlm.homework.dto;
 
 import com.jlm.homework.entity.ClassroomStudentWriteData;
-import com.jlm.homework.entity.StudentsWriteRecord;
 import lombok.Data;
 
 import java.util.List;

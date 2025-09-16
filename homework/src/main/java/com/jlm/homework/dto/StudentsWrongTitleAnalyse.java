@@ -5,7 +5,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Transient;
 import lombok.Data;
 
-import java.util.Date;
 import java.util.List;
 
 /**

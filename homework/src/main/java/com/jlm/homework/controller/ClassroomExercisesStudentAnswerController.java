@@ -3,7 +3,6 @@ package com.jlm.homework.controller;
 import com.jlm.homework.dto.ClassroomExercisesStudentStatistics;
 import com.jlm.homework.dto.KnowledgePointAnalysis;
 import com.jlm.homework.entity.ClassroomExercisesStudentAnswer;
-import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.service.IClassroomExercisesStudentAnswerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

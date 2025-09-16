@@ -2,10 +2,10 @@ package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.ExerciseBookRequest;
 import com.jlm.homework.dto.ExerciseBookResponse;
-import com.jlm.homework.entity.*;
-import com.jlm.homework.exception.ParameterException;
+import com.jlm.homework.entity.ExerciseBookChapter;
+import com.jlm.homework.entity.ExerciseBookEntity;
+import com.jlm.homework.entity.ExerciseBookImage;
 import com.jlm.homework.exception.ParameterNewException;
-import com.jlm.homework.exception.ResourceNotFoundException;
 import com.jlm.homework.exception.ResourceNotFoundNewException;
 import com.jlm.homework.service.ExerciseBookServer;
 import com.jlm.homework.service.UserService;

@@ -6,7 +6,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.Serializable;
 import java.util.Date;

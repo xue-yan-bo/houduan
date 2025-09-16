@@ -1,7 +1,6 @@
 package com.jlm.homework.controller;
 
 import com.jlm.homework.entity.KnowledgePoint;
-import com.jlm.homework.entity.QuestionBank;
 import com.jlm.homework.service.IKnowledgePointService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;

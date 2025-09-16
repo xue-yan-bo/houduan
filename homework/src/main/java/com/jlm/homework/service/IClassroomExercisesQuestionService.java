@@ -1,7 +1,6 @@
 package com.jlm.homework.service;
 
 import com.jlm.homework.dto.ClassroomExercisesData;
-import com.jlm.homework.dto.ExerciseTypeAnalyse;
 import com.jlm.homework.dto.TitleVolumeAnalyse;
 import com.jlm.homework.entity.ClassroomExercisesQuestion;
 

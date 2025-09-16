@@ -1,7 +1,7 @@
 package com.jlm.homework.service
 
-import com.jlm.homework.feign.SystemFeignClient
 import com.jlm.homework.feign.SysFeignClient
+import com.jlm.homework.feign.SystemFeignClient
 import com.jlm.homework.feign.TeacherFeignClient
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service

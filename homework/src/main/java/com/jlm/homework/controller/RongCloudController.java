@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSONObject;
 import com.jlm.homework.dto.RongMsgResult;
 import com.jlm.homework.util.RongCloudUtil;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

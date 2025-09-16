@@ -1,7 +1,5 @@
 package com.jlm.homework.dto;
 
-import com.jlm.homework.entity.StudentsHomeworkStatistics;
-import jakarta.persistence.Column;
 import lombok.Data;
 
 import java.math.BigDecimal;

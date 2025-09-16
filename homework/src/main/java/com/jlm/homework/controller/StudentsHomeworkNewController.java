@@ -1,7 +1,6 @@
 package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.StudentsHomeworkRequest;
-import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,7 +10,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
-import java.util.List;
 
 @Tag(name = "学生作业", description = "学生作业的查询、提交、审批等")
 @RestController

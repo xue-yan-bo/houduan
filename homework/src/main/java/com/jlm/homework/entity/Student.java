@@ -1,12 +1,10 @@
 package com.jlm.homework.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import io.swagger.v3.core.util.Json;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
-import java.util.List;
 
 @Data
 public class Student implements Serializable {

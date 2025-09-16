@@ -1,7 +1,6 @@
 package com.jlm.homework.controller;
 
 import com.jlm.homework.entity.StudentSignRecord;
-import com.jlm.homework.repository.StudentSignRecordRepository;
 import com.jlm.homework.service.IStudentSignRecordService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;

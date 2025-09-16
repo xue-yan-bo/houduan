@@ -9,16 +9,15 @@ import com.jlm.homework.repository.StudentsHomeworkNewRepository;
 import com.jlm.homework.service.ExerciseBookServer;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.service.UserService;
+import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.data.domain.*;
-import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.jdbc.support.JdbcAccessor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;

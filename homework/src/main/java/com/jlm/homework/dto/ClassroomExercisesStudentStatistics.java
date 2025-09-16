@@ -1,6 +1,5 @@
 package com.jlm.homework.dto;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.Data;
 
 import java.util.List;

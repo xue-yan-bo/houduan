@@ -3,9 +3,12 @@ package com.jlm.homework.service.impl;
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
 import com.jlm.homework.feign.StudentFeignClient;
+import com.jlm.homework.entity.ClassroomExercises;
+import com.jlm.homework.entity.ClassroomExercisesStudentAnswer;
+import com.jlm.homework.entity.Student;
+import com.jlm.homework.feign.StudentFeginClient;
 import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
-import com.jlm.homework.service.IClassroomExercisesService;
 import com.jlm.homework.service.IClassroomExercisesStudentAnswerService;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -17,7 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-
 
 import java.math.BigDecimal;
 import java.text.ParseException;

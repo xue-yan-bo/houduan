@@ -1,7 +1,6 @@
 package com.jlm.homework.service;
 
 import com.jlm.homework.dto.StudentVo;
-import com.jlm.homework.entity.QuestionType;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.entity.Student;
 import org.springframework.data.domain.Page;

@@ -2,9 +2,7 @@ package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.ExerciseWriteData;
 import com.jlm.homework.dto.StudentWriteDto;
-import com.jlm.homework.entity.ClassroomExercises;
 import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
-import com.jlm.homework.entity.ClassroomStudentWriteData;
 import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

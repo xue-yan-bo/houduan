@@ -2,7 +2,6 @@ package com.jlm.homework.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.JdbcTypeCode;

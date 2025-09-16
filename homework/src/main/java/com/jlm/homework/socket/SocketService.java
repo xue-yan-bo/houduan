@@ -2,14 +2,13 @@ package com.jlm.homework.socket;
 
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
-import com.jlm.homework.util.ParseTcpDataUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 

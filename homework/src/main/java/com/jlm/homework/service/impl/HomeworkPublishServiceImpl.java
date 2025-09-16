@@ -221,11 +221,11 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 }
                 Predicate cond6 = criteriaBuilder.equal(root.get("deleteFlag"),0);
                 Predicate cond7 = null;
-                CurrentUserInfo currentUserInfo=userService.getCurrentUserInfo();
+                //CurrentUserInfo currentUserInfo=userService.getCurrentUserInfo();
                 if(StringUtils.isNotEmpty(homeworkPublishRequest.getUserId())){
                     cond7 = criteriaBuilder.equal(root.get("userId"),homeworkPublishRequest.getUserId() );
-                }else if(currentUserInfo!=null){
-                    cond7 = criteriaBuilder.equal(root.get("userId"),currentUserInfo.getUserUuid() );
+                }else {
+                    cond7 =criteriaBuilder.conjunction();
                 }
                 query.where(condition,cond1,cond2,cond3,cond4,cond5,cond6,cond7);
                 return null;

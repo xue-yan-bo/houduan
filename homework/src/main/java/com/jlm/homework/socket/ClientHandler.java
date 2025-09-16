@@ -430,7 +430,6 @@ public class ClientHandler implements Runnable {
                     buff[1] = 0x30;
                     len += 2;
                 }
-                System.out.println("____字节长度"+len);
             }
         } else {
             // 没有当前菜单时的默认值
@@ -444,6 +443,7 @@ public class ClientHandler implements Runnable {
         if (len > 0 && out != null) {
             byte[] sendData = new byte[len];
             System.out.println(new String(buff, StandardCharsets.UTF_16LE));
+            ParseTcpDataUtil.sendLcdDisplayData(out,buff,len);
             System.arraycopy(buff, 0, sendData, 0, len);
             System.out.println(new String(sendData, StandardCharsets.UTF_16LE));
             ParseTcpDataUtil.sendLcdDisplayData(out,sendData,len);

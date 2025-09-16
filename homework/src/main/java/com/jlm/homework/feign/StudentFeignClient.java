@@ -1,9 +1,11 @@
 package com.jlm.homework.feign;
 
 import com.jlm.homework.dto.Result;
+import com.jlm.homework.dto.ResultDto;
 import com.jlm.homework.entity.Student;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /*@FeignClient(
@@ -21,4 +23,6 @@ public interface StudentFeignClient {
                 @RequestParam("gradeId") Long gradeId,
                 @RequestParam("classesId") Long classesId,
                 @RequestParam("studentStatus") String studentStatus);
+        @GetMapping("/student/getStudentInfo/{studentId}")
+        public ResultDto<Student> getStudentInfo(@PathVariable("studentId") Long studentId);
 }

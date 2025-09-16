@@ -3,6 +3,7 @@ package com.jlm.homework.socket;
 import com.alibaba.fastjson.JSONObject;
 import com.jlm.homework.dto.HomeWork2Board;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
+import com.jlm.homework.entity.StudentsWriteRecord;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.socket.boardmenu.MenuItemT;
@@ -22,6 +23,10 @@ import java.util.List;
 // 客户端处理线程
 public class ClientHandler implements Runnable {
     public static MenuT pCurrentMenu = null;
+    public static boolean homeworkflag = false;
+    public static Integer homeworkPageN = 1;
+    List<StudentsWriteRecord> studentsWriteRecords =new ArrayList<>();
+
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
@@ -94,33 +99,78 @@ public class ClientHandler implements Runnable {
                 System.out.println("收到 [" + clientAddress + "] TCP数据包: " + java.util.Arrays.toString(fullPacketBuffer));
                 
                 try {
-                    boolean menuKeydownflag = false;
-                    boolean backKeydownflag = false;
-                    boolean confirmKeydownflag = false;
-                    boolean upKeydownflag = false;
-                    boolean downKeydownflag = false;
+                    // 这里可以添加对显示字符串的处理逻辑
+                    // 例如，如果需要查询相关作业数据
+                    List<HomeWork2Board> work2Boards = new ArrayList<>();
+                    if (relation != null) {
+                        Long studentId = Long.parseLong(relation.getUserId());
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                        String day = sdf.format(new Date());
+                        work2Boards = studentsHomeworkNewService.getHomeWork2Board(null, day, studentId);
+                    }
                     List<MenuItemT> mainItems = new ArrayList<>();
-                    mainItems.add(new MenuItemT(1,"语文", null));
-                    mainItems.add(new MenuItemT(2,"数学", null));
-                    mainItems.add(new MenuItemT(3,"英语", null));
-                    mainItems.add(new MenuItemT(4,"科学", null));
-                    mainItems.add(new MenuItemT(5,"美术", null));
+                    if(work2Boards==null||work2Boards.size()<=0){
+                        mainItems.add(new MenuItemT(1," 语文\n".getBytes(StandardCharsets.UTF_16LE), null));
+                        mainItems.add(new MenuItemT(2," 数学\n".getBytes(StandardCharsets.UTF_16LE), null));
+                        mainItems.add(new MenuItemT(3," 英语\n".getBytes(StandardCharsets.UTF_16LE), null));
+                        mainItems.add(new MenuItemT(4," 科学\n".getBytes(StandardCharsets.UTF_16LE), null));
+                        mainItems.add(new MenuItemT(5," 美术\n\0".getBytes(StandardCharsets.UTF_16LE), null));
+                    }else {
+
+
+                        for (int i = 0; i < work2Boards.size(); i++) {
+                            HomeWork2Board homeWork2Board = work2Boards.get(i);
+                            if (StringUtils.isNotEmpty(homeWork2Board.getSubject())) {
+                                String subject = homeWork2Board.getSubject() + "\n";
+                                MenuItemT itemT = new MenuItemT(i + 1, subject.getBytes(StandardCharsets.UTF_16LE), null);
+                                List<MenuItemT> pItems = new ArrayList<>();
+                                if (homeWork2Board.getPageSize() > 0) {
+                                    for (int j = 1; j <= homeWork2Board.getPageSize(); j++) {
+                                        String name = homeWork2Board.getHomeworkName() + "  第" + j + "页 \n";
+                                        MenuItemT subItem = new MenuItemT(j, name.getBytes(StandardCharsets.UTF_16LE), null);
+                                        pItems.add(subItem);
+                                    }
+                                }
+                                MenuT subMenuT = new MenuT(null, pItems, 0, 0, 1, homeWork2Board.getPageSize());
+                                itemT.setPSubMenu(subMenuT);
+                                mainItems.add(itemT);
+                            }
+
+                        }
+
+                    }
                     MenuT mainMenu = new MenuT(null,mainItems,0,0,3,5);
+                    for(MenuItemT subItem:mainMenu.getPItems()){
+                        if(subItem!=null){
+                            subItem.setPSubMenu(mainMenu);
+                        }
+                    }
                     // 根据数据类型进行解析
                     if (dataType == 0x01) { // 手写数据
                         List<HandwritingParseResult> results = ParseTcpDataUtil.parseHandwritingTcpPackets(fullPacketBuffer);
                         System.out.println("手写数据解析结果数量：" + results.size());
+
                         for (HandwritingParseResult result : results) {
                             System.out.println("数据包解析结果：" + result.toString());
-                            if(relation!=null){
-                                result.setUserId(relation.getUserId());
+                            if (relation != null) {
+                                if(homeworkflag&&pCurrentMenu!=null){//作业
+                                    StudentsWriteRecord writeRecord = new StudentsWriteRecord();
+                                    writeRecord.setX(result.getX());
+                                    writeRecord.setY(result.getY());
+                                    writeRecord.setPressure(result.getPressure());
+                                    writeRecord.setTimestamp(result.getTimestamp());
+                                    studentsWriteRecords.add(writeRecord);
+                                }else {//课堂
+                                    result.setUserId(relation.getUserId());
+                                    // 发送解析结果给客户端
+                                    writer.println("服务器回复: " + result.toString());
+                                    // 通过WebSocket发送解析结果给前端
+                                    messagingTemplate.convertAndSend("/topic/writingData", result);
+                                }
                             }
-                            // 发送解析结果给客户端
-                            writer.println("服务器回复: " + result.toString());
-                            
-                            // 通过WebSocket发送解析结果给前端
-                            messagingTemplate.convertAndSend("/topic/writingData", result);
+
                         }
+
                     } else if (dataType == 0x02) { // 按键数据
                         ButtonParseResult result = ParseTcpDataUtil.parseButtonTcpPackets(fullPacketBuffer);
                         System.out.println("按键数据解析结果数量：" + result.toString());
@@ -155,13 +205,25 @@ public class ClientHandler implements Runnable {
                             }
 
                             if(8==result.getButton()){//确定
-                                if(StringUtils.isNotEmpty(relation.getUserId())) {
+                                if(homeworkflag){
+                                    //保存作业记录
+                                    if(studentsWriteRecords.size()>0&&pCurrentMenu!=null&&pCurrentMenu.getParentMenu()!=null&&relation!=null){
+                                        MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                        String name = new String(itemT.getDesc(),StandardCharsets.UTF_16LE);
+                                        Integer num=name.lastIndexOf("第");
+                                        String homeworkName = name.substring(0,num);
+
+                                        Integer pageN = Integer.valueOf(name.substring(num,name.lastIndexOf("页")));
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords);
+                                        pCurrentMenu = null;
+                                    }
+                                }else if(StringUtils.isNotEmpty(relation.getUserId())) {
                                     messagingTemplate.convertAndSend("/topic/endWrite", relation.getUserId());
                                 }
-                                confirmKeydownflag = true;
+
                             }
                             if(1==result.getButton()){//菜单
-                                menuKeydownflag = true;
+                                homeworkflag = true;
                                 System.out.println("++++++++++++菜单++++++++++");
                                 pCurrentMenu = mainMenu;
                                 pCurrentMenu.setShowStartItem(0);
@@ -170,7 +232,25 @@ public class ClientHandler implements Runnable {
                                 nMenuUpdate(out,writer);
                             }
                             if(2==result.getButton()){//返回
-                                backKeydownflag = true;
+                                if(pCurrentMenu!=null){
+                                    if(pCurrentMenu.getParentMenu()!=null){
+                                        pCurrentMenu = pCurrentMenu.getParentMenu();
+                                    }else{
+                                        pCurrentMenu = null;
+                                    }
+                                }
+                                if(homeworkflag){
+                                    //保存作业记录
+                                    if(studentsWriteRecords.size()>0&&pCurrentMenu!=null&&pCurrentMenu.getParentMenu()!=null&&relation!=null){
+                                        MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                        String name = new String(itemT.getDesc(),StandardCharsets.UTF_16LE);
+                                        Integer num=name.lastIndexOf("第");
+                                        String homeworkName = name.substring(0,num);
+
+                                        Integer pageN = Integer.valueOf(name.substring(num,name.lastIndexOf("页")));
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords);
+                                    }
+                                }
                             }
                             if(4==result.getButton()){//清除
                                 if(StringUtils.isNotEmpty(relation.getUserId())) {
@@ -178,59 +258,72 @@ public class ClientHandler implements Runnable {
                                 }
                             }
                             if(1024==result.getButton()){//上一页
-                                messagingTemplate.convertAndSend("/topic/lastPage", relation.getUserId());
-                                upKeydownflag = true;
+
                                 System.out.println("++++++++++++上一页++++++++++");
+                                if(homeworkflag) {
+                                    if (pCurrentMenu.getSelectItem() > pCurrentMenu.getShowStartItem()) {
+                                        Integer selectItem = pCurrentMenu.getSelectItem();
+                                        selectItem = selectItem - 1;
+                                        pCurrentMenu.setSelectItem(selectItem);
+                                        nMenuUpdate(out, writer);
+                                    } else {
+                                        if (pCurrentMenu.getSelectItem() > 0) {
+                                            pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem() - 1);
+                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() - 1);
+                                            pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem() - 1);
+                                            nMenuUpdate(out, writer);
+                                        }
+                                    }
+                                    //保存作业记录
+                                    if(studentsWriteRecords.size()>0&&pCurrentMenu!=null&&pCurrentMenu.getParentMenu()!=null&&relation!=null){
+                                        MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                        String name = new String(itemT.getDesc(),StandardCharsets.UTF_16LE);
+                                        Integer num=name.lastIndexOf("第");
+                                        String homeworkName = name.substring(0,num);
+
+                                        Integer pageN = Integer.valueOf(name.substring(num,name.lastIndexOf("页")));
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords);
+                                    }
+                                }else{
+                                    messagingTemplate.convertAndSend("/topic/lastPage", relation.getUserId());
+                                }
                             }
                             if(2048==result.getButton()){//下一页
-                                messagingTemplate.convertAndSend("/topic/nextPage", relation.getUserId());
-                                downKeydownflag = true;
+
                                 System.out.println("++++++++++++下一页++++++++++");
+                                if(homeworkflag) {
+                                    if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
+                                        Integer selectItem = pCurrentMenu.getSelectItem();
+                                        selectItem = selectItem + 1;
+                                        pCurrentMenu.setSelectItem(selectItem);
+                                        nMenuUpdate(out, writer);
+                                    } else {
+                                        if (pCurrentMenu.getSelectItem() < pCurrentMenu.getMaxItems() - 1) {
+                                            pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem() + 1);
+                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() + 1);
+                                            pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem() + 1);
+                                            nMenuUpdate(out, writer);
+                                        }
+                                    }
+                                    //保存作业记录
+                                    if(studentsWriteRecords.size()>0&&pCurrentMenu!=null&&pCurrentMenu.getParentMenu()!=null&&relation!=null){
+                                        MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                        String name = new String(itemT.getDesc(),StandardCharsets.UTF_16LE);
+                                        Integer num=name.lastIndexOf("第");
+                                        String homeworkName = name.substring(0,num);
+
+                                        Integer pageN = Integer.valueOf(name.substring(num,name.lastIndexOf("页")));
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords);
+                                    }
+                                }else{
+                                    messagingTemplate.convertAndSend("/topic/nextPage", relation.getUserId());
+                                }
                             }
 
                             //按键松开
                             if(0==result.getButton()){
                                 System.out.println("++++++++++++按键松开++++++++++");
-                                if(menuKeydownflag){
-                                    menuKeydownflag = false;
-                                    pCurrentMenu = mainMenu;
-                                    pCurrentMenu.setShowStartItem(0);
-                                    pCurrentMenu.setShowEndItem(3);
-                                    pCurrentMenu.setSelectItem(0);
-                                    nMenuUpdate(out,writer);
-                                }
-                                if(downKeydownflag){
-                                    downKeydownflag =  false;
-                                    if(pCurrentMenu.getSelectItem()<pCurrentMenu.getShowEndItem()){
-                                        Integer selectItem = pCurrentMenu.getSelectItem();
-                                        selectItem = selectItem+1;
-                                        pCurrentMenu.setSelectItem(selectItem);
-                                        nMenuUpdate(out,writer);
-                                    }else{
-                                        if(pCurrentMenu.getSelectItem()<pCurrentMenu.getMaxItems()-1){
-                                            pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem()+1);
-                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem()+1);
-                                            pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem()+1);
-                                            nMenuUpdate(out,writer);
-                                        }
-                                    }
-                                }
-                                if(upKeydownflag){
-                                    upKeydownflag =  false;
-                                    if(pCurrentMenu.getSelectItem()>pCurrentMenu.getShowStartItem()){
-                                        Integer selectItem = pCurrentMenu.getSelectItem();
-                                        selectItem = selectItem-1;
-                                        pCurrentMenu.setSelectItem(selectItem);
-                                        nMenuUpdate(out,writer);
-                                    }else{
-                                        if(pCurrentMenu.getSelectItem()>0){
-                                            pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem()-1);
-                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem()-1);
-                                            pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem()-1);
-                                            nMenuUpdate(out,writer);
-                                        }
-                                    }
-                                }
+
                             }
                         }
 
@@ -256,15 +349,15 @@ public class ClientHandler implements Runnable {
                             LCDDisplayParseResult result = ParseTcpDataUtil.parseLcdDisplayTcpPacket(fullPacketBuffer);
                             System.out.println("屏幕显示数据解析结果：" + result.toString());
                             String displayString = result.getDisplayString();
-                            
+
                             // 这里可以添加对显示字符串的处理逻辑
                             // 例如，如果需要查询相关作业数据
                             if (relation != null) {
                                 Long studentId = Long.parseLong(relation.getUserId());
                                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                                 String day = sdf.format(new Date());
-                                List<HomeWork2Board> work2Boards = studentsHomeworkNewService.getHomeWork2Board(displayString, day, studentId);
-                                String jsonStr = JSONObject.toJSONString(work2Boards);
+                                List<HomeWork2Board> work2Board = studentsHomeworkNewService.getHomeWork2Board(displayString, day, studentId);
+                                String jsonStr = JSONObject.toJSONString(work2Board);
                                 out.write(jsonStr.getBytes());
                             }
                         } catch (UnsupportedEncodingException e) {
@@ -315,16 +408,16 @@ public class ClientHandler implements Runnable {
                 // 获取菜单项
                 MenuItemT menuItem = pCurrentMenu.getPItems().get(i);
                 // 获取描述并转换为UTF-16LE编码字节数组
-                String desc = menuItem.getDesc();
-                System.out.println("_______"+desc);
-                byte[] descBytes = desc.getBytes(StandardCharsets.UTF_16LE);
+                byte[] desc = menuItem.getDesc();
+                System.out.println("_______"+desc.toString());
+                byte[] descBytes = desc;//.getBytes(StandardCharsets.UTF_16LE);
 
                 // 对应C++的memcpy
-                System.arraycopy(descBytes, 0, buff, len, descBytes.length);
+                System.arraycopy(desc, 0, buff, len, desc.length);
 
                 // 检查是否是选中项
                 if (pCurrentMenu.getSelectItem() == i) {
-                    len += descBytes.length;
+                    len += desc.length;
                     // 添加特殊标记 0x92 0x21
                     if (len < buff.length - 1) {
                         buff[len] = (byte) 0x92;
@@ -335,7 +428,7 @@ public class ClientHandler implements Runnable {
                     // 设置默认值
                     buff[0] = 0x00;
                     buff[1] = 0x30;
-                    len = 2;
+                    len += 2;
                 }
                 System.out.println("____字节长度"+len);
             }
@@ -351,9 +444,9 @@ public class ClientHandler implements Runnable {
         if (len > 0 && out != null) {
             byte[] sendData = new byte[len];
             System.out.println(new String(buff, StandardCharsets.UTF_16LE));
-            //System.arraycopy(buff, 0, sendData, 0, len);
-            //System.out.println(new String(sendData, StandardCharsets.UTF_16LE));
-            ParseTcpDataUtil.sendLcdDisplayData(out,buff,len);
+            System.arraycopy(buff, 0, sendData, 0, len);
+            System.out.println(new String(sendData, StandardCharsets.UTF_16LE));
+            ParseTcpDataUtil.sendLcdDisplayData(out,sendData,len);
             out.flush();
         }
     }

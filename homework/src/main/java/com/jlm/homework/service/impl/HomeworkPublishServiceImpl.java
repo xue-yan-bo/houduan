@@ -5,9 +5,7 @@ import com.jlm.homework.entity.ExerciseBookEntity;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.repository.HomeworkPublishRepository;
-import com.jlm.homework.service.ExerciseBookServer;
-import com.jlm.homework.service.IHomeworkPublishService;
-import com.jlm.homework.service.IStudentsHomeworkNewService;
+import com.jlm.homework.service.*;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -35,6 +33,8 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
     private IStudentsHomeworkNewService studentsHomeworkNewService;
     @Autowired
     private ExerciseBookServer exerciseBookServer;
+    @Autowired
+    private UserService userService;
     @Override
     public String create(HomeworkPublish homeworkPublish) {
         if(homeworkPublish!=null
@@ -220,7 +220,14 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                     cond5 =criteriaBuilder.conjunction();
                 }
                 Predicate cond6 = criteriaBuilder.equal(root.get("deleteFlag"),0);
-                query.where(condition,cond1,cond2,cond3,cond4,cond5,cond6);
+                Predicate cond7 = null;
+                CurrentUserInfo currentUserInfo=userService.getCurrentUserInfo();
+                if(StringUtils.isNotEmpty(homeworkPublishRequest.getUserId())){
+                    cond7 = criteriaBuilder.equal(root.get("userId"),homeworkPublishRequest.getUserId() );
+                }else if(currentUserInfo!=null){
+                    cond7 = criteriaBuilder.equal(root.get("userId"),currentUserInfo.getUserUuid() );
+                }
+                query.where(condition,cond1,cond2,cond3,cond4,cond5,cond6,cond7);
                 return null;
             }
         };

@@ -6,7 +6,6 @@ import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.entity.ClassroomExercises;
 import com.jlm.homework.entity.ClassroomExercisesStudentAnswer;
 import com.jlm.homework.entity.Student;
-import com.jlm.homework.feign.StudentFeginClient;
 import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.service.IClassroomExercisesStudentAnswerService;

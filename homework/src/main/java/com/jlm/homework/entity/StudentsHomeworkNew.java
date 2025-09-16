@@ -266,5 +266,9 @@ public class StudentsHomeworkNew implements Serializable {
     private List<CommentsCoordinate> commentsCoordinate2;
 
 
-
+    /**
+     * 学生写作记录
+     */
+    @Transient
+    private List<HomeworkStudentWriteData> studentWriteDataList;
 }

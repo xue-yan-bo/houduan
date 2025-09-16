@@ -3,6 +3,7 @@ package com.jlm.homework.service;
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.StudentsHomeworkNew;
+import com.jlm.homework.entity.StudentsWriteRecord;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -37,4 +38,6 @@ public interface IStudentsHomeworkNewService {
     HomeworkStatisticsDto getHomeworkStatistics(String startDate, String endDate);
 
     List<HomeWork2Board> getHomeWork2Board(String subject,String date,Long studentId);
+
+    void saveWriteRecords(Long studentId, String homeworkName,Integer pageN, List<StudentsWriteRecord> studentsWriteRecords);
 }

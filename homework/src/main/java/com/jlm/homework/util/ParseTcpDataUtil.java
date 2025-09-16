@@ -245,58 +245,7 @@ public class ParseTcpDataUtil {
         return result;
     }
 
-    /**
-     * 解析序列号TCP数据包
-     * @param data 待解析的TCP包数据
-     * @return 解析结果对象
-     * @throws IllegalArgumentException 数据异常时抛出
-     */
-    public static SubjectParseResult parseSubjectTcpPacket(byte[] data) throws UnsupportedEncodingException {
-        // 基础合法性校验
-        if (data == null || data.length < 5) {
-            throw new IllegalArgumentException("数据长度异常，至少需为5字节");
-        }
 
-        // 解析Header
-        byte header0 = data[0];
-        byte header1 = data[1];
-        if (header0 != 0x55 || header1 != 0x56) {
-            throw new IllegalArgumentException("包头不匹配");
-        }
-
-        // 解析Length和Type
-        int length = data[2] & 0xFF;
-        byte type = data[3];
-        if (type != 0x03) {
-            throw new IllegalArgumentException("数据类型异常，需为0x03");
-        }
-
-        // 验证总长度
-        if (data.length != length + 4) {
-            throw new IllegalArgumentException("数据总长度与Length字段不匹配");
-        }
-
-        // 解析Checksum
-        byte checksum = data[data.length - 1];
-        int calculatedChecksum = calculateChecksum(data, 0, data.length - 1);
-        boolean checksumValid = (calculatedChecksum & 0xFF) == (checksum & 0xFF);
-
-        // 提取Packet数据（序列号）
-        byte[] packet = Arrays.copyOfRange(data, 4, data.length - 1);
-        // 使用Unicode解码（UTF-16LE）
-        String subject = new String(packet, "UTF-16LE");
-
-        // 封装结果
-        SubjectParseResult result = new SubjectParseResult();
-        result.setHeader(new byte[]{header0, header1});
-        result.setLength(length);
-        result.setType(type);
-        result.setSubject(subject); // 保持使用现有字段存储序列号
-        result.setChecksum(checksum);
-        result.setChecksumValid(checksumValid);
-
-        return result;
-    }
     
     /**
      * 解析LCD显示字符串TCP数据包
@@ -422,9 +371,11 @@ public class ParseTcpDataUtil {
         buff[3] = 0x04;
         // 复制数据到缓冲区
         System.arraycopy(data, 0, buff, 4, length);
+        System.out.println(buff.toString());
         // 计算并设置校验和
         int checksum = calculateChecksum(buff, 0, 4 + length - 1);
         buff[4 + length] = (byte)(checksum & 0xFF);
+        System.out.println("发向板子数据："+java.util.Arrays.toString(buff));
         // 发送整个数据包
         outputStream.write(buff, 0, length + 5);
         outputStream.flush();

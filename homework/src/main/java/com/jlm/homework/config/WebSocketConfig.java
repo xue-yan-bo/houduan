@@ -42,6 +42,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 "http://192.168.1.135",  // 添加您的IP地址
                 "ws://192.168.1.135",
                 "http://192.168.1.135:18080",
+                "http://192.168.1.14",
+                "http://192.168.1.14:18080",
                 "http://49.232.159.98",
                 "http://192.168.1.251",
                 "http://192.168.1.29",

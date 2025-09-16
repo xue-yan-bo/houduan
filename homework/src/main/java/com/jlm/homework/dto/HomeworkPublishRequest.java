@@ -32,4 +32,6 @@ public class HomeworkPublishRequest {
      * 批改状态，0待批改、1已批改
      */
     private Integer auditStatus;
+
+    private String userId;
 }

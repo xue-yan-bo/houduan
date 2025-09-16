@@ -7,6 +7,7 @@ import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.HomeworkPublishRepository;
 import com.jlm.homework.repository.StudentsHomeworkNewRepository;
 import com.jlm.homework.service.ExerciseBookServer;
+import com.jlm.homework.service.IHomeworkStudentWriteDataService;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.service.UserService;
 import jakarta.annotation.Resource;
@@ -39,6 +40,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private ExerciseBookServer exerciseBookServer;
     @Autowired
     private UserService userService;
+    @Autowired
+    private IHomeworkStudentWriteDataService homeworkStudentWriteDataService;
 
     @Override
     public void createStudentsHomeworkByHomeworkPublish(HomeworkPublish homeworkPublish) {
@@ -495,7 +498,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Override
     public StudentsHomeworkNew getById(Long id) {
-        return studentsHomeworkNewRepository.findById(id).get();
+        StudentsHomeworkNew studentsHomework=studentsHomeworkNewRepository.findById(id).get();
+        List<HomeworkStudentWriteData> writeDatas=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId());
+        studentsHomework.setStudentWriteDataList(writeDatas);
+        return studentsHomework;
     }
 
     @Override
@@ -1290,5 +1296,25 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             homeWork2Boards.add(homeWork2Board);
         }
         return homeWork2Boards;
+    }
+
+    @Override
+    public void saveWriteRecords(Long studentId, String homeworkName, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords) {
+        StudentsHomeworkNew search = new StudentsHomeworkNew();
+        search.setStudentId(studentId);
+        search.setHomeworkPublishName(homeworkName);
+        Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findOne(Example.of(search));
+        if(optional==null||optional.get()==null){
+            return;
+        }
+        StudentsHomeworkNew studentsHomework=optional.get();
+        HomeworkStudentWriteData writeData = new HomeworkStudentWriteData();
+        writeData.setStudentHomeworkId(studentsHomework.getId());
+        writeData.setPageNum(pageN);
+        writeData.setStudentName(studentsHomework.getStudentName());
+        writeData.setStudentId(studentId);
+        writeData.setStudentsWriteRecords(studentsWriteRecords);
+        writeData.setCreateTime(new Date());
+        homeworkStudentWriteDataService.save(writeData);
     }
 }

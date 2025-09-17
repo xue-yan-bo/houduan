@@ -169,6 +169,7 @@ public class ClientHandler implements Runnable {
                                                 String name = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem()).getDesc();
                                                 if(board.getSubject().equals(name)){
                                                     String homeworkName = board.getHomeworkName();
+                                                    studentsHomeworkNewService.saveStartTime(board.getHomeworkId());
                                                     if((board.getPageSize()!=null&&board.getPageSize()>0)){
                                                         for(int i=0;i<board.getPageSize();i++){
                                                             String desc = homeworkName+"第" +(i+1)+"页";
@@ -207,7 +208,7 @@ public class ClientHandler implements Runnable {
                                                 homeworkName = name;
                                                 pageN = 1;
                                             }
-                                            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkName, pageN, studentsWriteRecords);
+                                            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkName, pageN, studentsWriteRecords,true);
                                             pCurrentMenu = null;
                                             work2Boards = new ArrayList<>();
                                             mainMenu = null;
@@ -317,7 +318,7 @@ public class ClientHandler implements Runnable {
                                             homeworkName = name;
                                             pageN = 1;
                                         }
-                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords);
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords,false);
                                     }
                                 }
                             }
@@ -339,7 +340,7 @@ public class ClientHandler implements Runnable {
                                             homeworkName = name;
                                             pageN = 1;
                                         }
-                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords);
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords,false);
                                     }
                                     pCurrentMenu = null;
                                     homeworkflag = false;
@@ -370,7 +371,7 @@ public class ClientHandler implements Runnable {
                                             homeworkName = name;
                                             pageN = 1;
                                         }
-                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords);
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords,false);
                                     }
                                     if (pCurrentMenu.getSelectItem() > pCurrentMenu.getShowStartItem()) {
                                         Integer selectItem = pCurrentMenu.getSelectItem();
@@ -412,7 +413,7 @@ public class ClientHandler implements Runnable {
                                             homeworkName = name;
                                             pageN = 1;
                                         }
-                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords);
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords,false);
                                     }
                                     if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
                                         Integer selectItem = pCurrentMenu.getSelectItem();

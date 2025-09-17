@@ -1304,7 +1304,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public void saveWriteRecords(Long studentId, String homeworkName, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords) {
+    public void saveWriteRecords(Long studentId, String homeworkName, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords,Boolean isFinish) {
         StudentsHomeworkNew search = new StudentsHomeworkNew();
         search.setStudentId(studentId);
         search.setHomeworkPublishName(homeworkName);
@@ -1321,5 +1321,21 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         writeData.setStudentsWriteRecords(studentsWriteRecords);
         writeData.setCreateTime(new Date());
         homeworkStudentWriteDataService.save(writeData);
+        if(isFinish) {
+            studentsHomework.setSubmitStatus(1);
+            studentsHomework.setSubmitTime(new Date());
+            studentsHomework.setAuditStatus("1");
+            studentsHomeworkNewRepository.save(studentsHomework);
+        }
+    }
+
+    @Override
+    public void saveStartTime(Long homeworkId) {
+        Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findById(homeworkId);
+        if(optional!=null){
+            StudentsHomeworkNew studentsHomework = optional.get();
+            studentsHomework.setStartTime(new Date());
+            studentsHomeworkNewRepository.save(studentsHomework);
+        }
     }
 }

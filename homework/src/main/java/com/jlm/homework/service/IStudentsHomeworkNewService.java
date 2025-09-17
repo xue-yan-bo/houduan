@@ -39,5 +39,7 @@ public interface IStudentsHomeworkNewService {
 
     List<HomeWork2Board> getHomeWork2Board(String subject,String date,Long studentId);
 
-    void saveWriteRecords(Long studentId, String homeworkName,Integer pageN, List<StudentsWriteRecord> studentsWriteRecords);
+    void saveWriteRecords(Long studentId, String homeworkName,Integer pageN, List<StudentsWriteRecord> studentsWriteRecords,Boolean isFinish);
+
+    void saveStartTime(Long homeworkId);
 }

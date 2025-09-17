@@ -232,7 +232,7 @@ public class StudentsHomeworkNew implements Serializable {
         return topicImages;
     }
     public void setTopicImagesStr(String topicImagesStr) {
-        if(!topicImages.isEmpty()){
+        if(topicImages!=null&&!topicImages.isEmpty()){
             this.topicImagesStr = String.join(" ,", topicImages);
         }else{
             this.topicImagesStr = topicImagesStr;

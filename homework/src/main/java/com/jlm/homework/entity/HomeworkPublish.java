@@ -147,13 +147,13 @@ public class HomeworkPublish implements Serializable {
     private String topicImagesStr;
 
     public List<String> getTopicImages() {
-        if(!StringUtils.isEmpty(topicImagesStr)){
+        if(StringUtils.isNotEmpty(topicImagesStr)){
             topicImages = Arrays.asList(topicImagesStr.split(" ,"));
         }
         return topicImages;
     }
     public void setTopicImagesStr(String topicImagesStr) {
-        if(!topicImages.isEmpty()){
+        if(topicImages!=null&&!topicImages.isEmpty()){
             this.topicImagesStr = String.join(" ,", topicImages);
         }else{
             this.topicImagesStr = topicImagesStr;

@@ -216,6 +216,7 @@ public class ClientHandler implements Runnable {
                                         Integer pageN = Integer.valueOf(name.substring(num,name.lastIndexOf("页")));
                                         studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords);
                                         pCurrentMenu = null;
+                                        homeworkflag = false;
                                     }
                                 }else if(StringUtils.isNotEmpty(relation.getUserId())) {
                                     messagingTemplate.convertAndSend("/topic/endWrite", relation.getUserId());
@@ -237,6 +238,7 @@ public class ClientHandler implements Runnable {
                                         pCurrentMenu = pCurrentMenu.getParentMenu();
                                     }else{
                                         pCurrentMenu = null;
+                                        homeworkflag = false;
                                     }
                                 }
                                 if(homeworkflag){
@@ -442,8 +444,6 @@ public class ClientHandler implements Runnable {
         // 对应C++的tcp_send(sl, buff, len)
         if (len > 0 && out != null) {
             byte[] sendData = new byte[len];
-            System.out.println(new String(buff, StandardCharsets.UTF_16LE));
-            ParseTcpDataUtil.sendLcdDisplayData(out,buff,len);
             System.arraycopy(buff, 0, sendData, 0, len);
             System.out.println(new String(sendData, StandardCharsets.UTF_16LE));
             ParseTcpDataUtil.sendLcdDisplayData(out,sendData,len);

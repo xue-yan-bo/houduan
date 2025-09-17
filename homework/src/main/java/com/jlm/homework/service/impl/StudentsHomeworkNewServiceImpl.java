@@ -1256,7 +1256,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 try {
                     Predicate condition = null;
-                    if(StringUtils.isEmpty(subject)){
+                    if(StringUtils.isNotEmpty(subject)){
                         condition = criteriaBuilder.equal(root.get("subject").as(String.class),subject);
                     }else {
                         condition = criteriaBuilder.conjunction();
@@ -1278,7 +1278,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }else{
                         condition2 = criteriaBuilder.conjunction();
                     }
-                    query.where(condition,condition1,condition2);
+                    query.where(condition2,condition1,condition);
                 } catch (ParseException e) {
                     throw new RuntimeException(e);
                 }
@@ -1292,7 +1292,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             homeWork2Board.setHomeworkId(homework.getHomeworkPublishId());
             homeWork2Board.setHomeworkName(homework.getHomeworkPublishName());
             homeWork2Board.setSubject(homework.getSubject());
-            homeWork2Board.setPageSize(homework.getTopicImages().size());
+            if(homework.getTopicImages()!=null&&homework.getTopicImages().size()>0){
+                homeWork2Board.setPageSize(homework.getTopicImages().size());
+            }else{
+                homeWork2Board.setPageSize(1);
+            }
+
             homeWork2Boards.add(homeWork2Board);
         }
         return homeWork2Boards;

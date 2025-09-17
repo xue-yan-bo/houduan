@@ -34,7 +34,7 @@ public class MenuUtil {
                 // 获取菜单项
                 MenuItemT menuItem = pCurrentMenu.getPItems().get(i);
                 // 获取描述并转换为UTF-16LE编码字节数组
-                byte[] desc = menuItem.getDesc();
+                byte[] desc = menuItem.getDesc2Byte();
                 byte[] descBytes = desc;
                 
                 // 对应C++的memcpy

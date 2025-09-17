@@ -2,19 +2,21 @@ package com.jlm.homework.socket.boardmenu;
 
 import lombok.Data;
 
+import java.nio.charset.StandardCharsets;
+
 @Data
 public class MenuItemT {
     private Integer id;
-    private byte[] desc;
+    private String desc;
     private MenuT  pSubMenu;
 
-    public MenuItemT(Integer id, byte[] desc, MenuT pSubMenu) {
+    public MenuItemT(Integer id, String desc, MenuT pSubMenu) {
         this.id = id;
         this.desc = desc;
         this.pSubMenu = pSubMenu;
     }
     // 将数字描述转换为可读字符串
-    public String getDescriptionString() {
+    /*public String getDescriptionString() {
         StringBuilder sb = new StringBuilder();
         for (int code : desc) {
             if (code != 0x0d && code != 0x0) { // 跳过回车符和结束符
@@ -22,5 +24,11 @@ public class MenuItemT {
             }
         }
         return sb.toString();
+    }*/
+
+    public byte[] getDesc2Byte() {
+        String name = desc + " \n";
+        byte[] bytes = name.getBytes(StandardCharsets.UTF_16LE);
+        return bytes;
     }
 }

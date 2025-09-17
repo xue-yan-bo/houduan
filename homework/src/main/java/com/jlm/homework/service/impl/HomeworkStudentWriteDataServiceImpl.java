@@ -33,6 +33,7 @@ public class HomeworkStudentWriteDataServiceImpl implements IHomeworkStudentWrit
             return;
         }
         if(homeworkStudentWriteData.getStudentsWriteRecords().size()<StudentWriteData_Size){
+            homeworkStudentWriteData.setIndexN(1);
             homeworkStudentWriteDataRepository.save(homeworkStudentWriteData);
         }else {
             HomeworkStudentWriteData data=new HomeworkStudentWriteData();

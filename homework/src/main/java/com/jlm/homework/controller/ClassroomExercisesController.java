@@ -5,6 +5,7 @@ import com.jlm.homework.entity.ClassroomExercises;
 import com.jlm.homework.service.IClassroomExercisesService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
@@ -109,14 +110,10 @@ public class ClassroomExercisesController {
     public Page<ClassroomExercises> classInteractList(
             @RequestParam(defaultValue = "1")Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            Long classId) {
-        ClassroomExercises classroomExercises =new ClassroomExercises();
-        if(classId!=null){
-            classroomExercises.setClassIds(Arrays.asList(classId));
-        }
+            Long classId,String homeworkName,String startDate,String endDate) {
 
-        classroomExercises.setExercisesType(2);
-        Page<ClassroomExercises> list = classroomExercisesService.selectList(pageNum,pageSize, classroomExercises);
+        Integer exercisesType = 2;
+        Page<ClassroomExercises> list = classroomExercisesService.classInteractList(pageNum,pageSize, classId,homeworkName,startDate,endDate,exercisesType);
 
         return list;
     }
@@ -131,14 +128,13 @@ public class ClassroomExercisesController {
     public Page<ClassroomExercises> liveStreamtList(
             @RequestParam(defaultValue = "1")Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            Long classId) {
+            Long classId,String homeworkName,String startDate,String endDate) {
         ClassroomExercises classroomExercises =new ClassroomExercises();
         if(classId!=null){
             classroomExercises.setClassIds(Arrays.asList(classId));
         }
-        classroomExercises.setExercisesType(3);
-        Page<ClassroomExercises> list = classroomExercisesService.selectList(pageNum,pageSize, classroomExercises);
-
+        Integer exercisesType=3;
+        Page<ClassroomExercises> list = classroomExercisesService.classInteractList(pageNum,pageSize, classId,homeworkName,startDate,endDate,exercisesType);
         return list;
     }
 }

@@ -320,5 +320,54 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         return classroomData;
     }
 
+    @Override
+    public Page<ClassroomExercises> classInteractList(Integer pageNum, Integer pageSize, Long classId, String homeworkName, String startDate, String endDate, Integer exercisesType) {
+        pageNum = pageNum == null ? 0 : pageNum-1;
+        pageSize = pageSize == null ? 10 : pageSize;
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
+        Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Specification<ClassroomExercises> specification = new Specification<ClassroomExercises>() {
+            @Override
+            public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                try {
+                    if(classId!=null){
+                        Predicate con = criteriaBuilder.like(root.get("classIds").as(String.class),"%"+classId+"%");
+                        list.add(con);
+                    }
+                    if(StringUtils.isNotEmpty(homeworkName)){
+                        Predicate con1 = criteriaBuilder.like(root.get("homeworkName").as(String.class),"%"+homeworkName+"%");
+                        list.add(con1);
+                    }
+                    if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
+                        Date startDate1 = sdf.parse(startDate);
+                        Date endDate1 = sdf.parse(endDate);
+                        Predicate condition = criteriaBuilder.between(root.<Date>get("createTime"),startDate1,endDate1);
+                        list.add(condition);
+                    }
+                    if(exercisesType!=null){
+                        Predicate con2 = criteriaBuilder.equal(root.get("exercisesType"),exercisesType);
+                        list.add(con2);
+                    }
+
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        Page<ClassroomExercises> page=  classroomExercisesRepository.findAll(specification,pageable);
+        List<ClassroomExercises> exercisesList=page.getContent();
+        for(ClassroomExercises item:exercisesList){
+            List<ClassroomExercisesQuestion> questionList=classroomExercisesQuestionService.selectQuestionList(item.getId());
+            item.setQuestionList(questionList);
+        }
+
+        return page;
+    }
+
 
 }

@@ -91,6 +91,7 @@ public class HomeworkStudentWriteDataServiceImpl implements IHomeworkStudentWrit
             //最后一个元素，list增加
             if(list.indexOf(writeData)==list.size()-1){
                 if(studentsWriteRecords!=null&&studentsWriteRecords.size()>0){
+                    studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
                     dataList.add(studentWriteData);
                 }
             }

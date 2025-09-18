@@ -1254,35 +1254,33 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
             @Override
             public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
                 try {
-                    Predicate condition = null;
+
                     if(StringUtils.isNotEmpty(subject)){
-                        condition = criteriaBuilder.equal(root.get("subject").as(String.class),subject);
-                    }else {
-                        condition = criteriaBuilder.conjunction();
+                        Predicate condition = criteriaBuilder.equal(root.get("subject").as(String.class),subject);
+                        list.add(condition);
                     }
                     Calendar calendar = Calendar.getInstance();
-                    Predicate condition1 = null;
-                    if(StringUtils.isNotEmpty(subject)){
+                    if(StringUtils.isNotEmpty(date)){
                         Date start = sdf.parse(date);
                         calendar.setTime(start);
-                        calendar.add(Calendar.DATE, 1);
+                        calendar.add(Calendar.DAY_OF_MONTH, 1);
                         Date end = calendar.getTime();
-                        condition1 = criteriaBuilder.between(root.<Date>get("createTime"),start,end);
-                    }else {
-                        condition1 = criteriaBuilder.conjunction();
+                        Predicate condition1 = criteriaBuilder.between(root.<Date>get("createTime").as(Date.class),start,end);
+                        list.add(condition1);
                     }
-                    Predicate condition2= null;
+
                     if(studentId!=null){
-                        condition2 = criteriaBuilder.equal(root.get("studentId").as(Long.class),studentId);
-                    }else{
-                        condition2 = criteriaBuilder.conjunction();
+                        Predicate  condition2 = criteriaBuilder.equal(root.get("studentId").as(Long.class),studentId);
+                        list.add(condition2);
                     }
-                    query.where(condition2,condition1,condition);
+
                 } catch (ParseException e) {
                     throw new RuntimeException(e);
                 }
-                return null;
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
             }
         };
         List<StudentsHomeworkNew> homeworkList=studentsHomeworkNewRepository.findAll(specification);

@@ -48,6 +48,9 @@ public class ClientHandler implements Runnable {
                 PrintWriter writer = new PrintWriter(out, true);
         ) {
             String clientAddress = clientSocket.getInetAddress().getHostAddress();
+            System.out.println("LocalSocketAddress:"+clientSocket.getLocalSocketAddress());
+            System.out.println("LocalAddress:"+clientSocket.getLocalAddress().getHostAddress());
+            System.out.println("RemoteSocketAddress:"+clientSocket.getRemoteSocketAddress());
             System.out.println("客户端连接: " + clientAddress);
             SmartDeviceUserRelation relation=smartDeviceUserRelationService.selectByIpAddress(clientAddress);
 
@@ -254,13 +257,13 @@ public class ClientHandler implements Runnable {
                                                 pItems = subjectMap.get(subject);
                                                 itemT = menuItemTMap.get(subject);
                                             }
-                                            if (homeWork2Board.getPageSize() > 0) {
+                                            /*if (homeWork2Board.getPageSize() > 0) {
                                                 for (int j = 1; j <= homeWork2Board.getPageSize(); j++) {
                                                     String name = homeWork2Board.getHomeworkName() + "  第" + j + "页 \n";
                                                     MenuItemT subItem = new MenuItemT(j, name, null);
                                                     pItems.add(subItem);
                                                 }
-                                            }
+                                            }*/
                                             MenuT subMenuT = new MenuT(mainMenu, pItems, 0, 0, 1, homeWork2Board.getPageSize());
                                             itemT.setPSubMenu(subMenuT);
                                             mainItems.add(itemT);

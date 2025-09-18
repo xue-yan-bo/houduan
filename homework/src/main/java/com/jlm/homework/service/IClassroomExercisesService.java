@@ -24,4 +24,5 @@ public interface IClassroomExercisesService {
 
     TeacherClassroomData getTeacherClassroomData(String startDate, String endDate);
 
+    Page<ClassroomExercises> classInteractList(Integer pageNum, Integer pageSize, Long classId, String homeworkName, String startDate, String endDate, Integer exercisesType);
 }

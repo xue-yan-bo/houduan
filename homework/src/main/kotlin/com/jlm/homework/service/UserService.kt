@@ -1,8 +1,10 @@
 package com.jlm.homework.service
 
+import com.jlm.homework.entity.CurrentUserInfo
 import com.jlm.homework.feign.SysFeignClient
 import com.jlm.homework.feign.SystemFeignClient
 import com.jlm.homework.feign.TeacherFeignClient
+import com.jlm.homework.service.IUserService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -15,7 +17,7 @@ class UserService(
     private val systemFeignClient: SystemFeignClient,
     private val teacherFeignClient: TeacherFeignClient,
     private val sysFeignClient: SysFeignClient
-) {
+) : IUserService {
 
     private val logger = LoggerFactory.getLogger(UserService::class.java)
 
@@ -23,7 +25,7 @@ class UserService(
      * 获取当前登录用户ID
      * @return 用户ID，如果获取失败返回默认用户ID
      */
-    fun getCurrentUserId(): Long? {
+    override fun getCurrentUserId(): Long? {
         return try {
             val loginUserInfo = systemFeignClient.loginUserInfo()
             val userId = loginUserInfo?.userInfo?.userId
@@ -46,7 +48,7 @@ class UserService(
      * 获取默认用户ID
      * 当无法获取当前用户信息时使用
      */
-    private fun getDefaultUserId(): Long {
+    override fun getDefaultUserId(): Long {
         // 可以从配置文件读取，或者使用固定值
         val defaultUserId = 1000L
         logger.info("使用默认用户ID: {}", defaultUserId)
@@ -57,7 +59,7 @@ class UserService(
      * 安全获取当前用户ID
      * 提供更好的容错性，确保不会因为远程服务问题而阻塞业务
      */
-    fun getCurrentUserIdSafely(): Long {
+    override fun getCurrentUserIdSafely(): Long {
         return try {
             getCurrentUserId() ?: getDefaultUserId()
         } catch (e: Exception) {
@@ -70,7 +72,7 @@ class UserService(
      * 获取当前登录用户信息
      * @return 用户信息，如果获取失败返回null
      */
-    fun getCurrentUserInfo(): CurrentUserInfo? {
+    override fun getCurrentUserInfo(): CurrentUserInfo? {
         return try {
             val loginUserInfo = systemFeignClient.loginUserInfo()
             if (loginUserInfo?.userInfo != null) {
@@ -86,7 +88,7 @@ class UserService(
                     null
                 }
 
-                CurrentUserInfo(
+                createCurrentUserInfo(
                     userId = userInfo.userId ?: 0L,
                     userName = userInfo.userName ?: "",
                     nickName = userInfo.nickName ?: "",
@@ -110,7 +112,7 @@ class UserService(
      * 检查当前用户是否为教师
      * @return true如果是教师，false如果不是或获取失败
      */
-    fun isCurrentUserTeacher(): Boolean {
+    override fun isCurrentUserTeacher(): Boolean {
         return try {
             val userInfo = getCurrentUserInfo()
             userInfo?.teacherName?.isNotBlank() == true
@@ -124,7 +126,7 @@ class UserService(
      * 获取当前登录用户所属学校信息
      * @return 学校信息，如果获取失败返回null
      */
-    fun getCurrentSchool(): com.jlm.homework.feign.School? {
+    override fun getCurrentSchool(): com.jlm.homework.feign.School? {
         return try {
             val school = sysFeignClient.currentSchool()
             if (school != null) {
@@ -144,7 +146,7 @@ class UserService(
      * 获取当前登录用户所属学校ID
      * @return 学校ID，如果获取失败返回默认学校ID
      */
-    fun getCurrentSchoolId(): Long {
+    override fun getCurrentSchoolId(): Long {
         return try {
             val school = getCurrentSchool()
             school?.schoolId ?: getDefaultSchoolId()
@@ -158,7 +160,7 @@ class UserService(
      * 安全获取当前学校ID
      * 提供更好的容错性，确保不会因为远程服务问题而阻塞业务
      */
-    fun getCurrentSchoolIdSafely(): Long {
+    override fun getCurrentSchoolIdSafely(): Long {
         return try {
             getCurrentSchoolId()
         } catch (e: Exception) {
@@ -171,7 +173,7 @@ class UserService(
      * 获取默认学校ID
      * 当无法获取当前学校信息时使用
      */
-    private fun getDefaultSchoolId(): Long {
+    override fun getDefaultSchoolId(): Long {
         // 可以从配置文件读取，或者使用固定值
         val defaultSchoolId = 1000L
         logger.info("使用默认学校ID: {}", defaultSchoolId)
@@ -180,15 +182,26 @@ class UserService(
 }
 
 /**
- * 当前用户信息数据类
- */
-data class CurrentUserInfo(
-    val userId: Long,
-    val userName: String,
-    val nickName: String,
-    val userUuid: String,
-    val isAdmin: Boolean,
-    val roles: List<String>,
-    val currentRole: String,
-    val teacherName: String? = null
-)
+     * 创建IUserService.CurrentUserInfo对象
+     */
+    private fun createCurrentUserInfo(
+        userId: Long,
+        userName: String,
+        nickName: String,
+        userUuid: String,
+        isAdmin: Boolean,
+        roles: List<String>,
+        currentRole: String,
+        teacherName: String? = null
+    ): CurrentUserInfo {
+        return CurrentUserInfo(
+            userId,
+            userName,
+            nickName,
+            userUuid,
+            isAdmin,
+            roles,
+            currentRole,
+            teacherName
+        )
+    }

@@ -1,13 +1,14 @@
 package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.Result;
+import com.jlm.homework.entity.CurrentUserInfo;
 import com.jlm.homework.entity.Student;
 import com.jlm.homework.entity.StudentSignRecord;
 import com.jlm.homework.entity.TeacherAttendanceRecord;
 import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.StudentSignRecordRepository;
 import com.jlm.homework.repository.TeacherAttendanceRecordRepository;
-import com.jlm.homework.service.CurrentUserInfo;
+
 import com.jlm.homework.service.ITeacherAttendanceRecordService;
 import com.jlm.homework.service.UserService;
 import jakarta.annotation.Resource;

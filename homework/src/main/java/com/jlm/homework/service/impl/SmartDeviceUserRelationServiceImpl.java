@@ -7,6 +7,7 @@ import com.jlm.homework.entity.Student;
 import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.SmartDeviceUserRelationRepository;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
+import com.jlm.homework.service.IUserService;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;

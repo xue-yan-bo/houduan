@@ -114,7 +114,7 @@ class UserService(
     override fun isCurrentUserTeacher(): Boolean {
         return try {
             val userInfo = getCurrentUserInfo()
-            userInfo?.teacherName?.isNotBlank() == true
+            userInfo?.getTeacherName()?.isNotBlank() == true
         } catch (e: Exception) {
             logger.warn("检查用户是否为教师失败: {}", e.message)
             false

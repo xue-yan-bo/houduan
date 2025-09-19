@@ -1,6 +1,7 @@
 package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.HomeworkPublishRequest;
+import com.jlm.homework.entity.CurrentUserInfo;
 import com.jlm.homework.entity.ExerciseBookEntity;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.StudentsHomeworkNew;
@@ -64,6 +65,12 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             subject =  exerciseBook.getSubject();
         }
         homeworkPublish.setSubject(subject);
+        if(StringUtils.isEmpty(homeworkPublish.getUserId())&&userService.getCurrentUserInfo()!=null){
+            CurrentUserInfo userInfo =userService.getCurrentUserInfo();
+            if(StringUtils.isNotEmpty(userInfo.getUserUuid())){
+                homeworkPublish.setUserId(userInfo.getUserUuid());
+            }
+        }
         homeworkPublishRepository.save(homeworkPublish);
 
         if(homeworkPublish.getScheduledReleaseFlag()==0){//如果不是定时发布，就是立刻发布，生成学生作业
@@ -168,16 +175,16 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             @Override
             public Predicate toPredicate(Root<HomeworkPublish> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 Predicate condition = null;
-                if(StringUtils.isNotEmpty(homeworkPublishRequest.getHomeworkName())){
-                    condition = criteriaBuilder.equal(root.get("homeworkName"),homeworkPublishRequest.getHomeworkName());
-                }else {
-                    condition= criteriaBuilder.conjunction();
+                if (StringUtils.isNotEmpty(homeworkPublishRequest.getHomeworkName())) {
+                    condition = criteriaBuilder.equal(root.get("homeworkName"), homeworkPublishRequest.getHomeworkName());
+                } else {
+                    condition = criteriaBuilder.conjunction();
                 }
                 Predicate cond1 = null;
-                if(StringUtils.isNotEmpty(homeworkPublishRequest.getClassIds())) {
-                    cond1 = criteriaBuilder.like(root.get("classIds"),"%"+homeworkPublishRequest.getClassIds()+"%");
-                }else {
-                    cond1  = criteriaBuilder.conjunction();
+                if (StringUtils.isNotEmpty(homeworkPublishRequest.getClassIds())) {
+                    cond1 = criteriaBuilder.like(root.get("classIds"), "%" + homeworkPublishRequest.getClassIds() + "%");
+                } else {
+                    cond1 = criteriaBuilder.conjunction();
                 }
                 Predicate cond2 = null;
                 Predicate cond3 = null;
@@ -185,46 +192,48 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 Calendar calendar = Calendar.getInstance();
                 try {
 
-                    if(StringUtils.isNotEmpty(homeworkPublishRequest.getPublishTime())){
+                    if (StringUtils.isNotEmpty(homeworkPublishRequest.getPublishTime())) {
 
                         Date publishTime = sdf.parse(homeworkPublishRequest.getPublishTime());
                         calendar.setTime(publishTime);
-                        calendar.add(Calendar.DAY_OF_MONTH,1);
+                        calendar.add(Calendar.DAY_OF_MONTH, 1);
                         Date publishTime1 = calendar.getTime();
-                        cond2 =criteriaBuilder.between(root.get("publishTime"),publishTime,publishTime1);
-                    }else {
+                        cond2 = criteriaBuilder.between(root.get("publishTime"), publishTime, publishTime1);
+                    } else {
                         cond2 = criteriaBuilder.conjunction();
                     }
-                    if(StringUtils.isNotEmpty(homeworkPublishRequest.getDeadline())){
+                    if (StringUtils.isNotEmpty(homeworkPublishRequest.getDeadline())) {
 
                         Date deadline = sdf.parse(homeworkPublishRequest.getDeadline());
                         calendar.setTime(deadline);
-                        calendar.add(Calendar.DAY_OF_MONTH,1);
+                        calendar.add(Calendar.DAY_OF_MONTH, 1);
                         Date deadline1 = calendar.getTime();
-                        cond3 =criteriaBuilder.between(root.get("deadline"),deadline,deadline1);
-                    }else {
-                        cond3 =criteriaBuilder.conjunction();
+                        cond3 = criteriaBuilder.between(root.get("deadline"), deadline, deadline1);
+                    } else {
+                        cond3 = criteriaBuilder.conjunction();
                     }
-                }catch (ParseException e) {
+                } catch (ParseException e) {
                     throw new RuntimeException(e);
                 }
                 Predicate cond4 = null;
-                if(homeworkPublishRequest.getTestSource()!=null){
-                    cond4 =criteriaBuilder.equal(root.get("testSource"),homeworkPublishRequest.getTestSource());
-                }else {
-                    cond4 =criteriaBuilder.conjunction();
+                if (homeworkPublishRequest.getTestSource() != null) {
+                    cond4 = criteriaBuilder.equal(root.get("testSource"), homeworkPublishRequest.getTestSource());
+                } else {
+                    cond4 = criteriaBuilder.conjunction();
                 }
                 Predicate cond5 = null;
-                if(homeworkPublishRequest.getAuditStatus()!=null){
-                    cond5= criteriaBuilder.equal(root.get("auditStatus"),homeworkPublishRequest.getAuditStatus());
-                }else {
-                    cond5 =criteriaBuilder.conjunction();
+                if (homeworkPublishRequest.getAuditStatus() != null) {
+                    cond5 = criteriaBuilder.equal(root.get("auditStatus"), homeworkPublishRequest.getAuditStatus());
+                } else {
+                    cond5 = criteriaBuilder.conjunction();
                 }
-                Predicate cond6 = criteriaBuilder.equal(root.get("deleteFlag"),0);
+                Predicate cond6 = criteriaBuilder.equal(root.get("deleteFlag"), 0);
                 Predicate cond7 = null;
-                //CurrentUserInfo currentUserInfo=userService.getCurrentUserInfo();
-                if(StringUtils.isNotEmpty(homeworkPublishRequest.getUserId())){
-                    cond7 = criteriaBuilder.equal(root.get("userId"),homeworkPublishRequest.getUserId() );
+                CurrentUserInfo currentUserInfo=userService.getCurrentUserInfo();
+                if (StringUtils.isNotEmpty(homeworkPublishRequest.getUserId())) {
+                    cond7 = criteriaBuilder.equal(root.get("userId"), homeworkPublishRequest.getUserId());
+                }else if(currentUserInfo!=null&&StringUtils.isNotEmpty(currentUserInfo.getUserUuid())){
+                    cond7 = criteriaBuilder.equal(root.get("userId"), currentUserInfo.getUserUuid());
                 }else {
                     cond7 =criteriaBuilder.conjunction();
                 }

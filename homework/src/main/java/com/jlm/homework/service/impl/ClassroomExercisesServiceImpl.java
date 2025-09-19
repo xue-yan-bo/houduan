@@ -92,7 +92,14 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
     @Override
     public ClassroomExercises publish(ClassroomExercises classroomExercises) {
         classroomExercises.setPublishStatus(1);
+        classroomExercises.setExercisesType(1);
+        if(classroomExercises.getCreateTime()==null){
+            classroomExercises.setCreateTime(new Date());
+        }
         classroomExercises.setPublishTime(new Date());
+        if(classroomExercises.getSchoolId()==null||classroomExercises.getSchoolId()==0){
+            classroomExercises.setSchoolId(userService.getCurrentSchoolIdSafely());
+        }
         List<ClassroomExercisesQuestion> questionList =classroomExercises.getQuestionList();
         classroomExercises = classroomExercisesRepository.save(classroomExercises);
         classroomExercisesQuestionService.saveQuestionList(classroomExercises.getId(),questionList);
@@ -175,7 +182,9 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
 
         }else if(classroomExercisesId!=0){
             classroomExercises=classroomExercisesRepository.findById(classroomExercisesId).get();
-            schoolId =  classroomExercises.getSchoolId();
+            if(schoolId==null||schoolId==0) {
+                schoolId = classroomExercises.getSchoolId();
+            }
         }
 
         Date now = new Date();

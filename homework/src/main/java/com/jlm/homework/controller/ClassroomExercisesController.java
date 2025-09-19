@@ -52,6 +52,7 @@ public class ClassroomExercisesController {
     @PostMapping("/publish")
     @Operation(summary = "发布练习",description = "随堂检测中的发布练习接口")
     public ClassroomExercises publish(@RequestBody ClassroomExercises classroomExercises) {
+
         classroomExercises=classroomExercisesService.publish(classroomExercises);
         return classroomExercises;
 

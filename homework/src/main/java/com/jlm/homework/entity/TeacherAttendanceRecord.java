@@ -1,5 +1,6 @@
 package com.jlm.homework.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -20,6 +21,7 @@ public class TeacherAttendanceRecord {
        * 考勤日期
        */
       @Column(name = "day")
+      @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
       private Date day;
       /**
      * 老师id-UUid
@@ -45,11 +47,13 @@ public class TeacherAttendanceRecord {
      * 考勤开始时间
      */
     @Column(name = "start_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date startTime;
       /**
      * 考勤结束时间
      */
     @Column(name = "end_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date endTime;
       /**
      * 总共学生数
@@ -70,6 +74,7 @@ public class TeacherAttendanceRecord {
      * 创建时间
      */
     @Column(name = "create_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
     /**
      * 学生签到列表

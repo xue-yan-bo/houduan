@@ -99,10 +99,10 @@ public class ExerciseBookController {
         }
 
         // 租户隔离：检查练习册是否属于当前学校
-        /*Long currentSchoolId = userService.getCurrentSchoolIdSafely();
+        Long currentSchoolId = userService.getCurrentSchoolIdSafely();
         if (!entity.getSchoolId().equals(currentSchoolId)) {
             throw new ResourceNotFoundNewException("练习册不存在，ID: " + id);
-        }*/
+        }
 
         List<ExerciseBookChapter> exerciseBookChapterList = exerciseBookChapterServer.getByExerciseBookId(entity.getId());
         ExerciseBookResponse response = ExerciseBookResponse.from(entity);

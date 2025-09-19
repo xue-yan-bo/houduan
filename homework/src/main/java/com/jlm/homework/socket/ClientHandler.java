@@ -289,7 +289,7 @@ public class ClientHandler implements Runnable {
                                 }
                                 pCurrentMenu = mainMenu;
                                 pCurrentMenu.setShowStartItem(0);
-                                pCurrentMenu.setShowEndItem(3<mainItems.size()?3:mainItems.size());
+                                pCurrentMenu.setShowEndItem(mainItems.size());
                                 pCurrentMenu.setSelectItem(0);
                                 nMenuUpdate(out,writer);
                             }

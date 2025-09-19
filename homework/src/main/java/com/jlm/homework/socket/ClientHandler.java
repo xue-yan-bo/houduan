@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -20,6 +21,9 @@ import java.util.*;
 
 // 客户端处理线程
 public class ClientHandler implements Runnable {
+    private InetSocketAddress realRemoteAddress;
+    private boolean headerParsed = false;
+
     public static MenuT pCurrentMenu = null;
     public static boolean homeworkflag = false;
     public static List<HomeWork2Board> work2Boards = new ArrayList<>();
@@ -46,13 +50,16 @@ public class ClientHandler implements Runnable {
                 InputStream in = clientSocket.getInputStream();
                 OutputStream out = clientSocket.getOutputStream();
                 PrintWriter writer = new PrintWriter(out, true);
+
         ) {
-            String clientAddress = clientSocket.getInetAddress().getHostAddress();
-            System.out.println("LocalSocketAddress:"+clientSocket.getLocalSocketAddress());
-            System.out.println("LocalAddress:"+clientSocket.getLocalAddress().getHostAddress());
-            System.out.println("RemoteSocketAddress:"+clientSocket.getRemoteSocketAddress());
-            System.out.println("客户端连接: " + clientAddress);
-            SmartDeviceUserRelation relation=smartDeviceUserRelationService.selectByIpAddress(clientAddress);
+            this.readProxyHeader();
+            // 获取客户端真实IP
+            InetSocketAddress realAddress = this.getRealRemoteAddress();
+            String clientIP = realAddress.getHostString();
+            int clientPort = realAddress.getPort();
+            System.out.println("客户端真实IP:"+clientIP +" 端口号："+clientPort);
+
+            SmartDeviceUserRelation relation=smartDeviceUserRelationService.selectByIpAddress(clientIP);
 
             // 持续处理客户端消息
             byte[] headerBuffer = new byte[4]; // 包头(2) + 长度(1) + 类型(1)
@@ -98,7 +105,7 @@ public class ClientHandler implements Runnable {
                     remainingBytes -= bytesReadNow;
                 }
                 
-                System.out.println("收到 [" + clientAddress + "] TCP数据包: " + java.util.Arrays.toString(fullPacketBuffer));
+                System.out.println("收到 [" + clientIP + "] TCP数据包: " + java.util.Arrays.toString(fullPacketBuffer));
                 
                 try {
 
@@ -451,13 +458,13 @@ public class ClientHandler implements Runnable {
                         // 处理序列号关联
                         SmartDeviceUserRelation deviceUserRelation = smartDeviceUserRelationService.selectByDeviceCode(result.getMac().toString());
                         if (deviceUserRelation != null) {
-                            deviceUserRelation.setIpAddress(clientAddress);
+                            deviceUserRelation.setIpAddress(clientIP);
                             smartDeviceUserRelationService.update(deviceUserRelation);
                         }else {
                             System.out.println(result.getMac()+"设备还未绑定学生，请检查！");
                             // 设备绑定学生
                             deviceUserRelation = new SmartDeviceUserRelation();
-                            deviceUserRelation.setIpAddress(clientAddress);
+                            deviceUserRelation.setIpAddress(clientIP);
                             deviceUserRelation.setDeviceCode(result.getMac().toString());
                             messagingTemplate.convertAndSend("/topic/bindStudent", deviceUserRelation);
                         }
@@ -568,4 +575,100 @@ public class ClientHandler implements Runnable {
             out.flush();
         }
     }
+
+
+
+    /**
+     * 解析 PROXY Protocol 头部
+     * 必须在读取业务数据前调用
+     */
+    public void readProxyHeader() throws IOException {
+        if (headerParsed) return;
+
+        PushbackInputStream pb = new PushbackInputStream(clientSocket.getInputStream(), 108);
+        byte[] signature = new byte[5];
+        int bytesRead = pb.read(signature);
+
+        if (bytesRead != 5) {
+            throw new IOException("读取协议签名失败");
+        }
+
+        pb.unread(signature);
+
+        System.out.println(signature.toString()+",签名标识：" +new String(signature));
+        // 识别协议版本
+        if (new String(signature).equals("PROXY")) {
+            parseV1(pb);
+        } else if (isV2Signature(signature)) {
+            parseV2(pb);
+        } else {
+            // 无 PROXY Protocol，使用原始地址
+            realRemoteAddress = (InetSocketAddress) clientSocket.getRemoteSocketAddress();
+        }
+
+        headerParsed = true;
+    }
+
+    private boolean isV2Signature(byte[] sig) {
+        return sig[0] == 0x0D && sig[1] == 0x0A &&
+                sig[2] == 0x0D && sig[3] == 0x0A &&
+                sig[4] == 0x00;
+    }
+
+    private void parseV1(PushbackInputStream pb) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(pb));
+        String line = reader.readLine();
+
+        if (line == null || !line.startsWith("PROXY")) {
+            throw new IOException("无效的 PROXY Protocol v1 头部");
+        }
+
+        String[] parts = line.split(" ");
+        if (parts.length < 6) {
+            throw new IOException("PROXY Protocol v1 格式错误");
+        }
+
+        String clientIP = parts[2];
+        int clientPort = Integer.parseInt(parts[4]);
+        realRemoteAddress = new InetSocketAddress(clientIP, clientPort);
+    }
+
+    private void parseV2(PushbackInputStream pb) throws IOException {
+        DataInputStream in = new DataInputStream(pb);
+
+        // 跳过 12 字节固定头部
+        in.skipBytes(12);
+
+        // 读取 IPv4 地址（4字节）
+        byte[] addressBytes = new byte[4];
+        in.readFully(addressBytes);
+
+        // 读取端口（2字节）
+        int port = in.readUnsignedShort();
+
+        // 构造 IP 地址
+        String ip = String.format("%d.%d.%d.%d",
+                addressBytes[0] & 0xff,
+                addressBytes[1] & 0xff,
+                addressBytes[2] & 0xff,
+                addressBytes[3] & 0xff);
+
+        realRemoteAddress = new InetSocketAddress(ip, port);
+    }
+
+    /**
+     * 获取客户端真实地址
+     * 必须先调用 readProxyHeader()
+     */
+    public InetSocketAddress getRealRemoteAddress() {
+        if (!headerParsed) {
+            throw new IllegalStateException("请先调用 readProxyHeader()");
+        }
+        return realRemoteAddress;
+    }
+
+
 }
+
+
+

@@ -24,6 +24,7 @@ public class ClassroomExercisesController {
     @PostMapping("/create")
     public Long create(@RequestBody ClassroomExercises classroomExercises) throws Throwable {
         classroomExercises.setPublishStatus(0);
+        classroomExercises.setExercisesType(1);
         Long id=classroomExercisesService.create(classroomExercises);
         return id;
     }
@@ -60,16 +61,16 @@ public class ClassroomExercisesController {
 
     /**
      * 分页查询
-     * @param classroomExercises
+     * @param
      * @return
      */
     @GetMapping("/queryList")
     public Page<ClassroomExercises> selectPurchaseList(
             @RequestParam(defaultValue = "1")Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            ClassroomExercises classroomExercises) {
-        classroomExercises.setExercisesType(1);
-        Page<ClassroomExercises> list = classroomExercisesService.selectList(pageNum,pageSize, classroomExercises);
+            Long classId,String homeworkName,String startTime,String endTime) {
+        Integer exercisesType=1;
+        Page<ClassroomExercises> list = classroomExercisesService.classInteractList(pageNum,pageSize, classId,homeworkName,startTime,endTime,exercisesType);
 
         return list;
     }
@@ -110,10 +111,10 @@ public class ClassroomExercisesController {
     public Page<ClassroomExercises> classInteractList(
             @RequestParam(defaultValue = "1")Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            Long classId,String homeworkName,String startDate,String endDate) {
+            Long classId,String homeworkName,String startTime,String endTime) {
 
         Integer exercisesType = 2;
-        Page<ClassroomExercises> list = classroomExercisesService.classInteractList(pageNum,pageSize, classId,homeworkName,startDate,endDate,exercisesType);
+        Page<ClassroomExercises> list = classroomExercisesService.classInteractList(pageNum,pageSize, classId,homeworkName,startTime,endTime,exercisesType);
 
         return list;
     }
@@ -128,13 +129,10 @@ public class ClassroomExercisesController {
     public Page<ClassroomExercises> liveStreamtList(
             @RequestParam(defaultValue = "1")Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            Long classId,String homeworkName,String startDate,String endDate) {
-        ClassroomExercises classroomExercises =new ClassroomExercises();
-        if(classId!=null){
-            classroomExercises.setClassIds(Arrays.asList(classId));
-        }
+            Long classId,String homeworkName,String startTime,String endTime) {
+
         Integer exercisesType=3;
-        Page<ClassroomExercises> list = classroomExercisesService.classInteractList(pageNum,pageSize, classId,homeworkName,startDate,endDate,exercisesType);
+        Page<ClassroomExercises> list = classroomExercisesService.classInteractList(pageNum,pageSize, classId,homeworkName,startTime,endTime,exercisesType);
         return list;
     }
 }

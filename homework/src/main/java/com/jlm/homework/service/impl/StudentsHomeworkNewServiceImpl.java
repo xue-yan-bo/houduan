@@ -6,10 +6,7 @@ import com.jlm.homework.feign.SchoolFeignClient;
 import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.HomeworkPublishRepository;
 import com.jlm.homework.repository.StudentsHomeworkNewRepository;
-import com.jlm.homework.service.ExerciseBookServer;
-import com.jlm.homework.service.IHomeworkStudentWriteDataService;
-import com.jlm.homework.service.IStudentsHomeworkNewService;
-import com.jlm.homework.service.UserService;
+import com.jlm.homework.service.*;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -39,7 +36,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Autowired
     private ExerciseBookServer exerciseBookServer;
     @Autowired
-    private UserService userService;
+    private IUserService userService;
     @Autowired
     private IHomeworkStudentWriteDataService homeworkStudentWriteDataService;
 
@@ -246,6 +243,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
         };
         Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(specification,pageable);
+        if(studentsHomeworkList!=null&&studentsHomeworkList.getContent()!=null&&studentsHomeworkList.getContent().size()>0){
+            for(StudentsHomeworkNew studentsHomework:studentsHomeworkList.getContent()){
+                List<HomeworkStudentWriteData> writeDatas=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId());
+                studentsHomework.setStudentWriteDataList(writeDatas);
+            }
+        }
         return studentsHomeworkList;
     }
 
@@ -316,7 +319,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 if(studentsHomework!=null){
 
-                    Predicate condition0 = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolId());
+                    Predicate condition0 = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
                     Predicate condition1 = null;
                     if(StringUtils.isNotEmpty(studentsHomework.getAuditStatus())){
                         condition1 = criteriaBuilder.equal(root.get("auditStatus"), studentsHomework.getAuditStatus());
@@ -705,7 +708,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     gradeUnSubmitMap.put(studentsHomework.getGrade(),1);
                 }
             }
-            if(studentsHomework.getSubmitTime()!=null){
+            if(studentsHomework.getStartTime()!=null&&studentsHomework.getSubmitTime()!=null){
                 Integer m = Math.toIntExact((studentsHomework.getSubmitTime().getTime() - studentsHomework.getStartTime().getTime()) / 1000 / 60);
                 if(m<=10){
                     if(homeworkNumMap.containsKey(10)){
@@ -995,7 +998,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         Map<String,Long> dayTimeMap=new HashMap<>();
         Map<String,Integer> dayNumMap=new HashMap<>();
         for(StudentsHomeworkNew studentsHomework:studentsHomeworkList){
-            if(studentsHomework.getSubmitTime()!=null){
+            if(studentsHomework.getStartTime()!=null&&studentsHomework.getSubmitTime()!=null){
                 if(schoolHomeworkNumMap.containsKey(studentsHomework.getSchoolId())){
                     schoolHomeworkNumMap.put(studentsHomework.getSchoolId(),schoolHomeworkNumMap.get(studentsHomework.getSchoolId())+1);
                 }else {

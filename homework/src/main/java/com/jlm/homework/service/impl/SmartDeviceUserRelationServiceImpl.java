@@ -7,7 +7,6 @@ import com.jlm.homework.entity.Student;
 import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.SmartDeviceUserRelationRepository;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
-import com.jlm.homework.service.UserService;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +24,7 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
     @Autowired
     private StudentFeignClient studentFeignClient;
     @Autowired
-    private UserService userService;
+    private IUserService userService;
     @Override
     public Long create(SmartDeviceUserRelation deviceUserRelation) {
         if(StringUtils.isNotEmpty(deviceUserRelation.getDeviceCode())){

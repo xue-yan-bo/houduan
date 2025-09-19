@@ -34,7 +34,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
     @Resource
     private ClassroomExercisesStudentRecordRepository classroomExercisesStudentRecordRepository;
     @Autowired
-    private UserService userService;
+    private IUserService userService;
     @Autowired
     private StudentFeignClient studentFeignClient;
     @Override
@@ -326,7 +326,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Specification<ClassroomExercises> specification = new Specification<ClassroomExercises>() {
             @Override
             public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
@@ -365,7 +365,6 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             List<ClassroomExercisesQuestion> questionList=classroomExercisesQuestionService.selectQuestionList(item.getId());
             item.setQuestionList(questionList);
         }
-
         return page;
     }
 

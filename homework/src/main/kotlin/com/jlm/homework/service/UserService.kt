@@ -4,7 +4,6 @@ import com.jlm.homework.entity.CurrentUserInfo
 import com.jlm.homework.feign.SysFeignClient
 import com.jlm.homework.feign.SystemFeignClient
 import com.jlm.homework.feign.TeacherFeignClient
-import com.jlm.homework.service.IUserService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -153,7 +152,7 @@ class UserService(
         } catch (e: Exception) {
             logger.warn("获取当前学校ID失败，使用默认值: {}", e.message)
             getDefaultSchoolId()
-        }
+        } as Long
     }
 
     /**
@@ -166,7 +165,7 @@ class UserService(
         } catch (e: Exception) {
             logger.warn("安全获取学校ID失败，使用默认值: {}", e.message)
             getDefaultSchoolId()
-        }
+        } as Long
     }
 
     /**

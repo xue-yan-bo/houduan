@@ -28,7 +28,7 @@ public class TeacherAttendanceRecordServiceImpl implements ITeacherAttendanceRec
     @Autowired
     private StudentFeignClient studentFeignClient;
     @Autowired
-    private UserService userService;
+    private IUserService userService;
     @Override
     public TeacherAttendanceRecord startAttendance(Long classId,Long schoolId) {
         TeacherAttendanceRecord record = new TeacherAttendanceRecord();

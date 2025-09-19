@@ -34,7 +34,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
     @Autowired
     private ExerciseBookServer exerciseBookServer;
     @Autowired
-    private UserService userService;
+    private IUserService userService;
     @Override
     public String create(HomeworkPublish homeworkPublish) {
         if(homeworkPublish!=null
@@ -76,6 +76,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 public void run() {
                     studentsHomeworkNewService.createStudentsHomeworkByHomeworkPublish(homeworkPublish);
                     homeworkPublish.setPublishStatus(1);
+                    homeworkPublish.setAuditStatus(1);
                     homeworkPublishRepository.save(homeworkPublish);
                 }
             };

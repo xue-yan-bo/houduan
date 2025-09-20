@@ -6,9 +6,11 @@ import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.entity.ClassroomExercises;
 import com.jlm.homework.entity.ClassroomExercisesStudentAnswer;
 import com.jlm.homework.entity.Student;
+import com.jlm.homework.repository.ClassroomExercisesQuestionRepository;
 import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.service.IClassroomExercisesStudentAnswerService;
+import com.jlm.homework.service.IWrongTitleBookService;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -33,6 +35,10 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
     @Autowired
     private ClassroomExercisesRepository classroomExercisesRepository;
     @Autowired
+    private ClassroomExercisesQuestionRepository classroomExercisesQuestionRepository;
+    @Autowired
+    private IWrongTitleBookService wrongTitleBookService;
+    @Autowired
     private StudentFeignClient studentFeignClient;
 
 
@@ -41,6 +47,20 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
         if(StringUtils.isNotEmpty(studentAnswer.getStudentAnswer())
         &&studentAnswer.getStudentAnswer().equals(studentAnswer.getAnswer())){
             studentAnswer.setRightFlag(1);
+        }else{
+            ClassroomExercisesQuestion question = classroomExercisesQuestionRepository.findById(studentAnswer.getExerciseQuestionId()).get();
+            WrongTitleBook wrongTitleBook = new WrongTitleBook();
+            wrongTitleBook.setSource("随堂检测");
+            wrongTitleBook.setExercisesRecordId(studentAnswer.getClassroomExercisesId());
+            wrongTitleBook.setStudentId(Long.parseLong(studentAnswer.getStudentId()));
+            wrongTitleBook.setStudentName(studentAnswer.getStudentName());
+            wrongTitleBook.setTitleBigNo(studentAnswer.getTitleNumber());
+            wrongTitleBook.setTitleContext(studentAnswer.getQuestionContent());
+            wrongTitleBook.setTitleAnswer(studentAnswer.getAnswer());
+            wrongTitleBook.setStudentAnswer(studentAnswer.getStudentAnswer());
+            wrongTitleBook.setParse(question.getParse());
+            wrongTitleBook.setCreateTime(new Date());
+            wrongTitleBookService.save(wrongTitleBook);
         }
         return classroomExercisesStudentAnswerRepository.save(studentAnswer);
     }

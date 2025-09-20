@@ -1339,4 +1339,65 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             studentsHomeworkNewRepository.save(studentsHomework);
         }
     }
+
+    @Override
+    public StudentsHomeworkNew emend(StudentsHomeworkNew studentsHomework) {
+        studentsHomework.setEmendStatus(1);
+        return studentsHomeworkNewRepository.save(studentsHomework);
+    }
+
+    @Override
+    public List<HomeWork2Board> getEmendHomeWork2Board(String subject, Long studentId) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
+
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                try {
+
+                    if(StringUtils.isNotEmpty(subject)){
+                        Predicate condition = criteriaBuilder.equal(root.get("subject").as(String.class),subject);
+                        list.add(condition);
+                    }
+                    Calendar calendar = Calendar.getInstance();
+
+
+                        calendar.setTime(new Date());
+                        calendar.add(Calendar.DAY_OF_MONTH, -3);
+                        Date start = calendar.getTime();
+                        Date end = new Date();
+                        Predicate condition1 = criteriaBuilder.between(root.<Date>get("createTime").as(Date.class),start,end);
+                        list.add(condition1);
+
+
+                    if(studentId!=null){
+                        Predicate  condition2 = criteriaBuilder.equal(root.get("studentId").as(Long.class),studentId);
+                        list.add(condition2);
+                    }
+
+                } catch (RuntimeException e) {
+                    throw new RuntimeException(e);
+                }
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        List<StudentsHomeworkNew> homeworkList=studentsHomeworkNewRepository.findAll(specification);
+        List<HomeWork2Board> homeWork2Boards =  new ArrayList<>();
+        for(StudentsHomeworkNew homework:homeworkList){
+            HomeWork2Board homeWork2Board = new HomeWork2Board();
+            homeWork2Board.setHomeworkId(homework.getHomeworkPublishId());
+            homeWork2Board.setHomeworkName(homework.getHomeworkPublishName());
+            homeWork2Board.setSubject(homework.getSubject());
+            if(homework.getTopicImages()!=null&&homework.getTopicImages().size()>0){
+                homeWork2Board.setPageSize(homework.getTopicImages().size());
+            }else{
+                homeWork2Board.setPageSize(1);
+            }
+
+            homeWork2Boards.add(homeWork2Board);
+        }
+        return homeWork2Boards;
+    }
 }

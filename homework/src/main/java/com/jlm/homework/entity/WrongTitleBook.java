@@ -3,6 +3,8 @@ package com.jlm.homework.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.Date;
+
 /**
  * 错题本 实体类
  */
@@ -37,7 +39,7 @@ public class WrongTitleBook {
      * 学生姓名
      */
     @Column(name = "student_name")
-     private Long studentName;
+     private String studentName;
      /**
      * 大题号
      */
@@ -52,7 +54,7 @@ public class WrongTitleBook {
      * 题内容
      */
     @Column(name = "title_context")
-     private Long titleContext;
+     private String titleContext;
      /**
      * 题答案
      */
@@ -67,10 +69,10 @@ public class WrongTitleBook {
      * 题解析
      */
     @Column(name = "parse")
-     private Long parse;
+     private String parse;
      /**
      * 创建时间
      */
     @Column(name = "create_time")
-     private Long createTime;
+     private Date createTime;
 }

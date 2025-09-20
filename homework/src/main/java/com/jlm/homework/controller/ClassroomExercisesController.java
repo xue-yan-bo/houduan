@@ -137,4 +137,21 @@ public class ClassroomExercisesController {
         Page<ClassroomExercises> list = classroomExercisesService.classInteractList(pageNum,pageSize, classId,homeworkName,startTime,endTime,exercisesType);
         return list;
     }
+
+    /**
+     * 分页查询随堂检测、课堂互动、纸笔直播
+     * @param
+     * @return
+     */
+    @GetMapping("/selectAllList")
+    @Operation(summary = "分页查询随堂检测、课堂互动、纸笔直播",description = "exercisesType 1随堂检测、2课堂互动、3纸笔直播")
+    public Page<ClassroomExercises> selectAllList(
+            @RequestParam(defaultValue = "1")Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            Long classId,Integer exercisesType,String homeworkName,String startTime,String endTime) {
+
+        Page<ClassroomExercises> list = classroomExercisesService.classInteractList(pageNum,pageSize, classId,homeworkName,startTime,endTime,exercisesType);
+
+        return list;
+    }
 }

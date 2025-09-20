@@ -34,4 +34,6 @@ public class HomeworkPublishRequest {
     private Integer auditStatus;
 
     private String userId;
+
+    private Long SchoolId;
 }

@@ -60,10 +60,10 @@ public class ExerciseBookQuestion implements Serializable {
      * 题的图片截图
      */
     @Column(name = "croppedlrl")
-    private String croppedlrl;
+    private String croppedUrl;
     /**
      * 题所在练习册页面图片
      */
     @Column(name = "imagelrl")
-    private String imagelrl;
+    private String sourceImageUrl;
 }

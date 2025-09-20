@@ -265,10 +265,22 @@ public class StudentsHomeworkNew implements Serializable {
     @Column(name = "comments_coordinate2", columnDefinition = "JSON")
     private List<CommentsCoordinate> commentsCoordinate2;
 
+    /**
+     * 订正,   1需要订正 2 订正完成
+     */
+    @Column(name = "emend_status")
+    private Integer emendStatus;
+
 
     /**
      * 学生写作记录
      */
     @Transient
     private List<HomeworkStudentWriteData> studentWriteDataList;
+
+    /**
+     * 学生作业订正
+     */
+    @Transient
+    private List<HomeworkStudentWriteData> studentWriteDataList2;
 }

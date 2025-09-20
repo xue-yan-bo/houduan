@@ -42,4 +42,8 @@ public interface IStudentsHomeworkNewService {
     void saveWriteRecords(Long studentId,Long homeworkId, String homeworkName,Integer pageN, List<StudentsWriteRecord> studentsWriteRecords,Boolean isFinish);
 
     void saveStartTime(Long homeworkId);
+
+    StudentsHomeworkNew emend(StudentsHomeworkNew studentsHomework);
+
+    List<HomeWork2Board> getEmendHomeWork2Board(String subject,Long studentId);
 }

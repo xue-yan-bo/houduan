@@ -176,7 +176,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             public Predicate toPredicate(Root<HomeworkPublish> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 Predicate condition = null;
                 if (StringUtils.isNotEmpty(homeworkPublishRequest.getHomeworkName())) {
-                    condition = criteriaBuilder.equal(root.get("homeworkName"), homeworkPublishRequest.getHomeworkName());
+                    condition = criteriaBuilder.like(root.get("homeworkName"), "%"+homeworkPublishRequest.getHomeworkName()+"%");
                 } else {
                     condition = criteriaBuilder.conjunction();
                 }
@@ -195,9 +195,8 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                     if (StringUtils.isNotEmpty(homeworkPublishRequest.getPublishTime())) {
 
                         Date publishTime = sdf.parse(homeworkPublishRequest.getPublishTime());
-                        calendar.setTime(publishTime);
-                        calendar.add(Calendar.DAY_OF_MONTH, 1);
-                        Date publishTime1 = calendar.getTime();
+
+                        Date publishTime1 = sdf.parse(homeworkPublishRequest.getPublishTime() +" 23:59:59");
                         cond2 = criteriaBuilder.between(root.get("publishTime"), publishTime, publishTime1);
                     } else {
                         cond2 = criteriaBuilder.conjunction();
@@ -205,9 +204,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                     if (StringUtils.isNotEmpty(homeworkPublishRequest.getDeadline())) {
 
                         Date deadline = sdf.parse(homeworkPublishRequest.getDeadline());
-                        calendar.setTime(deadline);
-                        calendar.add(Calendar.DAY_OF_MONTH, 1);
-                        Date deadline1 = calendar.getTime();
+                        Date deadline1 = sdf.parse(homeworkPublishRequest.getDeadline() +" 23:59:59");
                         cond3 = criteriaBuilder.between(root.get("deadline"), deadline, deadline1);
                     } else {
                         cond3 = criteriaBuilder.conjunction();
@@ -237,7 +234,16 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 }else {
                     cond7 =criteriaBuilder.conjunction();
                 }
-                query.where(condition,cond1,cond2,cond3,cond4,cond5,cond6,cond7);
+                Predicate cond8 = null;
+                Long schoolId =userService.getCurrentSchoolId();
+                if(homeworkPublishRequest.getSchoolId()!=null){
+                    cond8 = criteriaBuilder.equal(root.get("schoolId"), homeworkPublishRequest.getSchoolId());
+                }else if(schoolId!=null){
+                    cond8 = criteriaBuilder.equal(root.get("schoolId"), schoolId);
+                }else {
+                    cond8 =criteriaBuilder.conjunction();
+                }
+                query.where(condition,cond1,cond2,cond3,cond4,cond5,cond6,cond7,cond8);
                 return null;
             }
         };

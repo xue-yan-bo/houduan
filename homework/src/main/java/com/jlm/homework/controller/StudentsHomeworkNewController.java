@@ -79,5 +79,14 @@ public class StudentsHomeworkNewController {
         return studentsHomeworkList;
     }
 
-
+    /**
+     * 老师让学生订正作业接口
+     * @param
+     * @return
+     */
+    @PostMapping("/emend")
+    public StudentsHomeworkNew emend(@RequestBody StudentsHomeworkNew studentsHomework){
+        studentsHomework=studentsHomeworkNewService.emend(studentsHomework);
+        return studentsHomework;
+    }
 }

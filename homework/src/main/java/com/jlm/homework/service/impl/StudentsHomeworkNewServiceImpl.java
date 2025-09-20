@@ -160,7 +160,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
         StudentsHomeworkNew newSerach=new StudentsHomeworkNew();
         newSerach.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
-        newSerach.setAuditStatus("2");
+        newSerach.setAuditStatus("1");
         Example<StudentsHomeworkNew> example = Example.of(studentsHomework);
         long count =studentsHomeworkNewRepository.count(example);
         if(count==0){

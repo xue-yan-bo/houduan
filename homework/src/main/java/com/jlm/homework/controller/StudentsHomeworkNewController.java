@@ -2,6 +2,7 @@ package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.StudentsHomeworkRequest;
 import com.jlm.homework.entity.StudentsHomeworkNew;
+import com.jlm.homework.exception.ParameterNewException;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
@@ -56,6 +57,9 @@ public class StudentsHomeworkNewController {
      */
     @PostMapping("/audit")
     public StudentsHomeworkNew audit(@RequestBody StudentsHomeworkNew studentsHomework) throws Throwable {
+        if(studentsHomework.getId()==null){
+            throw new ParameterNewException("审批的学生作业ID不能为空!");
+        }
         studentsHomework.setAuditStatus("2");
         studentsHomework.setAuditTime(new Date());
         studentsHomework=studentsHomeworkNewService.update(studentsHomework);

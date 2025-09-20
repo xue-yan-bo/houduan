@@ -253,8 +253,7 @@ public class ExerciseBookRequest {
      * 查询参数验证
      */
     public String validateForQuery() {
-        // 实现查询参数验证逻辑
-        return null; // 假设验证通过
+        return ExerciseBookValidator.validateForQuery(this);
     }
 
     /**

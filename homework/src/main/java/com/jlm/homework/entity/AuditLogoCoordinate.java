@@ -9,4 +9,7 @@ public class AuditLogoCoordinate implements Serializable {
     private Double x;
     private Double y;
     private Object symbol;
+    private Boolean isStart;
+    private Boolean isEnd;
+    private String strokeId;
 }

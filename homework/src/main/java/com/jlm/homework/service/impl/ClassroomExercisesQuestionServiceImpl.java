@@ -19,6 +19,7 @@ import jakarta.persistence.criteria.Root;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -61,7 +62,8 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
     public List<ClassroomExercisesQuestion>  selectQuestionList(Long classroomExercisesId) {
         ClassroomExercisesQuestion question = new ClassroomExercisesQuestion();
         question.setClassroomExercisesId(classroomExercisesId);
-        List<ClassroomExercisesQuestion>  questionList= classroomExercisesQuestionRepository.findAll(Example.of(question));
+        Sort sort = Sort.by(Sort.Direction.ASC, "titleNumber");
+        List<ClassroomExercisesQuestion>  questionList= classroomExercisesQuestionRepository.findAll(Example.of(question),sort);
         for(ClassroomExercisesQuestion exercisesQuestion : questionList){
             if(exercisesQuestion.getQuestionBankId()!=null){
                 QuestionBank questionBank=questionBankService.getById(exercisesQuestion.getQuestionBankId());

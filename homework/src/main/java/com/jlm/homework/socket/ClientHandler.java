@@ -119,6 +119,7 @@ public class ClientHandler implements Runnable {
                             System.out.println("数据包解析结果：" + result.toString());
                             if (relation != null) {
                                 if(homeworkflag&&pCurrentMenu!=null){//作业
+                                    System.out.println("=============作业数据发送====");
                                     StudentsWriteRecord writeRecord = new StudentsWriteRecord();
                                     writeRecord.setX(result.getX());
                                     writeRecord.setY(result.getY());
@@ -126,6 +127,7 @@ public class ClientHandler implements Runnable {
                                     writeRecord.setTimestamp(result.getTimestamp());
                                     studentsWriteRecords.add(writeRecord);
                                 }else {//课堂
+                                    System.out.println("=============课堂数据发送====");
                                     result.setUserId(relation.getUserId());
                                     // 发送解析结果给客户端
                                     writer.println("服务器回复: " + result.toString());
@@ -171,6 +173,7 @@ public class ClientHandler implements Runnable {
 
                             if(8==result.getButton()){//确定
                                 if(homeworkflag){
+                                    System.out.println("=============作业数据发送====");
                                     if(pCurrentMenu.equals(mainMenu)){//
                                         if(work2Boards!=null&&work2Boards.size()>0){
                                             List<MenuItemT> itemTList = new ArrayList<>();
@@ -182,13 +185,13 @@ public class ClientHandler implements Runnable {
                                                     studentsHomeworkNewService.saveStartTime(board.getHomeworkId());
                                                     if((board.getPageSize()!=null&&board.getPageSize()>0)){
                                                         for(int i=0;i<board.getPageSize();i++){
-                                                            String desc = homeworkName+"第" +(i+1)+"页";
-                                                            MenuItemT menuItemT = new MenuItemT(nb,desc,null);
+                                                            String desc = homeworkName.substring(0,8)+" " +(i+1);
+                                                            MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                             itemTList.add(menuItemT);
                                                         }
                                                     }else{
-                                                        String desc = homeworkName+"第1页";
-                                                        MenuItemT menuItemT = new MenuItemT(nb,desc,null);
+                                                        String desc = homeworkName.substring(0,8)+" 1";
+                                                        MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                         itemTList.add(menuItemT);
                                                     }
 
@@ -197,7 +200,7 @@ public class ClientHandler implements Runnable {
                                             MenuT menuT = new MenuT(pCurrentMenu,itemTList,0,0,3<itemTList.size()?3:itemTList.size(),itemTList.size());
                                             pCurrentMenu = menuT;
                                             pCurrentMenu.setShowStartItem(0);
-                                            pCurrentMenu.setShowEndItem(3<itemTList.size()?3:itemTList.size());
+                                            pCurrentMenu.setShowEndItem(itemTList.size());
                                             pCurrentMenu.setSelectItem(0);
                                             nMenuUpdate(out,writer);
                                         }
@@ -207,18 +210,19 @@ public class ClientHandler implements Runnable {
                                         if (studentsWriteRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
                                             MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                             String name = itemT.getDesc();
+                                            Long homeworkId = itemT.getObjectId();
                                             Integer pageN = 1;
                                             String homeworkName;
-                                            if(name.contains("第")) {
-                                                int num = name.lastIndexOf("第");
+                                            if(name.contains(" ")) {
+                                                int num = name.lastIndexOf(" ");
                                                 homeworkName = name.substring(0, num);
 
-                                                pageN = Integer.valueOf(name.substring(num+1, name.lastIndexOf("页")));
+                                                pageN = Integer.valueOf(name.substring(num+1, name.length()));
                                             }else{
                                                 homeworkName = name;
                                                 pageN = 1;
                                             }
-                                            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkName, pageN, studentsWriteRecords,true);
+                                            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId,homeworkName, pageN, studentsWriteRecords,true);
                                             pCurrentMenu = null;
                                             work2Boards = new ArrayList<>();
                                             mainMenu = null;
@@ -227,6 +231,7 @@ public class ClientHandler implements Runnable {
                                         }
                                     }
                                 }else if(StringUtils.isNotEmpty(relation.getUserId())) {
+                                    System.out.println("=============课堂数据发送====");
                                     messagingTemplate.convertAndSend("/topic/endWrite", relation.getUserId());
                                 }
 
@@ -242,27 +247,29 @@ public class ClientHandler implements Runnable {
                                 }
                                 List<MenuItemT> mainItems = new ArrayList<>();
                                 if(work2Boards==null||work2Boards.size()<=0){
-                                    mainItems.add(new MenuItemT(1," 语文", null));
-                                    mainItems.add(new MenuItemT(2," 数学", null));
-                                    mainItems.add(new MenuItemT(3," 英语", null));
-                                    mainItems.add(new MenuItemT(4," 科学", null));
-                                    mainItems.add(new MenuItemT(5," 美术", null));
+                                    mainItems.add(new MenuItemT(1,null," 语文", null));
+                                    mainItems.add(new MenuItemT(2,null," 数学", null));
+                                    mainItems.add(new MenuItemT(3,null," 英语", null));
+                                    mainItems.add(new MenuItemT(4,null," 科学", null));
+                                    mainItems.add(new MenuItemT(5,null," 美术", null));
                                 }else {
                                     Map<String,List<MenuItemT>> subjectMap = new HashMap<>();
                                     Map<String,MenuItemT> menuItemTMap = new HashMap<>();
                                     for (int i = 0; i < work2Boards.size(); i++) {
                                         HomeWork2Board homeWork2Board = work2Boards.get(i);
-                                        if (StringUtils.isNotEmpty(homeWork2Board.getSubject())) {
-                                            String subject = homeWork2Board.getSubject();
+                                        String subject = homeWork2Board.getSubject().trim();
+                                        if (StringUtils.isNotEmpty(subject)) {
+
                                             List<MenuItemT> pItems = null;
                                             MenuItemT itemT = null;
-                                            if(!subjectMap.containsKey(subject)){
-                                                itemT = new MenuItemT(i + 1, subject, null);
-                                                pItems = new ArrayList<>();
-                                                menuItemTMap.put(subject, itemT);
-                                            }else{
+                                            if(subjectMap.containsKey(subject)){
                                                 pItems = subjectMap.get(subject);
                                                 itemT = menuItemTMap.get(subject);
+                                            }else{
+                                                itemT = new MenuItemT(i + 1,null, subject, null);
+                                                pItems = new ArrayList<>();
+                                                menuItemTMap.put(subject, itemT);
+
                                             }
                                             /*if (homeWork2Board.getPageSize() > 0) {
                                                 for (int j = 1; j <= homeWork2Board.getPageSize(); j++) {
@@ -271,17 +278,21 @@ public class ClientHandler implements Runnable {
                                                     pItems.add(subItem);
                                                 }
                                             }*/
-                                            MenuT subMenuT = new MenuT(mainMenu, pItems, 0, 0, 1, homeWork2Board.getPageSize());
-                                            itemT.setPSubMenu(subMenuT);
-                                            mainItems.add(itemT);
-                                            subjectMap.put(subject,pItems);
 
+                                            subjectMap.put(subject,pItems);
                                         }
 
                                     }
+                                    for(String subject: menuItemTMap.keySet()){
+                                        MenuT subMenuT = new MenuT(mainMenu, subjectMap.get(subject), 0, 0, subjectMap.get(subject).size(), subjectMap.get(subject).size());
+                                        MenuItemT itemT=menuItemTMap.get(subject);
+                                        itemT.setPSubMenu(subMenuT);
+                                        mainItems.add(itemT);
 
+                                    }
                                 }
-                                mainMenu = new MenuT(null,mainItems,0,0,3<mainItems.size()?3:mainItems.size(),mainItems.size());
+
+                                mainMenu = new MenuT(null,mainItems,0,0,mainItems.size(),mainItems.size());
                                 for(MenuItemT subItem:mainMenu.getPItems()){
                                     if(subItem!=null){
                                         subItem.setPSubMenu(mainMenu);
@@ -317,18 +328,19 @@ public class ClientHandler implements Runnable {
                                     if(studentsWriteRecords.size()>0&&pCurrentMenu!=null&&pCurrentMenu.getParentMenu()!=null&&relation!=null){
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                         String name = itemT.getDesc();
+                                        Long homeworkId = itemT.getObjectId();
                                         Integer pageN = 1;
                                         String homeworkName;
-                                        if(name.contains("第")) {
-                                            int num = name.lastIndexOf("第");
+                                        if(name.contains(" ")) {
+                                            int num = name.lastIndexOf(" ");
                                             homeworkName = name.substring(0, num);
 
-                                            pageN = Integer.valueOf(name.substring(num+1, name.lastIndexOf("页")));
+                                            pageN = Integer.valueOf(name.substring(num+1, name.length()));
                                         }else{
                                             homeworkName = name;
                                             pageN = 1;
                                         }
-                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords,false);
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,homeworkName,pageN,studentsWriteRecords,false);
                                     }
                                 }
                             }
@@ -339,18 +351,19 @@ public class ClientHandler implements Runnable {
                                     if(studentsWriteRecords.size()>0&&pCurrentMenu!=null&&pCurrentMenu.getParentMenu()!=null&&relation!=null){
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                         String name = itemT.getDesc();
-                                        Integer pageN = 1;
+                                        Long homeworkId = itemT.getObjectId();
+                                        Integer pageN=1;
                                         String homeworkName;
-                                        if(name.contains("第")) {
-                                            int num = name.lastIndexOf("第");
+                                        if(name.contains(" ")) {
+                                            int num = name.lastIndexOf(" ");
                                             homeworkName = name.substring(0, num);
 
-                                            pageN = Integer.valueOf(name.substring(num+1, name.lastIndexOf("页")));
+                                            pageN = Integer.valueOf(name.substring(num+1, name.length()));
                                         }else{
                                             homeworkName = name;
                                             pageN = 1;
                                         }
-                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords,false);
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,homeworkName,pageN,studentsWriteRecords,false);
                                     }
                                     pCurrentMenu = null;
                                     homeworkflag = false;
@@ -370,18 +383,19 @@ public class ClientHandler implements Runnable {
                                         int index = pCurrentMenu.getSelectItem();
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(index);
                                         String name = itemT.getDesc();
+                                        Long homeworkId = itemT.getObjectId();
                                         Integer pageN = 1;
                                         String homeworkName;
-                                        if(name.contains("第")) {
-                                            int num = name.lastIndexOf("第");
+                                        if(name.contains(" ")) {
+                                            int num = name.lastIndexOf(" ");
                                             homeworkName = name.substring(0, num);
 
-                                            pageN = Integer.valueOf(name.substring(num+1, name.lastIndexOf("页")));
+                                            pageN = Integer.valueOf(name.substring(num+1, name.length()));
                                         }else{
                                             homeworkName = name;
                                             pageN = 1;
                                         }
-                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords,false);
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,homeworkName,pageN,studentsWriteRecords,false);
                                     }
                                     if (pCurrentMenu.getSelectItem() > pCurrentMenu.getShowStartItem()) {
                                         Integer selectItem = pCurrentMenu.getSelectItem();
@@ -411,19 +425,19 @@ public class ClientHandler implements Runnable {
 
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(index);
                                         String name = itemT.getDesc();
-                                        System.out.println("----------"+name);
+                                        Long homeworkId = itemT.getObjectId();
                                         Integer pageN = 1;
                                         String homeworkName;
-                                        if(name.contains("第")) {
-                                            int num = name.lastIndexOf("第");
+                                        if(name.contains(" ")) {
+                                            int num = name.lastIndexOf(" ");
                                             homeworkName = name.substring(0, num);
 
-                                            pageN = Integer.valueOf(name.substring(num+1, name.lastIndexOf("页")));
+                                            pageN = Integer.valueOf(name.substring(num+1, name.length()));
                                         }else{
                                             homeworkName = name;
                                             pageN = 1;
                                         }
-                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkName,pageN,studentsWriteRecords,false);
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,homeworkName,pageN,studentsWriteRecords,false);
                                     }
                                     if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
                                         Integer selectItem = pCurrentMenu.getSelectItem();

@@ -97,7 +97,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                     return criteriaBuilder.and(list.toArray(p));
                 }
             };
-            Sort sort = Sort.by(Sort.Direction.DESC, "publishTime","createTime");
+            Sort sort = Sort.by(Sort.Direction.DESC, "id","publishTime","createTime");
             List<ClassroomExercises> exercisesList=classroomExercisesRepository.findAll(specification,sort);
             if(exercisesList.size()>0){
                 classroomExercisesId =  exercisesList.get(0).getId();

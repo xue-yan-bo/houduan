@@ -174,7 +174,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
     }
 
     @Override
-    public void teacherStartAnswer(Long classroomExercisesId, Long classId ,Long schoolId,Integer exercisesType) {
+    public Long teacherStartAnswer(Long classroomExercisesId, Long classId ,Long schoolId,Integer exercisesType) {
         ClassroomExercises classroomExercises = new ClassroomExercises();
 
         if(classroomExercisesId==0&&schoolId==null){//老师黑板现场出题
@@ -226,7 +226,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             studentRecord.setClassroomExercisesId(classroomExercisesId);
             List<ClassroomExercisesStudentRecord> recordList=classroomExercisesStudentRecordRepository.findAll(Example.of(studentRecord));
             if(recordList!=null&&recordList.size()>0){
-                return;
+                return classroomExercisesId;
             }
         }
         if(studentList!=null&&studentList.size()>0){
@@ -253,8 +253,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             classroomExercisesStudentRecordRepository.save(record);
 
         }
-
-
+        return classroomExercisesId;
     }
 
     @Override

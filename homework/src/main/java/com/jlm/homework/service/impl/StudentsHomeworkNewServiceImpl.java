@@ -1093,7 +1093,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
                     Calendar calendar = Calendar.getInstance();
                     Predicate condition = null;
-                    if(StringUtils.isNotEmpty(startDate)){
+                    if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
                         Date start = sdf.parse(startDate);
                         calendar.setTime(start);
                         Date end = sdf.parse(endDate);
@@ -1305,10 +1305,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public void saveWriteRecords(Long studentId, String homeworkName, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords,Boolean isFinish) {
+    public void saveWriteRecords(Long studentId,Long homeworkId, String homeworkName, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords,Boolean isFinish) {
         StudentsHomeworkNew search = new StudentsHomeworkNew();
         search.setStudentId(studentId);
-        search.setHomeworkPublishName(homeworkName);
+        search.setHomeworkPublishId(homeworkId);
         Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findOne(Example.of(search));
         if(optional==null||optional.get()==null){
             return;

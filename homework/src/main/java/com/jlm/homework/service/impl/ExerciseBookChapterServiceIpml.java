@@ -30,7 +30,7 @@ public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterServi
         chapter.setExerciseBookId(list.get(0).getExerciseBookId());
         exerciseBookChapterRepository.delete(chapter);
         for (ExerciseBookChapter exerciseBookChapter : list) {
-            List<ExerciseBookQuestion> questionList = exerciseBookChapter.getQuestionList();
+            List<ExerciseBookQuestion> questionList = exerciseBookChapter.getChapterDirectCropAreas();
             List<BookKnowledgePoint> knowledgePointList = exerciseBookChapter.getKnowledgePointList();
             exerciseBookChapter = exerciseBookChapterRepository.save(exerciseBookChapter);
             BookKnowledgePoint point = new BookKnowledgePoint();
@@ -74,7 +74,7 @@ public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterServi
             question.setExerciseBookChapterId(exerciseBookChapter.getId());
             question.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
             List<ExerciseBookQuestion> questionList=exerciseBookQuestionRepository.findAll(Example.of(question));
-            exerciseBookChapter.setQuestionList(questionList);
+            exerciseBookChapter.setChapterDirectCropAreas(questionList);
 
         }
         return chapterList;

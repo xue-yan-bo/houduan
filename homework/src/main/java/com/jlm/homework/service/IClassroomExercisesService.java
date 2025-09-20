@@ -20,7 +20,7 @@ public interface IClassroomExercisesService {
 
     ExerciseTypeAnalyse exerciseTypeAnalyse(Long classId, String startDate, String endDate);
 
-    void teacherStartAnswer(Long classroomExercisesId, Long classId,Long schoolId,Integer exercisesType);
+    Long teacherStartAnswer(Long classroomExercisesId, Long classId,Long schoolId,Integer exercisesType);
 
     TeacherClassroomData getTeacherClassroomData(String startDate, String endDate);
 

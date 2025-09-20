@@ -28,7 +28,7 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
             Long studentId =classroomStudentWriteData.getStudentId();
             ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
             record.setStudentId(studentId);
-            Sort sort = Sort.by(Sort.Direction.DESC,"startTime","createTime");
+            Sort sort = Sort.by(Sort.Direction.DESC,"classroomExercisesId","startTime","createTime");
             List<ClassroomExercisesStudentRecord> recordList=classroomExercisesStudentRecordRepository.findAll(Example.of(record),sort);
             if(recordList!=null&&recordList.size()>0){
                 classroomStudentWriteData.setStudentRecordId(recordList.get(0).getId());
@@ -95,6 +95,7 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
             //最后一个元素，list增加
             if(list.indexOf(writeData)==list.size()-1){
                 if(studentsWriteRecords!=null&&studentsWriteRecords.size()>0){
+                    studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
                     dataList.add(studentWriteData);
                 }
             }

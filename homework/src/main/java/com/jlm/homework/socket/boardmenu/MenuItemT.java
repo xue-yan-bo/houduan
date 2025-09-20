@@ -7,11 +7,13 @@ import java.nio.charset.StandardCharsets;
 @Data
 public class MenuItemT {
     private Integer id;
+    private Long objectId;
     private String desc;
     private MenuT  pSubMenu;
 
-    public MenuItemT(Integer id, String desc, MenuT pSubMenu) {
+    public MenuItemT(Integer id,Long objectId ,String desc, MenuT pSubMenu) {
         this.id = id;
+        this.objectId = objectId;
         this.desc = desc;
         this.pSubMenu = pSubMenu;
     }

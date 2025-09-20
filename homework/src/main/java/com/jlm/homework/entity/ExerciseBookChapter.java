@@ -30,12 +30,10 @@ public class ExerciseBookChapter {
     @Column(name = "image_urls", columnDefinition = "JSON")
     private List<String> chapterDirectImages;
     @Transient
-    private List<ExerciseBookQuestion> questionList;
+    private List<ExerciseBookQuestion> chapterDirectCropAreas;
 
     @Transient
     private List<BookKnowledgePoint> knowledgePointList;
 
-    public void setExerciseBookId(Long exerciseBookId) {
-        this.exerciseBookId = exerciseBookId;
-    }
+
 }

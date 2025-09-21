@@ -48,7 +48,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 ExerciseBookEntity exerciseBook = exerciseBookServer.findById(homeworkPublish.getExerciseBookId());
                 subject =  exerciseBook.getSubject();
             }
-
+            if(StringUtils.isEmpty(subject)){
+                subject = homeworkPublish.getSubject();
+            }
             for(Long classId:homeworkPublish.getClassId()){
                 if(classId==null){
                     continue;

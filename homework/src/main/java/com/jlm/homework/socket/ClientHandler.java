@@ -131,6 +131,14 @@ public class ClientHandler implements Runnable {
                                     writeRecord.setPressure(result.getPressure());
                                     writeRecord.setTimestamp(result.getTimestamp());
                                     studentsWriteRecords.add(writeRecord);
+                                }if(emendflag&&pCurrentMenu!=null){//作业
+                                    System.out.println("=============订正数据发送====");
+                                    StudentsWriteRecord writeRecord = new StudentsWriteRecord();
+                                    writeRecord.setX(result.getX());
+                                    writeRecord.setY(result.getY());
+                                    writeRecord.setPressure(result.getPressure());
+                                    writeRecord.setTimestamp(result.getTimestamp());
+                                    studentsEmendRecords.add(writeRecord);
                                 }else {//课堂
                                     System.out.println("=============课堂数据发送====");
                                     result.setUserId(relation.getUserId());
@@ -203,9 +211,11 @@ public class ClientHandler implements Runnable {
                                                     if(subjectMap.containsKey(subject)){
                                                         pItems = subjectMap.get(subject);
                                                         itemT = menuItemTMap.get(subject);
+                                                        pItems.add(itemT);
                                                     }else{
                                                         itemT = new MenuItemT(i + 1,null, subject, null);
                                                         pItems = new ArrayList<>();
+                                                        pItems.add(itemT);
                                                         menuItemTMap.put(subject, itemT);
 
                                                     }
@@ -260,9 +270,11 @@ public class ClientHandler implements Runnable {
                                                     if(subjectMap.containsKey(subject)){
                                                         pItems = subjectMap.get(subject);
                                                         itemT = menuItemTMap.get(subject);
+                                                        pItems.add(itemT);
                                                     }else{
                                                         itemT = new MenuItemT(i + 1,null, subject, null);
                                                         pItems = new ArrayList<>();
+                                                        pItems.add(itemT);
                                                         menuItemTMap.put(subject, itemT);
 
                                                     }
@@ -363,7 +375,7 @@ public class ClientHandler implements Runnable {
                                                     String homeworkName = board.getHomeworkName();
                                                     if((board.getPageSize()!=null&&board.getPageSize()>0)){
                                                         for(int i=0;i<board.getPageSize();i++){
-                                                            String desc = homeworkName.length()>6?homeworkName.substring(0,6):homeworkName+" " +(i+1);
+                                                            String desc = homeworkName.length()>6?homeworkName.substring(0,5):homeworkName +" " +(i+1);
                                                             MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                             itemTList.add(menuItemT);
                                                         }
@@ -404,6 +416,7 @@ public class ClientHandler implements Runnable {
                                             work2Boards = new ArrayList<>();
                                             mainMenu = null;
                                             homeworkflag = false;
+                                            emendflag = false;
                                             nMenuUpdate(out, writer);
                                         }
                                     }
@@ -428,13 +441,6 @@ public class ClientHandler implements Runnable {
                                 nMenuUpdate(out,writer);
 
 
-                                mainMenu = new MenuT(null,mainItems,0,0,mainItems.size(),mainItems.size());
-                                for(MenuItemT subItem:mainMenu.getPItems()){
-                                    if(subItem!=null){
-                                        subItem.setPSubMenu(mainMenu);
-                                    }
-                                }
-
                             }
                             if(2==result.getButton()){//返回
                                 if(pCurrentMenu!=null){
@@ -444,6 +450,7 @@ public class ClientHandler implements Runnable {
                                     }else{
                                         pCurrentMenu = null;
                                         homeworkflag = false;
+                                        emendflag = false;
                                         work2Boards =new ArrayList<>();
                                         mainMenu = null;
                                         nMenuUpdate(out, writer);
@@ -451,6 +458,7 @@ public class ClientHandler implements Runnable {
                                 }else{
                                     pCurrentMenu = null;
                                     homeworkflag = false;
+                                    emendflag = false;
                                     work2Boards =new ArrayList<>();
                                     mainMenu = null;
                                     nMenuUpdate(out, writer);

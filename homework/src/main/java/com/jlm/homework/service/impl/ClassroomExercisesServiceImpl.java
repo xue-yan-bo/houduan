@@ -208,12 +208,12 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             classroomExercises.setClassIds(Arrays.asList(classId));
             classroomExercises.setExercisesType(exercisesType);
             classroomExercises.setSchoolId(schoolId);
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             classroomExercises.setDeleteFlag(0);
             if(2==exercisesType){
-                classroomExercises.setHomeworkName(teacherName+sdf.format(new Date())+"堂课互动");
+                classroomExercises.setHomeworkName(sdf.format(new Date())+"堂课互动");
             }else if(3==exercisesType){
-                classroomExercises.setHomeworkName(teacherName+sdf.format(new Date())+"纸笔直播");
+                classroomExercises.setHomeworkName(sdf.format(new Date())+"纸笔直播");
             }
 
             classroomExercises.setCreateTime(new Date());
@@ -232,7 +232,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         if(studentList!=null&&studentList.size()>0){
             Student student = studentList.get(0);
             if(classroomExercises.getClassNames()==null||classroomExercises.getClassNames().size()==0){
-                classroomExercises.setClassNames(Arrays.asList(className));
+                classroomExercises.setClassNames(Arrays.asList(student.getClassesName()));
                 classroomExercises.setGradeId(student.getGradeId());
                 classroomExercises.setGradeName(student.getGradeName());
                 classroomExercisesRepository.save(classroomExercises);

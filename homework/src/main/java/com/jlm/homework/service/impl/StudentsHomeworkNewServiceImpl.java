@@ -1385,7 +1385,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         Predicate  condition2 = criteriaBuilder.equal(root.get("studentId").as(Long.class),studentId);
                         list.add(condition2);
                     }
-
+                    Predicate  condition3 = criteriaBuilder.equal(root.get("emendStatus"),"1");
+                    list.add(condition3);
                 } catch (RuntimeException e) {
                     throw new RuntimeException(e);
                 }

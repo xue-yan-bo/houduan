@@ -39,12 +39,14 @@ public class HomeworkStudentWriteDataServiceImpl implements IHomeworkStudentWrit
             HomeworkStudentWriteData data=new HomeworkStudentWriteData();
             data.setStudentHomeworkId(homeworkStudentWriteData.getStudentHomeworkId());
             data.setPageNum(homeworkStudentWriteData.getPageNum());
+            data.setType(homeworkStudentWriteData.getType());
             homeworkStudentWriteDataRepository.delete(data);
             for(int i=0;i<=homeworkStudentWriteData.getStudentsWriteRecords().size()/StudentWriteData_Size;i++){
                 HomeworkStudentWriteData writeData=new HomeworkStudentWriteData();
                 writeData.setStudentHomeworkId(homeworkStudentWriteData.getStudentHomeworkId());
                 writeData.setStudentId(homeworkStudentWriteData.getStudentId());
                 writeData.setIndexN(i);
+                writeData.setType(homeworkStudentWriteData.getType());
                 writeData.setPageNum(homeworkStudentWriteData.getPageNum());
                 int end=(i+1)*StudentWriteData_Size>homeworkStudentWriteData.getStudentsWriteRecords().size()?homeworkStudentWriteData.getStudentsWriteRecords().size():(i+1)*StudentWriteData_Size;
                 writeData.setStudentsWriteRecords(homeworkStudentWriteData.getStudentsWriteRecords().subList(i*StudentWriteData_Size,end));

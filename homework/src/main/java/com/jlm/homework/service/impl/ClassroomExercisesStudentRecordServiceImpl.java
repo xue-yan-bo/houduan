@@ -108,21 +108,22 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         }
         List<StudentWriteDto> writeDtos = exerciseWriteData.getStudentWriteList();
         for (ClassroomExercisesStudentRecord record : recordList) {
-            if(record.getEndFlag()==null||record.getEndFlag().equals("0")){
+            if(record.getEndFlag()==null||record.getEndFlag().equals("0")) {
                 record.setEndFlag(1);
                 record.setEndTime(now);
-                if(record.getStartTime()!=null){
-                    record.setAnswerDuration(now.getTime() - record.getStartTime().getTime());
-                }
-                for(StudentWriteDto studentWriteDto : writeDtos){
-                    if(studentWriteDto.getStudentId()==record.getStudentId()){
-                        record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordList());
-
-                        this.save(record);
-                    }
-                }
-                classroomExercisesStudentRecordRepository.save(record);
             }
+            if(record.getStartTime()!=null){
+                record.setAnswerDuration(now.getTime() - record.getStartTime().getTime());
+            }
+            for(StudentWriteDto studentWriteDto : writeDtos){
+                if(Long.compare(studentWriteDto.getStudentId(),record.getStudentId())==0){
+                    record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordList());
+
+                    this.save(record);
+                }
+            }
+            classroomExercisesStudentRecordRepository.save(record);
+
         }
         if(exerciseWriteData.getTeacherWriteRecords()!=null&&exerciseWriteData.getTeacherWriteRecords().size()>0){
             ClassroomExercises exercises=classroomExercisesRepository.findById(exerciseWriteData.getClassroomExercisesId()).get();

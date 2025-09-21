@@ -60,6 +60,6 @@ public class HomeworkStudentWriteData {
     /**
      * 类型,1作业答题 , 2作业订正
      */
-    @Column(name = "type")
+    @Column(name = "type_n")
     private String type;
 }

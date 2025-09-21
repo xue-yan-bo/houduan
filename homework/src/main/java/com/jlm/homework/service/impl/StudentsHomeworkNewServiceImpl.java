@@ -1332,7 +1332,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         writeData.setStudentId(studentId);
         writeData.setStudentsWriteRecords(studentsWriteRecords);
         writeData.setCreateTime(new Date());
-        writeData.setType(type);
+        if(StringUtils.isNotEmpty(type)) {
+            writeData.setType(type);
+        }
         homeworkStudentWriteDataService.save(writeData);
 
         studentsHomework.setSubmitStatus(1);

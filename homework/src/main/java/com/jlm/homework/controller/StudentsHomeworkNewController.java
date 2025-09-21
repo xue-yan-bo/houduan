@@ -4,6 +4,7 @@ import com.jlm.homework.dto.StudentsHomeworkRequest;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.exception.ParameterNewException;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,7 @@ public class StudentsHomeworkNewController {
      * @return
      */
     @GetMapping("/publish/{homeworkPublishId}")
+    @Operation(summary = "根据老师发布作业查找学生作业")
     public Page<StudentsHomeworkNew> getStudentsHomeworkList(@PathVariable Long homeworkPublishId,
                                                              @RequestParam(defaultValue = "1")Integer pageNum,
                                                              @RequestParam(defaultValue = "10") Integer pageSize,
@@ -33,6 +35,7 @@ public class StudentsHomeworkNewController {
         return studentsHomeworkList;
     }
     @GetMapping("/{id}")
+    @Operation(summary = "查询详情")
     public StudentsHomeworkNew getById(@PathVariable Long id) {
         StudentsHomeworkNew studentsHomeworkNew = studentsHomeworkNewService.getById(id);
         return studentsHomeworkNew;
@@ -56,6 +59,7 @@ public class StudentsHomeworkNewController {
      * 审批作业
      */
     @PostMapping("/audit")
+    @Operation(summary = "审批作业")
     public StudentsHomeworkNew audit(@RequestBody StudentsHomeworkNew studentsHomework) throws Throwable {
         if(studentsHomework.getId()==null){
             throw new ParameterNewException("审批的学生作业ID不能为空!");
@@ -72,6 +76,7 @@ public class StudentsHomeworkNewController {
      * @return
      */
     @GetMapping("/publish/page")
+    @Operation(summary = "分页查询")
     public Page<StudentsHomeworkNew> getStudentsHomeworkPage( @RequestParam(defaultValue = "1")Integer pageNum,
                 @RequestParam(defaultValue = "10") Integer pageSize,
                 StudentsHomeworkNew studentsHomework) {
@@ -85,6 +90,7 @@ public class StudentsHomeworkNewController {
      * @return
      */
     @PostMapping("/emend")
+    @Operation(summary = "老师让学生订正作业接口")
     public StudentsHomeworkNew emend(@RequestBody StudentsHomeworkNew studentsHomework){
         studentsHomework=studentsHomeworkNewService.emend(studentsHomework);
         return studentsHomework;

@@ -1358,7 +1358,6 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Override
     public List<HomeWork2Board> getEmendHomeWork2Board(String subject, Long studentId) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
 
             @Override
@@ -1371,14 +1370,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         list.add(condition);
                     }
                     Calendar calendar = Calendar.getInstance();
+                    calendar.setTime(new Date());
+                    calendar.add(Calendar.DAY_OF_MONTH, -3);
+                    Date start = calendar.getTime();
 
 
-                        calendar.setTime(new Date());
-                        calendar.add(Calendar.DAY_OF_MONTH, -3);
-                        Date start = calendar.getTime();
-                        Date end = new Date();
-                        Predicate condition1 = criteriaBuilder.between(root.<Date>get("createTime").as(Date.class),start,end);
-                        list.add(condition1);
+                    Date end = new Date();
+                    Predicate condition1 = criteriaBuilder.between(root.<Date>get("createTime").as(Date.class),start,end);
+                    list.add(condition1);
 
 
                     if(studentId!=null){

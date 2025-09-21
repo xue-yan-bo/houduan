@@ -29,7 +29,7 @@ public class MenuItemT {
     }*/
 
     public byte[] getDesc2Byte() {
-        String name = desc + " \n";
+        String name = desc + " \n\0";
         byte[] bytes = name.getBytes(StandardCharsets.UTF_16LE);
         return bytes;
     }

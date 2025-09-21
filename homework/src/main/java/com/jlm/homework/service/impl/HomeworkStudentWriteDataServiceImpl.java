@@ -76,6 +76,14 @@ public class HomeworkStudentWriteDataServiceImpl implements IHomeworkStudentWrit
                 }
                 studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
             }else{
+                if(studentWriteData==null){
+                    studentWriteData = new HomeworkStudentWriteData();
+                    studentWriteData.setId(writeData.getId());
+                    studentWriteData.setStudentHomeworkId(writeData.getStudentHomeworkId());
+                    studentWriteData.setStudentId(writeData.getStudentId());
+                    studentWriteData.setPageNum(pageNum);
+                    studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
+                }
                 studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
                 dataList.add(studentWriteData);
                 pageNum++;

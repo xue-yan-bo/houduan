@@ -16,5 +16,5 @@ public class StudentWriteDto {
     /**
      * 学生书写笔记
      */
-    private List<ClassroomStudentWriteData> studentWriteRecordlist;
+    private List<ClassroomStudentWriteData> studentWriteRecordList;
 }

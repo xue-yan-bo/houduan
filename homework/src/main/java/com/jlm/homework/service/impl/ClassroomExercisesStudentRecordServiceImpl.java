@@ -116,7 +116,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 }
                 for(StudentWriteDto studentWriteDto : writeDtos){
                     if(studentWriteDto.getStudentId()==record.getStudentId()){
-                        record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordlist());
+                        record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordList());
 
                         this.save(record);
                     }
@@ -147,7 +147,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             studentWriteDto.setStudentId(studentRecord.getStudentId());
             studentWriteDto.setStudentName(studentRecord.getStudentName());
             List<ClassroomStudentWriteData> writeDataList=classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
-            studentWriteDto.setStudentWriteRecordlist(writeDataList);
+            studentWriteDto.setStudentWriteRecordList(writeDataList);
             studentWriteDtoList.add(studentWriteDto);
         }
         return studentWriteDtoList;

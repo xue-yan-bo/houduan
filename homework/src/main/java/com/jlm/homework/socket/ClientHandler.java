@@ -185,12 +185,12 @@ public class ClientHandler implements Runnable {
                                                     studentsHomeworkNewService.saveStartTime(board.getHomeworkId());
                                                     if((board.getPageSize()!=null&&board.getPageSize()>0)){
                                                         for(int i=0;i<board.getPageSize();i++){
-                                                            String desc = homeworkName.substring(0,8)+" " +(i+1);
+                                                            String desc = homeworkName.length()>6?homeworkName.substring(0,6):homeworkName+" " +(i+1);
                                                             MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                             itemTList.add(menuItemT);
                                                         }
                                                     }else{
-                                                        String desc = homeworkName.substring(0,8)+" 1";
+                                                        String desc = homeworkName.length()>6?homeworkName.substring(0,6):homeworkName+" 1";
                                                         MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                         itemTList.add(menuItemT);
                                                     }

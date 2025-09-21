@@ -1286,7 +1286,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 return criteriaBuilder.and(list.toArray(p));
             }
         };
-        List<StudentsHomeworkNew> homeworkList=studentsHomeworkNewRepository.findAll(specification);
+        Sort sort = Sort.by(Sort.Direction.DESC,"id");
+        List<StudentsHomeworkNew> homeworkList=studentsHomeworkNewRepository.findAll(specification,sort);
         List<HomeWork2Board> homeWork2Boards =  new ArrayList<>();
         for(StudentsHomeworkNew homework:homeworkList){
             HomeWork2Board homeWork2Board = new HomeWork2Board();
@@ -1322,12 +1323,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         writeData.setStudentsWriteRecords(studentsWriteRecords);
         writeData.setCreateTime(new Date());
         homeworkStudentWriteDataService.save(writeData);
-        if(isFinish) {
-            studentsHomework.setSubmitStatus(1);
-            studentsHomework.setSubmitTime(new Date());
-            studentsHomework.setAuditStatus("1");
-            studentsHomeworkNewRepository.save(studentsHomework);
-        }
+
+        studentsHomework.setSubmitStatus(1);
+        studentsHomework.setSubmitTime(new Date());
+        studentsHomework.setAuditStatus("1");
+        studentsHomeworkNewRepository.save(studentsHomework);
+
     }
 
     @Override

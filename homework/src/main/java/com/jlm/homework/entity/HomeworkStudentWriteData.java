@@ -56,4 +56,10 @@ public class HomeworkStudentWriteData {
      */
     @Column(name = "create_time")
     private Date createTime;
+
+    /**
+     * 类型,1作业答题 , 2作业订正
+     */
+    @Column(name = "type")
+    private String type;
 }

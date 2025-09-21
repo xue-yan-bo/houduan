@@ -7,5 +7,5 @@ import java.util.List;
 public interface IHomeworkStudentWriteDataService {
     void save(HomeworkStudentWriteData homeworkStudentWriteData);
 
-    List<HomeworkStudentWriteData> findByStudentRecordId(Long studentHomeworkId);
+    List<HomeworkStudentWriteData> findByStudentRecordId(Long studentHomeworkId,String type);
 }

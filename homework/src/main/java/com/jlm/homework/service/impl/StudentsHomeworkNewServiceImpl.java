@@ -245,8 +245,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(specification,pageable);
         if(studentsHomeworkList!=null&&studentsHomeworkList.getContent()!=null&&studentsHomeworkList.getContent().size()>0){
             for(StudentsHomeworkNew studentsHomework:studentsHomeworkList.getContent()){
-                List<HomeworkStudentWriteData> writeDatas=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId());
+                List<HomeworkStudentWriteData> writeDatas=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"1");
                 studentsHomework.setStudentWriteDataList(writeDatas);
+                List<HomeworkStudentWriteData> writeDatas2=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"2");
+                studentsHomework.setStudentWriteDataList2(writeDatas2);
             }
         }
         return studentsHomeworkList;
@@ -502,8 +504,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Override
     public StudentsHomeworkNew getById(Long id) {
         StudentsHomeworkNew studentsHomework=studentsHomeworkNewRepository.findById(id).get();
-        List<HomeworkStudentWriteData> writeDatas=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId());
+        List<HomeworkStudentWriteData> writeDatas=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"1");
         studentsHomework.setStudentWriteDataList(writeDatas);
+        List<HomeworkStudentWriteData> writeDatas2=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"2");
+        studentsHomework.setStudentWriteDataList2(writeDatas2);
         return studentsHomework;
     }
 
@@ -1305,7 +1309,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public void saveWriteRecords(Long studentId,Long homeworkId, String homeworkName, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords,Boolean isFinish) {
+    public void saveWriteRecords(Long studentId,Long homeworkId, String type, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords,Boolean isFinish) {
         StudentsHomeworkNew search = new StudentsHomeworkNew();
         search.setStudentId(studentId);
         search.setHomeworkPublishId(homeworkId);
@@ -1321,13 +1325,18 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         writeData.setStudentId(studentId);
         writeData.setStudentsWriteRecords(studentsWriteRecords);
         writeData.setCreateTime(new Date());
+        writeData.setType(type);
         homeworkStudentWriteDataService.save(writeData);
-        if(isFinish) {
-            studentsHomework.setSubmitStatus(1);
-            studentsHomework.setSubmitTime(new Date());
-            studentsHomework.setAuditStatus("1");
-            studentsHomeworkNewRepository.save(studentsHomework);
-        }
+
+        studentsHomework.setSubmitStatus(1);
+        studentsHomework.setSubmitTime(new Date());
+        studentsHomework.setAuditStatus("1");
+        studentsHomeworkNewRepository.save(studentsHomework);
+
+        HomeworkPublish homeworkPublish=homeworkPublishRepository.findById(studentsHomework.getHomeworkPublishId()).get();
+        homeworkPublish.setAuditStatus(1);
+        homeworkPublishRepository.save(homeworkPublish);
+
     }
 
     @Override

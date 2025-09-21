@@ -80,6 +80,14 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
                 }
                 studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
             }else{
+                if(studentWriteData==null){
+                    studentWriteData = new ClassroomStudentWriteData();
+                    studentWriteData.setId(writeData.getId());
+                    studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
+                    studentWriteData.setStudentId(writeData.getStudentId());
+                    studentWriteData.setPageNum(pageNum);
+                    studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
+                }
                 studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
                 dataList.add(studentWriteData);
                 pageNum++;

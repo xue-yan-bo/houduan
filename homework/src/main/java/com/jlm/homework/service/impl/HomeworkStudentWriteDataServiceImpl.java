@@ -56,9 +56,10 @@ public class HomeworkStudentWriteDataServiceImpl implements IHomeworkStudentWrit
     }
 
     @Override
-    public List<HomeworkStudentWriteData> findByStudentRecordId(Long studentHomeworkId) {
+    public List<HomeworkStudentWriteData> findByStudentRecordId(Long studentHomeworkId,String type) {
         HomeworkStudentWriteData data=new HomeworkStudentWriteData();
         data.setStudentHomeworkId(studentHomeworkId);
+        data.setType(type);
         Sort sort = Sort.by(Sort.Direction.ASC,"pageNum","indexN");
         List<HomeworkStudentWriteData> list=homeworkStudentWriteDataRepository.findAll(Example.of(data),sort);
         List<HomeworkStudentWriteData> dataList=new ArrayList<>();

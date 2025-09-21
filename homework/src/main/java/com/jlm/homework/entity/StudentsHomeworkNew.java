@@ -266,7 +266,7 @@ public class StudentsHomeworkNew implements Serializable {
     private List<CommentsCoordinate> commentsCoordinate2;
 
     /**
-     * 订正,   1需要订正 2 订正完成
+     *  1需要订正 2 学生订正完成 3老师再次审批
      */
     @Column(name = "emend_status")
     private Integer emendStatus;

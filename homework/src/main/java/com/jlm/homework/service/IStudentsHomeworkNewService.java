@@ -46,4 +46,6 @@ public interface IStudentsHomeworkNewService {
     StudentsHomeworkNew emend(StudentsHomeworkNew studentsHomework);
 
     List<HomeWork2Board> getEmendHomeWork2Board(String subject,Long studentId);
+
+    Page<StudentsHomeworkNew> geemendPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 }

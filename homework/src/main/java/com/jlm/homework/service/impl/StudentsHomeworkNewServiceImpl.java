@@ -355,9 +355,13 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         }else {
                             condition3 = criteriaBuilder.conjunction();
                         }
-
-
-                        query.where(condition0,condition1,condition2,condition3,condition4);
+                        Predicate condition5 = null;
+                        if(studentsHomework.getEmendStatus()!=null){
+                            condition5 = criteriaBuilder.isNotEmpty(root.get("emendStatus"));
+                        }else {
+                            condition5 = criteriaBuilder.conjunction();
+                        }
+                        query.where(condition0,condition1,condition2,condition3,condition4,condition5);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -1331,7 +1335,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
         studentsHomework.setSubmitStatus(1);
         studentsHomework.setSubmitTime(new Date());
-        studentsHomework.setAuditStatus("1");
+        if("1".equals(type)) {
+            studentsHomework.setAuditStatus("1");
+        }else if("2".equals(type)) {
+            studentsHomework.setAuditStatus("4");
+        }
+
         studentsHomeworkNewRepository.save(studentsHomework);
 
         HomeworkPublish homeworkPublish=homeworkPublishRepository.findById(studentsHomework.getHomeworkPublishId()).get();
@@ -1353,6 +1362,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Override
     public StudentsHomeworkNew emend(StudentsHomeworkNew studentsHomework) {
         studentsHomework.setEmendStatus(1);
+        studentsHomework.setAuditStatus("3");
         return studentsHomeworkNewRepository.save(studentsHomework);
     }
 
@@ -1409,5 +1419,68 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             homeWork2Boards.add(homeWork2Board);
         }
         return homeWork2Boards;
+    }
+
+    @Override
+    public Page<StudentsHomeworkNew> geemendPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework) {
+        pageNum = pageNum == null ? 0 : pageNum-1;
+        pageSize = pageSize == null ? 10 : pageSize;
+        Sort sort = Sort.by(Sort.Direction.DESC,"createTime");
+        Pageable pageable = PageRequest.of(pageNum-1, pageSize,sort);
+        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
+
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                if(studentsHomework!=null){
+
+                    Predicate condition0 = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
+                    Predicate condition1 = null;
+                    if(StringUtils.isNotEmpty(studentsHomework.getAuditStatus())){
+                        condition1 = criteriaBuilder.equal(root.get("auditStatus"), studentsHomework.getAuditStatus());
+                    }else {
+                        condition1 = criteriaBuilder.conjunction();
+                    }
+                    Predicate condition2 = null;
+                    if(studentsHomework.getClassesId()!=null){
+                        condition2 = criteriaBuilder.equal(root.get("classesId"), studentsHomework.getClassesId());
+                    }else {
+                        condition2 = criteriaBuilder.conjunction();
+                    }
+                    Predicate condition4 = null;
+                    if(studentsHomework.getStudentId()!=null){
+                        condition4 = criteriaBuilder.equal(root.get("studentId"), studentsHomework.getStudentId());
+                    }else {
+                        condition4 = criteriaBuilder.conjunction();
+                    }
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                    Calendar calendar = Calendar.getInstance();
+
+                    try {
+                        Predicate condition3 = null;
+                        if(studentsHomework.getCreateTime()!=null){
+                            Date createTime = studentsHomework.getCreateTime();
+                            calendar.setTime(createTime);
+                            calendar.add(Calendar.DAY_OF_MONTH,1);
+                            Date createTime1 = calendar.getTime();
+                            condition3 = criteriaBuilder.between(root.get("createTime").as(Date.class),createTime,createTime1);
+
+                        }else {
+                            condition3 = criteriaBuilder.conjunction();
+                        }
+
+                        Predicate condition5 = criteriaBuilder.isNotEmpty(root.get("emendStatus"));
+                        query.where(condition0,condition1,condition2,condition3,condition4,condition5);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+
+                }
+                return null;
+            }
+
+
+        };
+        Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(specification,pageable);
+        return studentsHomeworkList;
     }
 }

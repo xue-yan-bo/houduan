@@ -66,6 +66,10 @@ public class StudentsHomeworkNewController {
         }
         studentsHomework.setAuditStatus("2");
         studentsHomework.setAuditTime(new Date());
+        if(studentsHomework.getEmendStatus()!=null){
+            studentsHomework.setEmendStatus(3);
+            studentsHomework.setAuditStatus("5");
+        }
         studentsHomework=studentsHomeworkNewService.update(studentsHomework);
         return studentsHomework;
     }
@@ -94,5 +98,19 @@ public class StudentsHomeworkNewController {
     public StudentsHomeworkNew emend(@RequestBody StudentsHomeworkNew studentsHomework){
         studentsHomework=studentsHomeworkNewService.emend(studentsHomework);
         return studentsHomework;
+    }
+
+    /**
+     * 订正分页
+     * @param studentsHomework
+     * @return
+     */
+    @GetMapping("/emend/page")
+    @Operation(summary = "订正分页")
+    public Page<StudentsHomeworkNew> geemendPage( @RequestParam(defaultValue = "1")Integer pageNum,
+                                                              @RequestParam(defaultValue = "10") Integer pageSize,
+                                                              StudentsHomeworkNew studentsHomework) {
+        Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewService.geemendPage(pageNum,pageSize,studentsHomework);
+        return studentsHomeworkList;
     }
 }

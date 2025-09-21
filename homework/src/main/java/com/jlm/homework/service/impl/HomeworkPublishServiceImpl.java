@@ -99,7 +99,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                     homeworkPublishRepository.save(homeworkPublish);
                 }
             };
-            timer.schedule(task1,homeworkPublish.getPublishTime());
+            timer.schedule(task1,homeworkPublish.getDeadline());
         }
         return homeworkPublish.getId().toString();
     }
@@ -151,7 +151,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                     homeworkPublishRepository.save(homeworkPublish);
                 }
             };
-            timer.schedule(task1,homeworkPublish.getPublishTime());
+            timer.schedule(task1,homeworkPublish.getDeadline());
         }
         String subject = null;
         if(homeworkPublish.getExerciseBookId() != null){

@@ -44,23 +44,27 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
 
     @Override
     public ClassroomExercisesStudentAnswer save(ClassroomExercisesStudentAnswer studentAnswer) {
-        if(StringUtils.isNotEmpty(studentAnswer.getStudentAnswer())
-        &&studentAnswer.getStudentAnswer().equals(studentAnswer.getAnswer())){
-            studentAnswer.setRightFlag(1);
-        }else{
-            ClassroomExercisesQuestion question = classroomExercisesQuestionRepository.findById(studentAnswer.getExerciseQuestionId()).get();
-            WrongTitleBook wrongTitleBook = new WrongTitleBook();
-            wrongTitleBook.setSource("随堂检测");
-            wrongTitleBook.setExercisesRecordId(studentAnswer.getClassroomExercisesId());
-            wrongTitleBook.setStudentId(Long.parseLong(studentAnswer.getStudentId()));
-            wrongTitleBook.setStudentName(studentAnswer.getStudentName());
-            wrongTitleBook.setTitleBigNo(studentAnswer.getTitleNumber());
-            wrongTitleBook.setTitleContext(studentAnswer.getQuestionContent());
-            wrongTitleBook.setTitleAnswer(studentAnswer.getAnswer());
-            wrongTitleBook.setStudentAnswer(studentAnswer.getStudentAnswer());
-            wrongTitleBook.setParse(question.getParse());
-            wrongTitleBook.setCreateTime(new Date());
-            wrongTitleBookService.save(wrongTitleBook);
+        if(StringUtils.isNotEmpty(studentAnswer.getStudentAnswer())){
+            if(studentAnswer.getStudentAnswer().equals(studentAnswer.getAnswer())){
+                studentAnswer.setRightFlag(1);
+            }else{
+                ClassroomExercisesQuestion question = classroomExercisesQuestionRepository.findById(studentAnswer.getExerciseQuestionId()).get();
+                WrongTitleBook wrongTitleBook = new WrongTitleBook();
+                wrongTitleBook.setSource("随堂检测");
+                wrongTitleBook.setExercisesRecordId(studentAnswer.getClassroomExercisesId());
+                wrongTitleBook.setStudentId(Long.parseLong(studentAnswer.getStudentId()));
+                wrongTitleBook.setStudentName(studentAnswer.getStudentName());
+                wrongTitleBook.setTitleBigNo(studentAnswer.getTitleNumber());
+                wrongTitleBook.setTitleContext(studentAnswer.getQuestionContent());
+                wrongTitleBook.setTitleAnswer(studentAnswer.getAnswer());
+                wrongTitleBook.setStudentAnswer(studentAnswer.getStudentAnswer());
+                wrongTitleBook.setParse(question.getParse());
+                wrongTitleBook.setCreateTime(new Date());
+                wrongTitleBook.setClassId(studentAnswer.getClassId());
+                wrongTitleBook.setClassName(studentAnswer.getClassName());
+                wrongTitleBookService.save(wrongTitleBook);
+            }
+
         }
         return classroomExercisesStudentAnswerRepository.save(studentAnswer);
     }

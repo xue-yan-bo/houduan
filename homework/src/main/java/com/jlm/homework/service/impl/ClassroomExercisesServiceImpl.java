@@ -211,9 +211,9 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             classroomExercises.setDeleteFlag(0);
             if(2==exercisesType){
-                classroomExercises.setHomeworkName(sdf.format(new Date())+"堂课互动");
+                classroomExercises.setHomeworkName(teacherName+sdf.format(new Date())+"堂课互动");
             }else if(3==exercisesType){
-                classroomExercises.setHomeworkName(sdf.format(new Date())+"纸笔直播");
+                classroomExercises.setHomeworkName(teacherName+sdf.format(new Date())+"纸笔直播");
             }
 
             classroomExercises.setCreateTime(new Date());

@@ -38,12 +38,24 @@ public class WrongTitleBook {
      /**
      * 学生姓名
      */
-    @Column(name = "student_name")
+     @Column(name = "student_name")
      private String studentName;
+
+
+     /**
+      * 班级ID
+      */
+     @Column(name = "class_id")
+     private Long classId;
+     /**
+      * 班级姓名
+      */
+     @Column(name = "class_name")
+     private String className;
      /**
      * 大题号
      */
-    @Column(name = "title_big_no")
+     @Column(name = "title_big_no")
      private Integer titleBigNo;
      /**
      * 小题号

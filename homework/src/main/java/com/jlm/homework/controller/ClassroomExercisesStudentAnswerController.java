@@ -24,6 +24,7 @@ public class ClassroomExercisesStudentAnswerController {
     private IClassroomExercisesStudentAnswerService classroomExercisesStudentAnswerService;
 
     @PostMapping("/update")
+    @Operation(summary = "学生提交答案")
     public ClassroomExercisesStudentAnswer update(ClassroomExercisesStudentAnswer studentAnswer){
         return classroomExercisesStudentAnswerService.save(studentAnswer);
     }

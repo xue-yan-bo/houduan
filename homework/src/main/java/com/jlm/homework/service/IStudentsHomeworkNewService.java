@@ -43,7 +43,7 @@ public interface IStudentsHomeworkNewService {
 
     void saveStartTime(Long homeworkId);
 
-    StudentsHomeworkNew emend(StudentsHomeworkNew studentsHomework);
+    void emend(Long studentsHomeworkId);
 
     List<HomeWork2Board> getEmendHomeWork2Board(String subject,Long studentId);
 

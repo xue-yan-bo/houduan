@@ -1364,10 +1364,11 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public StudentsHomeworkNew emend(StudentsHomeworkNew studentsHomework) {
+    public void emend(Long studentsHomeworkId) {
+        StudentsHomeworkNew studentsHomework=studentsHomeworkNewRepository.findById(studentsHomeworkId).get();
         studentsHomework.setEmendStatus(1);
         studentsHomework.setAuditStatus("3");
-        return studentsHomeworkNewRepository.save(studentsHomework);
+        studentsHomeworkNewRepository.save(studentsHomework);
     }
 
     @Override

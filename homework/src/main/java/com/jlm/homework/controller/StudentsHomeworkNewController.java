@@ -93,11 +93,11 @@ public class StudentsHomeworkNewController {
      * @param
      * @return
      */
-    @PostMapping("/emend")
+    @GetMapping("/emend")
     @Operation(summary = "老师让学生订正作业接口")
-    public StudentsHomeworkNew emend(@RequestBody StudentsHomeworkNew studentsHomework){
-        studentsHomework=studentsHomeworkNewService.emend(studentsHomework);
-        return studentsHomework;
+    public void emend(Long studentsHomeworkId){
+        studentsHomeworkNewService.emend(studentsHomeworkId);
+        return;
     }
 
     /**

@@ -285,36 +285,21 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
 
         classroomData.setClassesNum(exercisesList.size());
         classroomData.setClassroomExercisesNum(exercisesList.size());
-        Specification<ClassroomExercisesStudentRecord> specification1 = new Specification<ClassroomExercisesStudentRecord>() {
-            @Override
-            public Predicate toPredicate(Root<ClassroomExercisesStudentRecord> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                List<Predicate> list = new ArrayList<>();
-                try {
-                    Predicate condition = null;
-                    if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
-                        Date startDate1 = sdf.parse(startDate);
-                        Date endDate1 = sdf.parse(endDate);
-                        condition = criteriaBuilder.between(root.<Date>get("createTime"),startDate1,endDate1);
-                        list.add(condition);
-                    }
-
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-
-                Predicate[] p =  new Predicate[list.size()];
-                return criteriaBuilder.and(list.toArray(p));
-            }
-        };
-        List<ClassroomExercisesStudentRecord> exercisesStudentRecordList=classroomExercisesStudentRecordRepository.findAll(specification1);
         int purePenPlowNum = 0;
-        for(ClassroomExercisesStudentRecord record:exercisesStudentRecordList){
-            if(record.getStudentWriteDataList()!=null&&record.getStudentWriteDataList().size()>0){
+        int classroomExercisesNum = 0;
+        int classroomInteractionNum =0;
+        for(ClassroomExercises exercises :exercisesList){
+            if(1==exercises.getExercisesType()){
+                classroomExercisesNum++;
+            }if(2==exercises.getExercisesType()){
+                classroomInteractionNum++;
+            }else{
                 purePenPlowNum++;
             }
         }
+        classroomData.setClassroomExercisesNum(classroomExercisesNum);
         classroomData.setPurePenPlowNum(purePenPlowNum);
-        classroomData.setClassroomInteractionNum(exercisesStudentRecordList.size());
+        classroomData.setClassroomInteractionNum(classroomInteractionNum);
         Map<String,Integer> dayClassroomUseNumMap = new HashMap<>();
         for(ClassroomExercises exercises:exercisesList){
             String day = sdf.format(exercises.getPublishTime());

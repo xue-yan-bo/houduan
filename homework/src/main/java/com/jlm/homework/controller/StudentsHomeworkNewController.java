@@ -70,7 +70,7 @@ public class StudentsHomeworkNewController {
             studentsHomework.setEmendStatus(3);
             studentsHomework.setAuditStatus("5");
         }
-        studentsHomework=studentsHomeworkNewService.update(studentsHomework);
+        studentsHomework=studentsHomeworkNewService.audit(studentsHomework);
         return studentsHomework;
     }
 

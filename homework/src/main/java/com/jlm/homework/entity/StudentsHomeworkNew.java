@@ -283,4 +283,20 @@ public class StudentsHomeworkNew implements Serializable {
      */
     @Transient
     private List<HomeworkStudentWriteData> studentWriteDataList2;
+
+    /**
+     * 每日一练ID
+     */
+    @Column(name = "daily_practice_id")
+    private Long dailyPracticeld;
+    /**
+     * 每日一练名称
+     */
+    @Column(name = "daily_practice_name")
+    private String dailyPracticeName;
+    /**
+     * 每日一练试题文档
+     */
+    @Column(name = "daily_practice_preview")
+    private String dailyPracticePreview;
 }

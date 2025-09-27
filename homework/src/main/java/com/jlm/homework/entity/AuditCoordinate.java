@@ -8,4 +8,7 @@ public class AuditCoordinate implements Serializable {
     private Integer index;
     private Double x;
     private Double y;
+    private Boolean isStart;
+    private Boolean isEnd;
+    private String strokeId;
 }

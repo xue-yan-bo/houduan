@@ -86,7 +86,7 @@ public class HomeworkPublish implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date deadline;
     /**
-     * 试题来源, 1练习册 2题库  3模版发布
+     * 试题来源, 1练习册 2题库  3每日一练
      */
     @Column(name = "test_source")
     private Integer testSource;
@@ -180,4 +180,20 @@ public class HomeworkPublish implements Serializable {
      */
     @Column(name = "knowledge_point")
     private String knowledgePoint;
+
+    /**
+     * 每日一练ID
+     */
+    @Column(name = "daily_practice_id")
+    private Long dailyPracticeld;
+    /**
+     * 每日一练名称
+     */
+    @Column(name = "daily_practice_name")
+    private String dailyPracticeName;
+    /**
+     * 每日一练试题文档
+     */
+    @Column(name = "daily_practice_preview")
+    private String dailyPracticePreview;
 }

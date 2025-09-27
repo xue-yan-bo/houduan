@@ -23,4 +23,9 @@ public class WrongTitleBookController {
     public List<WrongTitleBook> findByStudentId(@PathVariable("studentId") Long studentId){
         return wrongTitleBookService.findByStudentId(studentId);
     }
+
+    @GetMapping("/createWrongBook")
+    public void createWrongBook(Long studentsHomeworkId){
+        wrongTitleBookService.createWrongBook(studentsHomeworkId);
+    }
 }

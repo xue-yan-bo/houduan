@@ -1,5 +1,6 @@
 package com.jlm.homework.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jlm.homework.entity.ExerciseBookChapter;
@@ -107,12 +108,14 @@ public class ExerciseBookRequest {
      * 创建时间查询 - 开始时间
      * 格式：yyyy-MM-dd HH:mm:ss 或 yyyy-MM-dd
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdStartTime;
 
     /**
      * 创建时间查询 - 结束时间
      * 格式：yyyy-MM-dd HH:mm:ss 或 yyyy-MM-dd
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdEndTime;
 
     /**

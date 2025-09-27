@@ -18,11 +18,13 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 // 客户端处理线程
 public class ClientHandler implements Runnable {
-    private InetSocketAddress realRemoteAddress;
-    private boolean headerParsed = false;
+    
 
     public static MenuT pCurrentMenu = null; //当前菜单
     public static boolean mrnuflag = false;
@@ -33,6 +35,11 @@ public class ClientHandler implements Runnable {
     public static MenuT mainMenu = null; //主菜单
     public static MenuT homeworkMenu = null; //作业模式
     public static MenuT emendMenu = null; //订正模式
+
+
+    private InetSocketAddress realRemoteAddress;
+    private boolean headerParsed = false;
+
     List<StudentsWriteRecord> studentsWriteRecords =new ArrayList<>();
     List<StudentsWriteRecord> studentsEmendRecords =new ArrayList<>();
 
@@ -40,6 +47,12 @@ public class ClientHandler implements Runnable {
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
     private IStudentsHomeworkNewService studentsHomeworkNewService;
     private final Socket clientSocket;
+
+
+    // 添加心跳相关成员变量
+    private ScheduledExecutorService heartbeatScheduler;
+    private static final byte HEARTBEAT_TYPE = 0x05; // 定义心跳包类型
+    private static final long HEARTBEAT_INTERVAL = 9; // 心跳包间隔（秒）
 
     public ClientHandler(Socket socket,SimpMessagingTemplate messagingTemplate,ISmartDeviceUserRelationService  smartDeviceUserRelationService,IStudentsHomeworkNewService studentsHomeworkNewService) {
         this.clientSocket = socket;
@@ -57,6 +70,8 @@ public class ClientHandler implements Runnable {
                 PrintWriter writer = new PrintWriter(out, true);
 
         ) {
+
+            clientSocket.setKeepAlive(true);
             this.readProxyHeader();
             // 获取客户端真实IP
             InetSocketAddress realAddress = this.getRealRemoteAddress();
@@ -69,7 +84,8 @@ public class ClientHandler implements Runnable {
             // 持续处理客户端消息
             byte[] headerBuffer = new byte[4]; // 包头(2) + 长度(1) + 类型(1)
             int bytesRead;
-
+            // 初始化心跳包定时发送器
+            initHeartbeatScheduler(out);
             while (true) {
                 // 首先读取包头和基本信息
                 bytesRead = in.read(headerBuffer);
@@ -147,6 +163,19 @@ public class ClientHandler implements Runnable {
                                     // 通过WebSocket发送解析结果给前端
                                     messagingTemplate.convertAndSend("/topic/writingData", result);
                                 }
+                            }else {
+
+                                relation=smartDeviceUserRelationService.selectByIpAddress(clientIP);
+                                if(relation!=null){
+                                    result.setUserId(relation.getUserId());
+                                    // 发送解析结果给客户端
+                                    writer.println("服务器回复: " + result.toString());
+                                    // 通过WebSocket发送解析结果给前端
+                                    messagingTemplate.convertAndSend("/topic/writingData", result);
+                                }else {
+                                    System.out.println("=========没有获取到学生信息！======");
+                                }
+
                             }
 
                         }
@@ -175,6 +204,7 @@ public class ClientHandler implements Runnable {
                                 classroomResult.setOption("E");
                             }
                             if(512==result.getButton()){//按键F  签到
+                                //classroomResult.setOption("F");
                                 if(StringUtils.isNotEmpty(relation.getUserId())) {
                                     messagingTemplate.convertAndSend("/topic/studentSign", relation.getUserId());
                                 }
@@ -189,7 +219,7 @@ public class ClientHandler implements Runnable {
                                     String name = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem()).getDesc();
                                     if("作业模式".equals(name)) {
                                         homeworkflag = true;
-
+                                        System.out.println("作业模式确认");
                                         if (relation != null) {
                                             Long studentId = Long.parseLong(relation.getUserId());
                                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
@@ -198,38 +228,48 @@ public class ClientHandler implements Runnable {
                                         }
 
                                         if(work2Boards!=null||work2Boards.size()>0){
+                                            System.out.println("===========作业数"+work2Boards.size());
                                             List<MenuItemT> homeworkItems = new ArrayList<>();
                                             Map<String,List<MenuItemT>> subjectMap = new HashMap<>();
                                             Map<String,MenuItemT> menuItemTMap = new HashMap<>();
                                             for (int i = 0; i < work2Boards.size(); i++) {
                                                 HomeWork2Board homeWork2Board = work2Boards.get(i);
+                                                System.out.println("---------------作业："+homeWork2Board.getHomeworkName()+":"+homeWork2Board.getPageSize());
+                                                if(StringUtils.isEmpty(homeWork2Board.getSubject())){
+                                                    continue;
+                                                }
                                                 String subject = homeWork2Board.getSubject().trim();
                                                 if (StringUtils.isNotEmpty(subject)) {
 
                                                     List<MenuItemT> pItems = null;
                                                     MenuItemT itemT = null;
-                                                    if(subjectMap.containsKey(subject)){
+                                                    if(subjectMap.containsKey(subject)&&menuItemTMap.containsKey(subject)){
+                                                        System.out.println("---------------科目："+subject);
                                                         pItems = subjectMap.get(subject);
                                                         itemT = menuItemTMap.get(subject);
-                                                        pItems.add(itemT);
+                                                        //pItems.add(itemT);
                                                     }else{
+                                                        System.out.println("##############新建科目菜单："+subject);
                                                         itemT = new MenuItemT(i + 1,null, subject, null);
                                                         pItems = new ArrayList<>();
                                                         pItems.add(itemT);
                                                         menuItemTMap.put(subject, itemT);
-
+                                                        System.out.println("---------------科目菜单："+subject);
                                                     }
-
+                                                    System.out.println("=====科目下的作业数+++++++："+pItems.size());
                                                     subjectMap.put(subject,pItems);
                                                 }
-
+                                                System.out.println("=====科目下的作业数："+subjectMap.size());
                                             }
+                                            System.out.println("科目菜单数："+menuItemTMap.size());
                                             for(String subject: menuItemTMap.keySet()){
+                                                System.out.println("作业科目："+subject);
                                                 MenuT subMenuT = new MenuT(homeworkMenu, subjectMap.get(subject), 0, 0, subjectMap.get(subject).size(), subjectMap.get(subject).size());
                                                 MenuItemT itemT=menuItemTMap.get(subject);
                                                 itemT.setPSubMenu(subMenuT);
                                                 homeworkItems.add(itemT);
                                             }
+                                            System.out.println("=============子菜单数："+homeworkItems.size());
                                             homeworkMenu = new MenuT(mainMenu,homeworkItems,0,0,homeworkItems.size(),homeworkItems.size());
                                             pCurrentMenu = homeworkMenu;
                                             pCurrentMenu.setShowStartItem(0);
@@ -237,6 +277,7 @@ public class ClientHandler implements Runnable {
                                             pCurrentMenu.setSelectItem(0);
                                             nMenuUpdate(out,writer);
                                         }else{
+                                            System.out.println("没有作业数");
                                             pCurrentMenu = mainMenu;
                                             pCurrentMenu.setShowStartItem(0);
                                             pCurrentMenu.setShowEndItem(2);
@@ -276,9 +317,7 @@ public class ClientHandler implements Runnable {
                                                         pItems = new ArrayList<>();
                                                         pItems.add(itemT);
                                                         menuItemTMap.put(subject, itemT);
-
                                                     }
-
                                                     subjectMap.put(subject,pItems);
                                                 }
 
@@ -361,13 +400,10 @@ public class ClientHandler implements Runnable {
                                             work2Boards = new ArrayList<>();
                                             mainMenu = null;
                                             homeworkflag = false;
-                                            emendflag = false;
-                                            homeworkMenu = null;
-                                            emendMenu = null;
                                             nMenuUpdate(out, writer);
                                         }
                                     }
-                                }else if(emendflag){//作业订正
+                                }else if(emendflag){//末级菜单作业订正
                                     if(pCurrentMenu.equals(emendMenu)){
                                         if(emendBoards!=null&&emendBoards.size()>0){
                                             List<MenuItemT> itemTList = new ArrayList<>();
@@ -783,9 +819,12 @@ public class ClientHandler implements Runnable {
                     writer.println("解析失败：" + e.getMessage());
                 }
             }
+
         } catch (IOException e) {
             System.err.println("客户端处理异常: " + e.getMessage());
         } finally {
+            // 关闭连接时取消心跳包定时任务
+            cancelHeartbeat();
             // 确保关闭客户端连接
             try {
                 clientSocket.close();
@@ -795,8 +834,69 @@ public class ClientHandler implements Runnable {
             }
         }
     }
+    // 添加初始化心跳包定时发送器方法
+    private void initHeartbeatScheduler(OutputStream out) {
+        heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
+        heartbeatScheduler.scheduleAtFixedRate(() -> {
+            try {
+                sendHeartbeat(out);
+            } catch (IOException e) {
+                System.err.println("发送心跳包失败: " + e.getMessage());
+                cancelHeartbeat();
+            }
+        }, HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL, TimeUnit.SECONDS);
+    }
+    // 添加发送心跳包方法
+    private void sendHeartbeat(OutputStream out) throws IOException {
+        // 创建心跳包数据（一个字节）
+        byte heartbeatData = 0x01; // 简单的心跳包数据内容
 
+        // 创建数据包（包头+长度+类型+数据+校验和）
+        byte[] packet = new byte[5]; // 包头(2)+长度(1)+类型(1)+数据(1)+校验和(1)
 
+        // 设置包头
+        packet[0] = 0x55;
+        packet[1] = 0x56;
+
+        // 设置长度字段（数据长度+1）
+        packet[2] = 0x02; // 心跳包数据长度+1 = 1+1 = 2
+
+        // 设置数据类型
+        packet[3] = HEARTBEAT_TYPE;
+
+        // 设置心跳数据
+        packet[4] = heartbeatData;
+
+        // 计算校验和
+        int checksum = calculateChecksum(packet, 0, 4); // 计算前5个字节的校验和
+        byte checksumByte = (byte)(checksum & 0xFF);
+
+        // 创建完整的数据包
+        byte[] fullPacket = new byte[6]; // 包头(2)+长度(1)+类型(1)+数据(1)+校验和(1)
+        System.arraycopy(packet, 0, fullPacket, 0, 5);
+        fullPacket[5] = checksumByte;
+
+        // 发送心跳包
+        out.write(fullPacket);
+        out.flush();
+        System.out.println("发送心跳包: " + Arrays.toString(fullPacket));
+    }
+
+    // 添加计算校验和的辅助方法（从ParseTcpDataUtil类复制）
+    private int calculateChecksum(byte[] data, int start, int end) {
+        int sum = 0;
+        for (int i = start; i <= end; i++) {
+            sum += (data[i] & 0xFF); // 转为无符号整数累加
+        }
+        return sum;
+    }
+
+    // 添加取消心跳包定时任务的方法
+    private void cancelHeartbeat() {
+        if (heartbeatScheduler != null && !heartbeatScheduler.isShutdown()) {
+            heartbeatScheduler.shutdownNow();
+        }
+    }
     /**
      * 更新菜单并发送到客户端
      * @param out 输出流，用于发送数据

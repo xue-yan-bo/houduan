@@ -52,6 +52,7 @@ public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterServi
                     exerciseBookQuestion.setExerciseBookChapterId(exerciseBookChapter.getId());
                     exerciseBookQuestion.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
                     exerciseBookQuestion.setKnowledgePoint(knowledgePoints);
+                    exerciseBookQuestion.setPageNumber(list.indexOf(exerciseBookChapter)+1);
                     exerciseBookQuestion.setSourceImageUrl(exerciseBookQuestion.getSourceImageUrl());
                     exerciseBookQuestion.setCroppedUrl(exerciseBookQuestion.getCroppedUrl());
                     exerciseBookQuestion.setKnowledgePoint(exerciseBookChapter.getKnowledgePointList().toString());

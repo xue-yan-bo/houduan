@@ -9,4 +9,6 @@ public interface IWrongTitleBookService {
     WrongTitleBook save(WrongTitleBook wrongTitleBook);
 
     List<WrongTitleBook> findByStudentId(Long studentId);
+
+    void createWrongBook(Long studentsHomeworkId);
 }

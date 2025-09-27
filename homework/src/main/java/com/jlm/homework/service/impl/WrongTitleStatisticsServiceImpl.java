@@ -1,18 +1,77 @@
 package com.jlm.homework.service.impl;
 
+import com.jlm.homework.entity.StudentsHomeworkNew;
+import com.jlm.homework.entity.WrongTitleBook;
 import com.jlm.homework.entity.WrongTitleStatistics;
+import com.jlm.homework.repository.StudentsHomeworkNewRepository;
+import com.jlm.homework.repository.WrongTitleBookRepository;
 import com.jlm.homework.repository.WrongTitleStatisticsRepository;
 import com.jlm.homework.service.IWrongTitleStatisticsService;
 import jakarta.annotation.Resource;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.math.BigDecimal;
+import java.util.*;
 
 @Service
 public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsService {
     @Resource
     private WrongTitleStatisticsRepository wrongTitleStatisticsRepository;
+
+    @Resource
+    private WrongTitleBookRepository wrongTitleBookRepository;
+
+    @Resource
+    private StudentsHomeworkNewRepository studentsHomeworkNewRepository;
+
+
+    public void createWrongTitleStatistics(Long homeworkPublishId,Long classId){
+        WrongTitleBook search=new WrongTitleBook();
+        search.setClassId(classId);
+        search.setStudentsHomeworkId(search.getHomeworkPublishId());
+        List<WrongTitleBook> wrongTitleBookList=wrongTitleBookRepository.findAll(Example.of(search));
+        Map<Long,Integer> wrongNumMap=new HashMap<>();
+        List<WrongTitleStatistics> wrongTitleStatisticsList=new ArrayList<>();
+        for(WrongTitleBook titleBook:wrongTitleBookList){
+            if(wrongNumMap.containsKey(titleBook.getQuestionId())){
+                wrongNumMap.put(titleBook.getQuestionId(),wrongNumMap.get(titleBook.getQuestionId())+1);
+            }else {
+                wrongNumMap.put(titleBook.getQuestionId(),1);
+                WrongTitleStatistics statistics=new WrongTitleStatistics();
+                statistics.setClassId(titleBook.getClassId());
+                statistics.setHomeworkPublishId(titleBook.getHomeworkPublishId());
+                statistics.setHomeworkPublishName(titleBook.getHomeworkPublishName());
+                statistics.setQuestionId(titleBook.getQuestionId());
+                statistics.setSource(titleBook.getSource());
+                statistics.setTitleImage(titleBook.getTitleImage());
+                statistics.setTitleBigNo(titleBook.getTitleBigNo());
+                statistics.setTitleSmallNo(titleBook.getTitleSmallNo());
+                statistics.setParse(titleBook.getParse());
+                statistics.setPageNo(titleBook.getPageNo());
+                statistics.setTitleContext(titleBook.getTitleContext());
+                statistics.setCreateDate(new Date());
+                wrongTitleStatisticsList.add(statistics);
+            }
+        }
+        for(WrongTitleStatistics titleStatistics:wrongTitleStatisticsList){
+            Integer wrongNum =wrongNumMap.get(titleStatistics.getQuestionId());
+            titleStatistics.setWrongStudentNum(wrongNum);
+            StudentsHomeworkNew searchStu = new StudentsHomeworkNew();
+            searchStu.setClassesId(titleStatistics.getClassId());
+            searchStu.setHomeworkPublishId(titleStatistics.getHomeworkPublishId());
+            searchStu.setSubmitStatus(1);
+            Long sum=studentsHomeworkNewRepository.count(Example.of(searchStu));
+            titleStatistics.setAnswerTotal(Integer.valueOf(sum.toString()));
+            Double wrongRate = 0d;
+            if(sum!=null&&0!=sum){
+                wrongRate = BigDecimal.valueOf(wrongNum).divide(BigDecimal.valueOf(sum),4,BigDecimal.ROUND_HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).doubleValue();
+            }
+            titleStatistics.setWrongRate(wrongRate);
+            wrongTitleStatisticsRepository.save(titleStatistics);
+        }
+    }
 
     @Override
     public List<WrongTitleStatistics> getWrongTitleStatisticses(Long homeworkPublishId, Long classId) {

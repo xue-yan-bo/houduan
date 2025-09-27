@@ -22,10 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExercisesStudentRecordService {
@@ -126,9 +123,13 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
 
         }
         if(exerciseWriteData.getTeacherWriteRecords()!=null&&exerciseWriteData.getTeacherWriteRecords().size()>0){
-            ClassroomExercises exercises=classroomExercisesRepository.findById(exerciseWriteData.getClassroomExercisesId()).get();
-            exercises.setTeacherWriteRecords(exerciseWriteData.getTeacherWriteRecords());
-            classroomExercisesRepository.save(exercises);
+            Optional<ClassroomExercises> optional=classroomExercisesRepository.findById(exerciseWriteData.getClassroomExercisesId());
+            if(optional!=null&&optional.isPresent()){
+                ClassroomExercises exercises=optional.get();
+                exercises.setTeacherWriteRecords(exerciseWriteData.getTeacherWriteRecords());
+                classroomExercisesRepository.save(exercises);
+            }
+
         }
     }
 

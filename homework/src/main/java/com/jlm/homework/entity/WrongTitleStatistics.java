@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.Date;
 
 /**
  * 学生作业统计 实体类
@@ -35,6 +36,12 @@ public class WrongTitleStatistics implements Serializable {
      */
     @Column(name = "class_id")
     private Long classId;
+
+    /**
+     * 题图片路径
+     */
+    @Column(name = "question_id")
+    private Long questionId;
     /**
      * 题图片路径
      */
@@ -79,7 +86,7 @@ public class WrongTitleStatistics implements Serializable {
      * 创建时间
      */
     @Column(name = "create_date")
-    private Double createDate;
+    private Date createDate;
 
     /**
      * 解析

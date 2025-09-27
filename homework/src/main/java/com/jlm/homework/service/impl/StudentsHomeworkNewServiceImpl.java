@@ -4,14 +4,18 @@ import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
 import com.jlm.homework.feign.SchoolFeignClient;
 import com.jlm.homework.feign.StudentFeignClient;
+import com.jlm.homework.repository.ExerciseBookQuestionRepository;
 import com.jlm.homework.repository.HomeworkPublishRepository;
 import com.jlm.homework.repository.StudentsHomeworkNewRepository;
+import com.jlm.homework.repository.WrongTitleBookRepository;
 import com.jlm.homework.service.*;
+import com.jlm.homework.util.PiontSignUtil;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.xml.bind.annotation.W3CDomHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
@@ -22,6 +26,8 @@ import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 
 @Service
 public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewService {
@@ -39,6 +45,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private IUserService userService;
     @Autowired
     private IHomeworkStudentWriteDataService homeworkStudentWriteDataService;
+
+    @Autowired
+    private WrongTitleBookRepository wrongTitleBookRepository;
+
+    @Resource
+    private ExerciseBookQuestionRepository exerciseBookQuestionRepository;
 
     @Override
     public void createStudentsHomeworkByHomeworkPublish(HomeworkPublish homeworkPublish) {
@@ -80,6 +92,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         studentsHomework.setTopicImagesStr(homeworkPublish.getTopicImagesStr());
                         studentsHomework.setDeadline(homeworkPublish.getDeadline());
                         studentsHomework.setGrade(student.getGradeName());
+                        studentsHomework.setDailyPracticeld(homeworkPublish.getDailyPracticeld());
+                        studentsHomework.setDailyPracticeName(homeworkPublish.getDailyPracticeName());
+                        studentsHomework.setDailyPracticePreview(homeworkPublish.getDailyPracticePreview());
                         studentsHomeworkNewRepository.save(studentsHomework);
                     }
                 } catch (Exception e) {
@@ -158,18 +173,21 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public StudentsHomeworkNew update(StudentsHomeworkNew studentsHomework) {
+    public StudentsHomeworkNew  update(StudentsHomeworkNew studentsHomework) {
         studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
+        HomeworkPublish homeworkPublish=homeworkPublishRepository.getById(studentsHomework.getHomeworkPublishId());
         StudentsHomeworkNew newSerach=new StudentsHomeworkNew();
         newSerach.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
         newSerach.setAuditStatus("1");
+
         Example<StudentsHomeworkNew> example = Example.of(studentsHomework);
         long count =studentsHomeworkNewRepository.count(example);
         if(count==0){
-            HomeworkPublish homeworkPublish=homeworkPublishRepository.getById(studentsHomework.getHomeworkPublishId());
+
             homeworkPublish.setAuditStatus(1);
             homeworkPublishRepository.save(homeworkPublish);
         }
+
         return studentsHomework;
     }
 
@@ -375,6 +393,13 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
         };
         Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(specification,pageable);
+        List<StudentsHomeworkNew> homeworkList=studentsHomeworkList.getContent();
+        for(StudentsHomeworkNew homework:homeworkList){
+            List<HomeworkStudentWriteData> writeDatas=homeworkStudentWriteDataService.findByStudentRecordId(homework.getId(),"1");
+            homework.setStudentWriteDataList(writeDatas);
+            List<HomeworkStudentWriteData> writeDatas2=homeworkStudentWriteDataService.findByStudentRecordId(homework.getId(),"2");
+            homework.setStudentWriteDataList2(writeDatas2);
+        }
         return studentsHomeworkList;
     }
 
@@ -1189,10 +1214,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     gradeDayAuditNum.put(gradeDayAudit,1);
                 }
             }
-            if(subjectNumMap.containsKey(homework.getSubject())){
-                subjectNumMap.put(homework.getSubject(),subjectNumMap.get(homework.getSubject())+1);
-            }else{
-                subjectNumMap.put(homework.getSubject(),1);
+            if(StringUtils.isNotEmpty(homework.getSubject())) {
+                if (subjectNumMap.containsKey(homework.getSubject())) {
+                    subjectNumMap.put(homework.getSubject(), subjectNumMap.get(homework.getSubject()) + 1);
+                } else {
+                    subjectNumMap.put(homework.getSubject(), 1);
+                }
             }
 
         }
@@ -1355,11 +1382,16 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Override
     public void saveStartTime(Long homeworkId) {
+        if(homeworkId==null){
+            return;
+        }
         Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findById(homeworkId);
-        if(optional!=null){
+        if(optional!=null&&optional.isPresent()){
             StudentsHomeworkNew studentsHomework = optional.get();
-            studentsHomework.setStartTime(new Date());
-            studentsHomeworkNewRepository.save(studentsHomework);
+            if(studentsHomework!=null) {
+                studentsHomework.setStartTime(new Date());
+                studentsHomeworkNewRepository.save(studentsHomework);
+            }
         }
     }
 
@@ -1487,5 +1519,108 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         };
         Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(specification,pageable);
         return studentsHomeworkList;
+    }
+
+    @Override
+    public StudentsHomeworkNew audit(StudentsHomeworkNew studentsHomework) {
+        studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
+        HomeworkPublish homeworkPublish=homeworkPublishRepository.getById(studentsHomework.getHomeworkPublishId());
+        StudentsHomeworkNew newSerach=new StudentsHomeworkNew();
+        newSerach.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
+        newSerach.setAuditStatus("1");
+
+        Example<StudentsHomeworkNew> example = Example.of(studentsHomework);
+        long count =studentsHomeworkNewRepository.count(example);
+        if(count==0){
+
+            homeworkPublish.setAuditStatus(1);
+            homeworkPublishRepository.save(homeworkPublish);
+        }
+        try {
+            StudentsHomeworkNew finalStudentsHomework = studentsHomework;
+            FutureTask<String> futureTask = new FutureTask<>(() -> {
+                // 异步执行的代码
+                //根据老师审批标识和练习册分割题图片生成错题本
+                if (finalStudentsHomework.getAuditLogoCoordinate() != null) {
+                    List<AuditLogoCoordinate> auditLogoCoordinateList = finalStudentsHomework.getAuditLogoCoordinate();
+                    ExerciseBookQuestion search = new ExerciseBookQuestion();
+                    search.setExerciseBookId(homeworkPublish.getExerciseBookId());
+                    List<ExerciseBookQuestion> bookQuestionList = exerciseBookQuestionRepository.findAll(Example.of(search));
+                    for (AuditLogoCoordinate logoCoordinate : auditLogoCoordinateList) {
+                        if ("X".equals(logoCoordinate.getSymbol())) {//错题
+                            for (ExerciseBookQuestion question : bookQuestionList) {
+                                QuestionCoordinate coordinates = question.getCoordinates();
+                                if (logoCoordinate.getX() > coordinates.getX() && logoCoordinate.getX() < (coordinates.getX() + coordinates.getWidth())
+                                        && logoCoordinate.getY() > (coordinates.getY() - coordinates.getHeight()) && logoCoordinate.getY() < coordinates.getY()) {
+                                    WrongTitleBook wrongTitleBook = new WrongTitleBook();
+                                    wrongTitleBook.setStudentsHomeworkId(finalStudentsHomework.getId());
+                                    wrongTitleBook.setSource("学生作业：" + finalStudentsHomework.getHomeworkPublishName());
+                                    wrongTitleBook.setQuestionId(question.getId());
+                                    wrongTitleBook.setStudentId(finalStudentsHomework.getStudentId());
+                                    wrongTitleBook.setStudentName(finalStudentsHomework.getStudentName());
+                                    wrongTitleBook.setClassId(finalStudentsHomework.getClassesId());
+                                    wrongTitleBook.setClassName(finalStudentsHomework.getClassesName());
+                                    wrongTitleBook.setTitleImage(question.getCroppedUrl());
+                                    wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
+                                    wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
+                                    wrongTitleBook.setTitleSmallNo(question.getTitleSmallNo());
+                                    wrongTitleBookRepository.save(wrongTitleBook);
+                                }
+                            }
+                        }
+
+                    }
+                }
+                //根据老师审批和练习册分割题图片生成错题本
+                if (finalStudentsHomework.getAuditCoordinate() != null) {
+                    List<AuditLogoCoordinate> auditCoordinateList = finalStudentsHomework.getAuditCoordinate();
+                    ExerciseBookQuestion search = new ExerciseBookQuestion();
+                    search.setExerciseBookId(homeworkPublish.getExerciseBookId());
+                    List<ExerciseBookQuestion> bookQuestionList = exerciseBookQuestionRepository.findAll(Example.of(search));
+                    for (ExerciseBookQuestion question : bookQuestionList) {
+                        //把题内老师审批的起始点、结束点作为判断是否是错误符号的逻辑点
+                        List<AuditLogoCoordinate> signList = new ArrayList<>();
+                        for (AuditLogoCoordinate coordinate : auditCoordinateList) {
+                            QuestionCoordinate questionCoordinates = question.getCoordinates();
+                            if (coordinate.getX() > questionCoordinates.getX() && coordinate.getX() < (questionCoordinates.getX() + questionCoordinates.getWidth())
+                                    && coordinate.getY() > (questionCoordinates.getY() - questionCoordinates.getHeight()) && coordinate.getY() < questionCoordinates.getY()
+                                    && (Boolean.TRUE.equals(coordinate.getIsStart()) || Boolean.TRUE.equals(coordinate.getIsEnd()))
+                            ) {
+                                signList.add(coordinate);
+
+                            }
+                        }
+                        if (PiontSignUtil.isCrossMark(signList)) {//如果是错误符号，加入错题本
+                            WrongTitleBook wrongTitleBook = new WrongTitleBook();
+                            wrongTitleBook.setStudentsHomeworkId(finalStudentsHomework.getId());
+                            wrongTitleBook.setSource("学生作业：" + finalStudentsHomework.getHomeworkPublishName());
+                            wrongTitleBook.setQuestionId(question.getId());
+                            wrongTitleBook.setStudentId(finalStudentsHomework.getStudentId());
+                            wrongTitleBook.setStudentName(finalStudentsHomework.getStudentName());
+                            wrongTitleBook.setClassId(finalStudentsHomework.getClassesId());
+                            wrongTitleBook.setClassName(finalStudentsHomework.getClassesName());
+                            wrongTitleBook.setTitleImage(question.getCroppedUrl());
+                            wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
+                            wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
+                            wrongTitleBook.setTitleSmallNo(question.getTitleSmallNo());
+                            wrongTitleBookRepository.save(wrongTitleBook);
+                        }
+                    }
+
+
+                }
+
+                return "异步生成错题本完成";
+            });
+            Thread thread = new Thread(futureTask);
+            thread.start(); // 启动线程执行任务
+        
+            System.out.println(futureTask.get()); // 获取结果，会阻塞直到任务完成
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+        return studentsHomework;
     }
 }

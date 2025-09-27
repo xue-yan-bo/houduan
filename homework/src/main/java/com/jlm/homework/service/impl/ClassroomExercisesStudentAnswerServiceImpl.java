@@ -52,6 +52,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                 WrongTitleBook wrongTitleBook = new WrongTitleBook();
                 wrongTitleBook.setSource("随堂检测");
                 wrongTitleBook.setExercisesRecordId(studentAnswer.getClassroomExercisesId());
+                wrongTitleBook.setQuestionId(question.getId());
                 wrongTitleBook.setStudentId(Long.parseLong(studentAnswer.getStudentId()));
                 wrongTitleBook.setStudentName(studentAnswer.getStudentName());
                 wrongTitleBook.setTitleBigNo(studentAnswer.getTitleNumber());

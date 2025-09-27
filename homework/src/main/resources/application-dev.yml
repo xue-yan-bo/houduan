@@ -6,6 +6,7 @@ server:
 socket:
   server:
     port: 6000
+    maxConnections: 10
 # 开发环境数据库配置覆盖
 spring:
   datasource:

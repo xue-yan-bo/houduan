@@ -21,6 +21,17 @@ public class WrongTitleBook {
      @Column(name = "source")
      private String source;
      /**
+      * 作业ID
+      */
+     @Column(name = "homework_publish_id")
+     private Long homeworkPublishId;
+
+    /**
+     * 作业名称
+     */
+    @Column(name = "homework_publish_name")
+    private String homeworkPublishName;
+     /**
      * 学生作业ID
      */
     @Column(name = "students_homework_id")
@@ -30,9 +41,15 @@ public class WrongTitleBook {
      */
     @Column(name = "exercises_record_id")
      private Long exercisesRecordId;
-     /**
-     * 学生ID
+
+    /**
+     * 问题ID
      */
+    @Column(name = "question_id")
+    private Long questionId;
+    /**
+    * 学生ID
+    */
     @Column(name = "student_id")
      private Long studentId;
      /**
@@ -72,6 +89,16 @@ public class WrongTitleBook {
      */
     @Column(name = "title_answer")
      private String titleAnswer;
+    /**
+     * 题图片路径
+     */
+    @Column(name = "title_image")
+    private String titleImage;
+    /**
+     * 题所在练习册页面图片
+     */
+    @Column(name = "source_image_url")
+    private String sourceImageUrl;
      /**
      * 学生答案
      */
@@ -82,9 +109,15 @@ public class WrongTitleBook {
      */
     @Column(name = "parse")
      private String parse;
+    /**
+     * 页码
+     */
+    @Column(name = "page_no")
+    private Integer pageNo;
      /**
      * 创建时间
      */
     @Column(name = "create_time")
      private Date createTime;
+
 }

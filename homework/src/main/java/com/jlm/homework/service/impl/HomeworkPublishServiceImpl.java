@@ -59,12 +59,15 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
         }else {
             homeworkPublish.setPublishStatus(0);
         }
-        String subject = null;
-        if(homeworkPublish.getExerciseBookId() != null){
-            ExerciseBookEntity exerciseBook = exerciseBookServer.findById(homeworkPublish.getExerciseBookId());
-            subject =  exerciseBook.getSubject();
+
+        if(StringUtils.isNotEmpty(homeworkPublish.getSubject())) {
+            String subject = null;
+            if (homeworkPublish.getExerciseBookId() != null) {
+                ExerciseBookEntity exerciseBook = exerciseBookServer.findById(homeworkPublish.getExerciseBookId());
+                subject = exerciseBook.getSubject();
+            }
+            homeworkPublish.setSubject(subject);
         }
-        homeworkPublish.setSubject(subject);
         if(StringUtils.isEmpty(homeworkPublish.getUserId())&&userService.getCurrentUserInfo()!=null){
             CurrentUserInfo userInfo =userService.getCurrentUserInfo();
             if(StringUtils.isNotEmpty(userInfo.getUserUuid())){
@@ -122,7 +125,14 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
         if(homeworkPublish.getTopicImages()!=null&&homeworkPublish.getTopicImages().size()>0){
             homeworkPublish.setTopicImagesStr(String.join(" ,", homeworkPublish.getTopicImages()));
         }
-
+        if(1==homeworkPublish.getTestSource()){//练习册，清空每日一练数据
+            homeworkPublish.setDailyPracticeld(null);
+            homeworkPublish.setDailyPracticeName(null);
+            homeworkPublish.setDailyPracticePreview(null);
+        }else if(3==homeworkPublish.getTestSource()){//每日一练，练习册数据
+            homeworkPublish.setExerciseBookId(null);
+            homeworkPublish.setExerciseBookName(null);
+        }
         List<StudentsHomeworkNew> homeworkNewList=studentsHomeworkNewService.getByHomeworkPublishId(homeworkPublish.getId(),null);
         if(homeworkNewList.isEmpty()){
             if(homeworkPublish.getScheduledReleaseFlag()==0){//如果不是定时发布，就是立刻发布，生成学生作业
@@ -153,12 +163,15 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             };
             timer.schedule(task1,homeworkPublish.getDeadline());
         }
-        String subject = null;
-        if(homeworkPublish.getExerciseBookId() != null){
-            ExerciseBookEntity exerciseBook = exerciseBookServer.findById(homeworkPublish.getExerciseBookId());
-            subject =  exerciseBook.getSubject();
+        if(StringUtils.isEmpty(homeworkPublish.getSubject())){
+            String subject = null;
+            if(homeworkPublish.getExerciseBookId() != null){
+                ExerciseBookEntity exerciseBook = exerciseBookServer.findById(homeworkPublish.getExerciseBookId());
+                subject =  exerciseBook.getSubject();
+            }
+            homeworkPublish.setSubject(subject);
         }
-        homeworkPublish.setSubject(subject);
+
         return homeworkPublishRepository.save(homeworkPublish);
     }
 

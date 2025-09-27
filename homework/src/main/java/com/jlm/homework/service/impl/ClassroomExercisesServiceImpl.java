@@ -115,22 +115,25 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         Map<String,String> questionIdMap = new HashMap<>();
         for(ClassroomExercisesQuestion question:questionList){
-            if (exerciseTypeMap.containsKey(question.getQuestionType())){
-                exerciseTypeMap.put(question.getQuestionType(),exerciseTypeMap.get(question.getQuestionType())+1);
-            }else {
-                exerciseTypeMap.put(question.getQuestionType(),1);
-            }
-            if (questionIdMap.containsKey(question.getQuestionType())){
-                questionIdMap.put(question.getQuestionType(),questionIdMap.get(question.getQuestionType())+","+question.getId());
-            }else{
-                questionIdMap.put(question.getQuestionType(),""+question.getId());
-            }
-            String day = sdf.format(question.getCreateTime());
-            String key = question.getQuestionType()+":"+day;
-            if (dayExerciseTypeMap.containsKey(key)){
-                dayExerciseTypeMap.put(key,dayExerciseTypeMap.get(key)+1);
-            }else {
-                dayExerciseTypeMap.put(key,1);
+            if(StringUtils.isNotEmpty(question.getQuestionType())) {
+                if (exerciseTypeMap.containsKey(question.getQuestionType())) {
+                    exerciseTypeMap.put(question.getQuestionType(), exerciseTypeMap.get(question.getQuestionType()) + 1);
+                } else {
+                    exerciseTypeMap.put(question.getQuestionType(), 1);
+                }
+                if (questionIdMap.containsKey(question.getQuestionType())) {
+                    questionIdMap.put(question.getQuestionType(), questionIdMap.get(question.getQuestionType()) + "," + question.getId());
+                } else {
+                    questionIdMap.put(question.getQuestionType(), "" + question.getId());
+                }
+
+                String day = sdf.format(question.getCreateTime());
+                String key = question.getQuestionType()+":"+day;
+                if (dayExerciseTypeMap.containsKey(key)){
+                    dayExerciseTypeMap.put(key,dayExerciseTypeMap.get(key)+1);
+                }else {
+                    dayExerciseTypeMap.put(key,1);
+                }
             }
         }
         exerciseTypeAnalyse.setExerciseTypeMap(exerciseTypeMap);
@@ -302,11 +305,13 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         classroomData.setClassroomInteractionNum(classroomInteractionNum);
         Map<String,Integer> dayClassroomUseNumMap = new HashMap<>();
         for(ClassroomExercises exercises:exercisesList){
-            String day = sdf.format(exercises.getPublishTime());
-            if(dayClassroomUseNumMap.containsKey(day)){
-                dayClassroomUseNumMap.put(day,dayClassroomUseNumMap.get(day)+1);
-            }else {
-                dayClassroomUseNumMap.put(day,1);
+            if(exercises.getPublishTime()!=null) {
+                String day = sdf.format(exercises.getPublishTime());
+                if (dayClassroomUseNumMap.containsKey(day)) {
+                    dayClassroomUseNumMap.put(day, dayClassroomUseNumMap.get(day) + 1);
+                } else {
+                    dayClassroomUseNumMap.put(day, 1);
+                }
             }
         }
         classroomData.setDayClassroomUseNumMap(dayClassroomUseNumMap);

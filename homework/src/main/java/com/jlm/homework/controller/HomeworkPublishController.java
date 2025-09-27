@@ -60,6 +60,5 @@ public class HomeworkPublishController {
     @GetMapping("/delete/{id}")
     public void deleteById(@PathVariable Long id) {
         homeworkPublishService.deleteById(id);
-
     }
 }

@@ -165,38 +165,5 @@ public class DailyWrongTitleStatisticsTask implements ApplicationListener<Contex
         }
     }
 
-    // 方案二：使用ScheduledExecutorService实现（与ClientHandler心跳包任务类似）
-    // 如果需要使用这种方式，可以取消上面的Timer实现，使用下面的代码
-    /*
-    private void startDailyWrongTitleStatisticsTaskWithExecutor() {
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-        
-        // 计算首次执行延迟时间
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.HOUR_OF_DAY, 3);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        
-        Date firstExecuteTime = calendar.getTime();
-        if (firstExecuteTime.before(new Date())) {
-            calendar.add(Calendar.DAY_OF_MONTH, 1);
-            firstExecuteTime = calendar.getTime();
-        }
-        
-        long initialDelay = firstExecuteTime.getTime() - System.currentTimeMillis();
-        
-        scheduler.scheduleAtFixedRate(() -> {
-            try {
-                logger.info("开始执行每日错题统计任务...");
-                generateDailyWrongTitleStatistics();
-                logger.info("每日错题统计任务执行完成");
-            } catch (Exception e) {
-                logger.error("执行每日错题统计任务失败: {}", e.getMessage(), e);
-            }
-        }, initialDelay, 24 * 60 * 60, TimeUnit.SECONDS);
-        
-        logger.info("每日错题统计定时任务已启动（ScheduledExecutorService），首次执行时间：{}", firstExecuteTime);
-    }
-    */
+
 }

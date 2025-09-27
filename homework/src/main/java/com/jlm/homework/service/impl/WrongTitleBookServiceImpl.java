@@ -130,4 +130,9 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             throw new RuntimeException(e);
         }
     }
+
+    @Override
+    public void addWrongBook(WrongTitleBook wrongTitleBook) {
+        wrongTitleBookRepository.save(wrongTitleBook);
+    }
 }

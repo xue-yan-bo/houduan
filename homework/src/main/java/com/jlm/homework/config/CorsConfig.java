@@ -12,44 +12,12 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
-        
-        // 允许的源
-        config.addAllowedOrigin("http://localhost");
-        config.addAllowedOrigin("http://localhost:81");
-        config.addAllowedOrigin("http://localhost:82");
-        config.addAllowedOrigin("http://localhost:83");
-        config.addAllowedOrigin("http://192.168.1.129");
-        config.addAllowedOrigin("http://192.168.1.129:81");
-        config.addAllowedOrigin("http://192.168.1.129:82");
-        config.addAllowedOrigin("http://192.168.1.129:83");
-        config.addAllowedOrigin("ws://192.168.1.129");
-        config.addAllowedOrigin("http://127.0.0.1");
-        config.addAllowedOrigin("http://192.168.1.135");
-        config.addAllowedOrigin("ws://192.168.1.135");
-        config.addAllowedOrigin("http://192.168.1.135:18080");
-        config.addAllowedOrigin("http://49.232.159.98:9000");
-        config.addAllowedOrigin("http://49.232.159.98");
-        config.addAllowedOrigin("http://192.168.1.251");
-        config.addAllowedOrigin("http://192.168.1.29");
-        config.addAllowedOrigin("http://192.168.1.14");
-        config.addAllowedOrigin("http://192.168.1.14:18080");
-        config.addAllowedOrigin("http://192.168.1.29:99");
-        
-        // 允许的方法
-        config.addAllowedMethod("*");
-        
-        // 允许的请求头
-        config.addAllowedHeader("*");
-        
-        // 允许凭证
         config.setAllowCredentials(true);
-        
-        // 预检请求的有效期（秒）
-        config.setMaxAge(3600L);
-        
-        // 应用到所有路径
+        config.addAllowedOrigin("*"); // 允许所有域
+        config.addAllowedHeader("*"); // 允许所有请求头
+        config.addAllowedMethod("*"); // 允许所有HTTP方法
         source.registerCorsConfiguration("/**", config);
-        
         return new CorsFilter(source);
+
     }
 }

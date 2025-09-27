@@ -27,29 +27,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry){
-        registry.addEndpoint("/websocket")
-                .setAllowedOrigins(
-                "http://localhost",
-                "http://localhost:81",
-                "http://localhost:82",
-                "http://localhost:83",
-                "http://192.168.1.129",
-                "http://192.168.1.129:81",
-                "http://192.168.1.129:82",
-                "http://192.168.1.129:83",
-                "ws://192.168.1.129",
-                "http://127.0.0.1",
-                "http://192.168.1.135",  // 添加您的IP地址
-                "ws://192.168.1.135",
-                "http://192.168.1.135:18080",
-                "http://192.168.1.14",
-                "http://192.168.1.14:18080",
-                "http://49.232.159.98",
-                "http://192.168.1.251",
-                "http://192.168.1.29",
-                "http://192.168.1.29:99",
-                "http://49.232.159.98:9000"  // 添加 Vue 应用的地址
-        ).withSockJS();
+        registry.addEndpoint("/websocket").withSockJS();
     }
+
 
 }

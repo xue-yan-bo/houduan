@@ -14,6 +14,7 @@ import com.jlm.homework.service.IUserService;
 import com.jlm.homework.service.UserService;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -90,5 +91,15 @@ public class TeacherAttendanceRecordServiceImpl implements ITeacherAttendanceRec
         Date now = new Date();
         record.setEndTime(now);
         return record;
+    }
+
+    @Override
+    public Page<TeacherAttendanceRecord> queryList(Integer pageNum, Integer pageSize, TeacherAttendanceRecord teacherAttendanceRecord) {
+        pageNum = pageNum == null ? 0 : pageNum-1;
+        pageSize = pageSize == null ? 10 : pageSize;
+        Sort sort = Sort.by(Sort.Direction.DESC, "startTime");
+        Pageable pageable;
+        pageable = PageRequest.of(pageNum, pageSize, sort);
+        return teacherAttendanceRecordRepository.findAll(Example.of(teacherAttendanceRecord),pageable);
     }
 }

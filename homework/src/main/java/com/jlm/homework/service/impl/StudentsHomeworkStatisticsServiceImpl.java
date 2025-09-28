@@ -55,6 +55,7 @@ public class StudentsHomeworkStatisticsServiceImpl implements IStudentsHomeworkS
         Double fastestDuration=0.0;
         Double slowestDuration=0.0;
         Double totalDuration=0.0;
+        Double totalAccuracy=0.0;
         for(StudentsHomeworkNew studentsHomework:studentsHomeworkList){
             if(1==studentsHomework.getSubmitStatus()){
                 submitStudentNum++;
@@ -73,6 +74,9 @@ public class StudentsHomeworkStatisticsServiceImpl implements IStudentsHomeworkS
                     slowestDuration = duration;
                 }
             }
+            if(studentsHomework.getAccuracy()!=null){
+                totalAccuracy +=studentsHomework.getAccuracy();
+            }
         }
         studentsHomeworkStatistics.setSubmitStudentNum(submitStudentNum);
         studentsHomeworkStatistics.setUnsubmitStudentNum(unsubmitStudentNum);
@@ -81,11 +85,19 @@ public class StudentsHomeworkStatisticsServiceImpl implements IStudentsHomeworkS
             submitRate = BigDecimal.valueOf(submitStudentNum).divide(BigDecimal.valueOf(studentsHomeworkList.size()),4,BigDecimal.ROUND_HALF_UP)
                     .multiply(BigDecimal.valueOf(100)).doubleValue();
         }
+        Double unsubmitRate = 0.0d;
+        if(studentsHomeworkList.size()>0){
+            unsubmitRate = BigDecimal.valueOf(unsubmitStudentNum).divide(BigDecimal.valueOf(studentsHomeworkList.size()),4,BigDecimal.ROUND_HALF_UP)
+                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+        }
         studentsHomeworkStatistics.setSubmitRate(submitRate);
+        studentsHomeworkStatistics.setUnsubmitRate(unsubmitRate);
         studentsHomeworkStatistics.setFastestDuration(fastestDuration);
         studentsHomeworkStatistics.setSlowestDuration(slowestDuration);
         studentsHomeworkStatistics.setAverageDuration(totalDuration/submitStudentNum);
-        //studentsHomeworkStatistics.setAverageAccuracy();
+        studentsHomeworkStatistics.setAverageAccuracy(totalAccuracy/studentsHomeworkList.size());
+        studentsHomeworkStatistics.setAverageCorrectness(totalAccuracy/studentsHomeworkList.size());
+        studentsHomeworkStatistics.setCompareLast(0.0);
         studentsHomeworkStatisticsRepository.save(studentsHomeworkStatistics);
     }
 }

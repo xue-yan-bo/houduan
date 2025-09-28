@@ -7,9 +7,12 @@ import com.jlm.homework.repository.TeacherAttendanceRecordRepository;
 import com.jlm.homework.service.IStudentSignRecordService;
 import com.jlm.homework.util.SseManagerUtil;
 import jakarta.annotation.Resource;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 public class StudentSignRecordServiceImpl  implements IStudentSignRecordService {
@@ -22,10 +25,31 @@ public class StudentSignRecordServiceImpl  implements IStudentSignRecordService 
     @Override
     public StudentSignRecord sign(StudentSignRecord studentSignRecord) {
         Date now = new Date();
-        TeacherAttendanceRecord attendanceRecord=teacherAttendanceRecordRepository.findById(studentSignRecord.getAttendanceRecordId()).get();
+        if(studentSignRecord.getAttendanceRecordId()==null){
+            throw new RuntimeException("老师考勤ID不能为空！");
+        }
+        Optional<TeacherAttendanceRecord> optional =teacherAttendanceRecordRepository.findById(studentSignRecord.getAttendanceRecordId());
+        TeacherAttendanceRecord attendanceRecord= null;
+        if(optional != null && optional.isPresent()){
+            attendanceRecord=optional.get();
+        }
+        if(attendanceRecord==null){
+            throw new RuntimeException("老师考勤记录不存在！");
+        }
         if(attendanceRecord.getEndTime()!=null&&attendanceRecord.getEndTime().before(now)){
             throw new RuntimeException("考勤已经结束，不能签到了！");
         }
+        if(studentSignRecord.getId()==null){
+            StudentSignRecord search=new StudentSignRecord();
+            search.setAttendanceRecordId(studentSignRecord.getAttendanceRecordId());
+            List<StudentSignRecord> studentSignRecordList=studentSignRecordRepository.findAll(Example.of(search));
+            for(StudentSignRecord signRecord:studentSignRecordList){
+                if(studentSignRecord.getStudentId()==signRecord.getStudentId()){
+                    studentSignRecord.setId(studentSignRecord.getId());
+                }
+            }
+        }
+
         studentSignRecord.setSignTime(now);
         studentSignRecord.setSignFlag(1);
 
@@ -35,7 +59,19 @@ public class StudentSignRecordServiceImpl  implements IStudentSignRecordService 
         attendanceRecord.setUnsignNum(unsignNum);
         studentSignRecord =studentSignRecordRepository.save(studentSignRecord);
         teacherAttendanceRecordRepository.save(attendanceRecord);
-        sseManagerUtil.sendMsgToClient("qiandao"+studentSignRecord.getAttendanceRecordId(), studentSignRecord.getStudentId().toString());
+        //sseManagerUtil.sendMsgToClient("qiandao"+studentSignRecord.getAttendanceRecordId(), studentSignRecord.getStudentId().toString());
         return studentSignRecord;
+    }
+
+    @Override
+    public Page<StudentSignRecord> queryList(Integer pageNum, Integer pageSize, Long attendanceRecordId) {
+        pageNum = pageNum == null ? 0 : pageNum-1;
+        pageSize = pageSize == null ? 10 : pageSize;
+        Sort sort = Sort.by(Sort.Direction.ASC, "signTime");
+        Pageable pageable;
+        pageable = PageRequest.of(pageNum, pageSize, sort);
+        StudentSignRecord record = new StudentSignRecord();
+        record.setAttendanceRecordId(attendanceRecordId);
+        return studentSignRecordRepository.findAll(Example.of(record),pageable);
     }
 }

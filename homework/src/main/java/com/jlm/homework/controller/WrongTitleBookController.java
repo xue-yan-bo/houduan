@@ -1,10 +1,12 @@
 package com.jlm.homework.controller;
 
 import com.jlm.homework.entity.WrongTitleBook;
+import com.jlm.homework.entity.WrongTitleStatistics;
 import com.jlm.homework.service.IWrongTitleBookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,7 +25,7 @@ public class WrongTitleBookController {
     }
 
     @GetMapping("/{studentId}")
-    @Operation(summary = "学生错题本")
+    @Operation(summary = "学生错题本、我的错题本")
     public List<WrongTitleBook> findByStudentId(@PathVariable("studentId") Long studentId){
         return wrongTitleBookService.findByStudentId(studentId);
     }
@@ -31,5 +33,18 @@ public class WrongTitleBookController {
     @GetMapping("/createWrongBook")
     public void createWrongBook(Long studentsHomeworkId){
         wrongTitleBookService.createWrongBook(studentsHomeworkId);
+    }
+
+    /**
+     * 根据
+     * @param wrongTitleBook
+     * @return
+     */
+    @GetMapping("/page")
+    public Page<WrongTitleBook> getWrongTitleBookList(@RequestParam(defaultValue = "1")Integer pageNum,
+                                                            @RequestParam(defaultValue = "10") Integer pageSize,
+                                                            WrongTitleBook wrongTitleBook) {
+        Page<WrongTitleBook> wrongTitleBookList=wrongTitleBookService.getPage(pageNum,pageSize,wrongTitleBook);
+        return wrongTitleBookList;
     }
 }

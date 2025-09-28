@@ -3,6 +3,7 @@ package com.jlm.homework.timerTask;
 import com.jlm.homework.entity.CurrentUserInfo;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.repository.HomeworkPublishRepository;
+import com.jlm.homework.service.IStudentsHomeworkStatisticsService;
 import com.jlm.homework.service.IWrongTitleStatisticsService;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -12,6 +13,7 @@ import jakarta.persistence.criteria.Root;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.data.jpa.domain.Specification;
@@ -37,9 +39,10 @@ public class DailyWrongTitleStatisticsTask implements ApplicationListener<Contex
 
     private static final Logger logger = LoggerFactory.getLogger(DailyWrongTitleStatisticsTask.class);
 
-    @Resource
+    @Autowired
     private IWrongTitleStatisticsService wrongTitleStatisticsService;
-
+    @Autowired
+    private IStudentsHomeworkStatisticsService studentsHomeworkStatisticsService;
     @Resource
     private HomeworkPublishRepository homeworkPublishRepository;
 
@@ -143,6 +146,7 @@ public class DailyWrongTitleStatisticsTask implements ApplicationListener<Contex
                                 wrongTitleStatisticsService.createWrongTitleStatistics(homeworkPublish.getId(), classId);
                                 logger.info("作业[ID: {}]的班级[ID: {}]错题统计生成完成",
                                         homeworkPublish.getId(), classId);
+                                studentsHomeworkStatisticsService.addStudentHomeworkStatistics(homeworkPublish.getId(), classId);
                             } catch (Exception e) {
                                 logger.error("为作业[ID: {}]的班级[ID: {}]生成错题统计失败: {}",
                                         homeworkPublish.getId(), classId, e.getMessage(), e);

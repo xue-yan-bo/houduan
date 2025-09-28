@@ -7,5 +7,5 @@ public interface IStudentsHomeworkStatisticsService {
 
     Long insertStudentHomeworkStatistics(StudentsHomeworkStatistics studentsHomeworkStatistics);
 
-
+    void addStudentHomeworkStatistics(Long homeworkPublishId,Long classId);
 }

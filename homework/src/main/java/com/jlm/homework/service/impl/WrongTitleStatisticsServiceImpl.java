@@ -8,6 +8,7 @@ import com.jlm.homework.repository.WrongTitleBookRepository;
 import com.jlm.homework.repository.WrongTitleStatisticsRepository;
 import com.jlm.homework.service.IWrongTitleStatisticsService;
 import jakarta.annotation.Resource;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
@@ -45,6 +46,10 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
                 statistics.setQuestionId(titleBook.getQuestionId());
                 statistics.setSource(titleBook.getSource());
                 statistics.setTitleImage(titleBook.getTitleImage());
+                if(StringUtils.isEmpty(titleBook.getTitleImage())){
+                    statistics.setTitleImage(titleBook.getSourceImageUrl());
+                }
+
                 statistics.setTitleBigNo(titleBook.getTitleBigNo());
                 statistics.setTitleSmallNo(titleBook.getTitleSmallNo());
                 statistics.setParse(titleBook.getParse());

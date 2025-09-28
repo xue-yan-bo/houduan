@@ -10,6 +10,7 @@ import jakarta.persistence.Column;
 import org.springframework.data.domain.Example;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,6 +61,31 @@ public class StudentsHomeworkStatisticsServiceImpl implements IStudentsHomeworkS
             }else{
                 unsubmitStudentNum++;
             }
+
+            if(studentsHomework.getStartTime()!=null&&studentsHomework.getSubmitTime()!=null ){
+                double duration = 0.0;
+                duration =  (studentsHomework.getSubmitTime().getTime() - studentsHomework.getStartTime().getTime())/1000/60;
+                totalDuration  += duration;
+                if(duration!=0.0&&duration<fastestDuration){
+                    fastestDuration = duration;
+                }
+                if(duration!=0.0&&duration>slowestDuration){
+                    slowestDuration = duration;
+                }
+            }
         }
+        studentsHomeworkStatistics.setSubmitStudentNum(submitStudentNum);
+        studentsHomeworkStatistics.setUnsubmitStudentNum(unsubmitStudentNum);
+        Double submitRate = 0.0d;
+        if(studentsHomeworkList.size()>0){
+            submitRate = BigDecimal.valueOf(submitStudentNum).divide(BigDecimal.valueOf(studentsHomeworkList.size()),4,BigDecimal.ROUND_HALF_UP)
+                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+        }
+        studentsHomeworkStatistics.setSubmitRate(submitRate);
+        studentsHomeworkStatistics.setFastestDuration(fastestDuration);
+        studentsHomeworkStatistics.setSlowestDuration(slowestDuration);
+        studentsHomeworkStatistics.setAverageDuration(totalDuration/submitStudentNum);
+        //studentsHomeworkStatistics.setAverageAccuracy();
+        studentsHomeworkStatisticsRepository.save(studentsHomeworkStatistics);
     }
 }

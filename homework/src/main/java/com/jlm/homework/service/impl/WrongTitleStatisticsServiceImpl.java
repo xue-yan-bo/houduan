@@ -32,13 +32,14 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
         search.setClassId(classId);
         search.setStudentsHomeworkId(search.getHomeworkPublishId());
         List<WrongTitleBook> wrongTitleBookList=wrongTitleBookRepository.findAll(Example.of(search));
-        Map<Long,Integer> wrongNumMap=new HashMap<>();
+        Map<String,Integer> wrongNumMap=new HashMap<>();
         List<WrongTitleStatistics> wrongTitleStatisticsList=new ArrayList<>();
         for(WrongTitleBook titleBook:wrongTitleBookList){
+            String qkey = titleBook.getQuestionId() + titleBook.getSourceImageUrl();
             if(wrongNumMap.containsKey(titleBook.getQuestionId())){
-                wrongNumMap.put(titleBook.getQuestionId(),wrongNumMap.get(titleBook.getQuestionId())+1);
+                wrongNumMap.put(qkey,wrongNumMap.get(titleBook.getQuestionId())+1);
             }else {
-                wrongNumMap.put(titleBook.getQuestionId(),1);
+                wrongNumMap.put(qkey,1);
                 WrongTitleStatistics statistics=new WrongTitleStatistics();
                 statistics.setClassId(titleBook.getClassId());
                 statistics.setHomeworkPublishId(titleBook.getHomeworkPublishId());
@@ -65,11 +66,11 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
             StudentsHomeworkNew searchStu = new StudentsHomeworkNew();
             searchStu.setClassesId(titleStatistics.getClassId());
             searchStu.setHomeworkPublishId(titleStatistics.getHomeworkPublishId());
-            searchStu.setSubmitStatus(1);
+            //searchStu.setSubmitStatus(1);
             Long sum=studentsHomeworkNewRepository.count(Example.of(searchStu));
             titleStatistics.setAnswerTotal(Integer.valueOf(sum.toString()));
             Double wrongRate = 0d;
-            if(sum!=null&&0!=sum){
+            if(sum!=null&&0!=sum&&wrongNum!=null){
                 wrongRate = BigDecimal.valueOf(wrongNum).divide(BigDecimal.valueOf(sum),4,BigDecimal.ROUND_HALF_UP)
                         .multiply(BigDecimal.valueOf(100)).doubleValue();
             }

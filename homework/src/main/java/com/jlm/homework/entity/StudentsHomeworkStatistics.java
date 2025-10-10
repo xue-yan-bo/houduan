@@ -1,6 +1,7 @@
 package com.jlm.homework.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -14,6 +15,7 @@ import java.util.List;
 @Data
 @Entity
 @Table(name = "students_homework_statistics")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class StudentsHomeworkStatistics implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

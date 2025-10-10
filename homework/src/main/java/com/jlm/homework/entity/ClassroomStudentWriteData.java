@@ -7,6 +7,7 @@ import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.beans.Transient;
 import java.util.Date;
 import java.util.List;
 
@@ -32,7 +33,7 @@ public class ClassroomStudentWriteData {
     @Column(name = "student_id")
     private Long studentId;
 
-    @Transient
+    @Column(name = "student_name")
     private String studentName;
 
     /**

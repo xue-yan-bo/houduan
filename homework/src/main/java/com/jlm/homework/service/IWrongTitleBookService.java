@@ -9,7 +9,7 @@ public interface IWrongTitleBookService {
 
     WrongTitleBook save(WrongTitleBook wrongTitleBook);
 
-    List<WrongTitleBook> findByStudentId(Long studentId);
+    Page<WrongTitleBook> findByStudentId(Long studentId,Integer pageNum,Integer pageSize);
 
     void createWrongBook(Long studentsHomeworkId);
 

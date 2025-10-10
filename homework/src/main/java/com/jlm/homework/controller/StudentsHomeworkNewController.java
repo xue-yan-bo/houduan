@@ -1,5 +1,6 @@
 package com.jlm.homework.controller;
 
+import com.jlm.homework.dto.StudentHomeworkDto;
 import com.jlm.homework.dto.StudentsHomeworkRequest;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.exception.ParameterNewException;
@@ -86,6 +87,21 @@ public class StudentsHomeworkNewController {
                 StudentsHomeworkNew studentsHomework) {
         Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewService.getStudentsHomeworkPage(pageNum,pageSize,studentsHomework);
         return studentsHomeworkList;
+    }
+
+
+    /**
+     * 分页
+     * @param studentsHomework
+     * @return
+     */
+    @GetMapping("/homeworkPage")
+    @Operation(summary = "分页查询-带已提交、未提交数")
+    public StudentHomeworkDto homeworkPage( @RequestParam(defaultValue = "1")Integer pageNum,
+                                                              @RequestParam(defaultValue = "10") Integer pageSize,
+                                                              StudentsHomeworkNew studentsHomework) {
+        StudentHomeworkDto studentHomeworkDto=studentsHomeworkNewService.homeworkPage(pageNum,pageSize,studentsHomework);
+        return studentHomeworkDto;
     }
 
     /**

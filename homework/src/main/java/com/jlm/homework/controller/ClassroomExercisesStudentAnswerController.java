@@ -7,10 +7,7 @@ import com.jlm.homework.service.IClassroomExercisesStudentAnswerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 课堂练习学生作业统计控制器
@@ -44,7 +41,10 @@ public class ClassroomExercisesStudentAnswerController {
      */
     @GetMapping("/knowledgePoint-analysis")
     @Operation(summary = "知识点分析",description = "知识点分析")
-    public KnowledgePointAnalysis getKnowledgePointAnalysis(String subject, Long classId, String startDate, String endDate) {
-        return classroomExercisesStudentAnswerService.getKnowledgePointAnalysis(subject,classId,startDate,endDate);
+    public KnowledgePointAnalysis getKnowledgePointAnalysis(
+            @RequestParam(defaultValue = "1")Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            String subject, Long classId, String startDate, String endDate) {
+        return classroomExercisesStudentAnswerService.getKnowledgePointAnalysis(pageNum,pageSize,subject,classId,startDate,endDate);
     }
 }

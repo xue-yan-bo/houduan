@@ -33,11 +33,14 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     }
 
     @Override
-    public List<WrongTitleBook> findByStudentId(Long studentId) {
+    public Page<WrongTitleBook> findByStudentId(Long studentId,Integer pageNum,Integer pageSize) {
+        pageNum = pageNum == null ? 0 : pageNum-1;
+        pageSize = pageSize == null ? 10 : pageSize;
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
+        Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
         WrongTitleBook search = new WrongTitleBook();
         search.setStudentId(studentId);
-        Sort sort = Sort.by(Sort.Direction.DESC, "id");
-        return wrongTitleBookRepository.findAll(Example.of(search),sort);
+        return wrongTitleBookRepository.findAll(Example.of(search),pageable);
     }
 
     public void createWrongBook(Long studentsHomeworkId){

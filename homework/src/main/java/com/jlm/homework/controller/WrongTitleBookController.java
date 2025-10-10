@@ -26,8 +26,10 @@ public class WrongTitleBookController {
 
     @GetMapping("/{studentId}")
     @Operation(summary = "学生错题本、我的错题本")
-    public List<WrongTitleBook> findByStudentId(@PathVariable("studentId") Long studentId){
-        return wrongTitleBookService.findByStudentId(studentId);
+    public Page<WrongTitleBook> findByStudentId(@PathVariable("studentId") Long studentId,
+                       @RequestParam(defaultValue = "1")Integer pageNum,
+                       @RequestParam(defaultValue = "10") Integer pageSize){
+        return wrongTitleBookService.findByStudentId(studentId,pageNum,pageSize);
     }
 
     @GetMapping("/createWrongBook")

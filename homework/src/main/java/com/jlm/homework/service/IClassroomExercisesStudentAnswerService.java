@@ -13,7 +13,7 @@ public interface IClassroomExercisesStudentAnswerService {
 
     ClassroomExercisesStudentStatistics statisticsByClassroomExercisesId(Long classroomExercisesId);
 
-    KnowledgePointAnalysis getKnowledgePointAnalysis(String subject, Long classId, String startDate, String endDate);
+    KnowledgePointAnalysis getKnowledgePointAnalysis(Integer pageNum, Integer pageSize,String subject, Long classId, String startDate, String endDate);
 
     List<ClassroomExercisesStudentAnswer> findByClassAndDate(Long classId, String startDate, String endDate);
 

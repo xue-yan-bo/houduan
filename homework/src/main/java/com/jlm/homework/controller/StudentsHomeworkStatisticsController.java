@@ -10,6 +10,9 @@ import com.jlm.homework.service.IWrongTitleStatisticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -56,9 +59,11 @@ public class StudentsHomeworkStatisticsController {
      * @return
      */
     @GetMapping("/class-homework-statistics")
-    public List<StudentsHomeworkNew> getClassHomeworkStatistics(String subject,Long classId,String startDate,String endDate){
-        List<StudentsHomeworkNew>  studentsHomeworkNewList =new ArrayList<>();
-        studentsHomeworkNewList =studentsHomeworkNewService.getClassHomeworkStatistics(subject,classId,startDate,endDate);
+    public Page<StudentsHomeworkNew> getClassHomeworkStatistics(
+            @RequestParam(defaultValue = "1")Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            String subject,Long classId,String startDate,String endDate){
+        Page<StudentsHomeworkNew>  studentsHomeworkNewList=studentsHomeworkNewService.getClassHomeworkStatistics(pageNum,pageSize,subject,classId,startDate,endDate);
         return studentsHomeworkNewList;
     }
 
@@ -68,10 +73,17 @@ public class StudentsHomeworkStatisticsController {
      * @return
      */
     @GetMapping("/homework-chapter-statistics")
-    public List<StudentChapterAccuracy> homeworkChapterStatistics(String subject, Long classId, String chapter) {
+    public Page<StudentChapterAccuracy> homeworkChapterStatistics(
+            @RequestParam(defaultValue = "1")Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            String subject, Long classId, String chapter) {
         List<StudentChapterAccuracy> studentChapterAccuracyList = new ArrayList<>();
         studentChapterAccuracyList=studentsHomeworkNewService.studentChapterStatistics(subject,classId,chapter);
-        return studentChapterAccuracyList;
+        Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNum);
+        int end = pageNum*pageSize>studentChapterAccuracyList.size()?studentChapterAccuracyList.size():pageNum;
+        List<StudentChapterAccuracy> content  = studentChapterAccuracyList.subList((pageNum-1)*pageSize,end);
+        Page<StudentChapterAccuracy> page = new PageImpl<>(content, pageable, studentChapterAccuracyList.size());
+        return page;
     }
     /**
      * 章节知识点掌握情况

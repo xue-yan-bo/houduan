@@ -52,11 +52,14 @@ public class StudentSignRecordServiceImpl  implements IStudentSignRecordService 
 
         studentSignRecord.setSignTime(now);
         studentSignRecord.setSignFlag(1);
+        studentSignRecord.setCreateTime(now);
 
         Integer signNum=attendanceRecord.getSignNum()+1;
         Integer unsignNum=attendanceRecord.getUnsignNum()-1;
         attendanceRecord.setSignNum(signNum);
         attendanceRecord.setUnsignNum(unsignNum);
+        attendanceRecord.setTeacherId(studentSignRecord.getTeacherId());
+        attendanceRecord.setTeacherName(studentSignRecord.getTeacherName());
         studentSignRecord =studentSignRecordRepository.save(studentSignRecord);
         teacherAttendanceRecordRepository.save(attendanceRecord);
         //sseManagerUtil.sendMsgToClient("qiandao"+studentSignRecord.getAttendanceRecordId(), studentSignRecord.getStudentId().toString());

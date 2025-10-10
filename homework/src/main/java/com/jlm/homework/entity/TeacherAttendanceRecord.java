@@ -43,6 +43,11 @@ public class TeacherAttendanceRecord {
      */
     @Column(name = "class_name")
     private String className;
+    /**
+     * 科目
+     */
+    @Column(name = "subject")
+    private String subject;
       /**
      * 考勤开始时间
      */

@@ -24,8 +24,8 @@ public class TeacherAttendanceRecordController {
      * @return
      */
     @GetMapping("/startAttendance")
-    public TeacherAttendanceRecord startAttendance(Long classId,Long schoolId){
-        return studentAttendanceRecordService.startAttendance(classId,schoolId);
+    public TeacherAttendanceRecord startAttendance(Long classId,Long schoolId,String subject){
+        return studentAttendanceRecordService.startAttendance(classId,schoolId,subject);
     }
 
     /**

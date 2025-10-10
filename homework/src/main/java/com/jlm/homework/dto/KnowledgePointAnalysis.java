@@ -1,6 +1,7 @@
 package com.jlm.homework.dto;
 
 import lombok.Data;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -17,5 +18,5 @@ public class KnowledgePointAnalysis {
     /**
      * 学生知识点分析
      */
-    private List<StudentKnowledgePointAnalysis> studentKnowledgePointAnalysisList;
+    private Page<StudentKnowledgePointAnalysis> studentKnowledgePointAnalysisList;
 }

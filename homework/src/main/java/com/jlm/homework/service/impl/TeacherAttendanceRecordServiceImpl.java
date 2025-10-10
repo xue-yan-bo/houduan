@@ -32,7 +32,7 @@ public class TeacherAttendanceRecordServiceImpl implements ITeacherAttendanceRec
     @Autowired
     private IUserService userService;
     @Override
-    public TeacherAttendanceRecord startAttendance(Long classId,Long schoolId) {
+    public TeacherAttendanceRecord startAttendance(Long classId,Long schoolId,String subject) {
         TeacherAttendanceRecord record = new TeacherAttendanceRecord();
         try {
             CurrentUserInfo userInfo = userService.getCurrentUserInfo();
@@ -40,9 +40,9 @@ public class TeacherAttendanceRecordServiceImpl implements ITeacherAttendanceRec
                 schoolId=userService.getCurrentSchoolIdSafely();
             }
             record.setClassId(classId);
-            if(userInfo!=null){
+            if(userInfo!=null&&userService.isCurrentUserTeacher()){
                 record.setTeacherId(userInfo.getUserUuid());
-                record.setTeacherName(userInfo.getUserName());
+                record.setTeacherName(userInfo.getTeacherName());
             }
             Date now = new Date();
             record.setCreateTime(now);
@@ -57,6 +57,7 @@ public class TeacherAttendanceRecordServiceImpl implements ITeacherAttendanceRec
             record.setStudentSum(studentList.size());
             record.setDay(now);
             record.setClassName(studentList.get(0).getClassesName());
+            record.setSubject(subject);
             record.setSignNum(0);
             record.setUnsignNum(studentList.size());
             record.setStartTime(now);

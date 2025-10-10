@@ -5,6 +5,7 @@ import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.entity.StudentsWriteRecord;
 import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -17,7 +18,7 @@ public interface IStudentsHomeworkNewService {
 
     Page<StudentsHomeworkNew> getListByHomeworkPublishId(Long homeworkPublishId, Integer pageNum, Integer pageSize, StudentsHomeworkRequest studentsHomeworkRequest);
 
-    List<StudentsHomeworkNew> getClassHomeworkStatistics(String subject, Long classId, String startDate,String endDate);
+    Page<StudentsHomeworkNew> getClassHomeworkStatistics(Integer pageNum, Integer pageSize, String subject, Long classId, String startDate, String endDate);
 
     Page<StudentsHomeworkNew> getStudentsHomeworkPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 
@@ -50,4 +51,6 @@ public interface IStudentsHomeworkNewService {
     Page<StudentsHomeworkNew> geemendPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 
     StudentsHomeworkNew audit(StudentsHomeworkNew studentsHomework);
+
+    StudentHomeworkDto homeworkPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 }

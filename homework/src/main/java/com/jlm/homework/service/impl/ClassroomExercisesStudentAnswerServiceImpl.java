@@ -19,6 +19,9 @@ import jakarta.persistence.criteria.Root;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
@@ -178,7 +181,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
     }
 
     @Override
-    public KnowledgePointAnalysis getKnowledgePointAnalysis(String subject, Long classId, String startDate, String endDate) {
+    public KnowledgePointAnalysis getKnowledgePointAnalysis(Integer pageNum, Integer pageSize,String subject, Long classId, String startDate, String endDate) {
         KnowledgePointAnalysis knowledgePointAnalysis =new KnowledgePointAnalysis();
         Specification<ClassroomExercisesStudentAnswer> specification = new Specification<ClassroomExercisesStudentAnswer>() {
 
@@ -270,7 +273,11 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             studentKnowledgePointAnalysis.setClassName(classInfo.split(":")[1]);
             studentKnowledgePointAnalysisList.add(studentKnowledgePointAnalysis);
         }
-        knowledgePointAnalysis.setStudentKnowledgePointAnalysisList(studentKnowledgePointAnalysisList);
+        Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNum);
+        int end = pageNum*pageSize > studentKnowledgePointAnalysisList.size()?studentKnowledgePointAnalysisList.size():pageNum*pageSize;
+        List<StudentKnowledgePointAnalysis> contect = studentKnowledgePointAnalysisList.subList((pageNum-1)*pageSize,end);
+        Page<StudentKnowledgePointAnalysis> page = new PageImpl<>(contect,pageable,studentKnowledgePointAnalysisList.size());
+        knowledgePointAnalysis.setStudentKnowledgePointAnalysisList(page);
         List<KnowledgePointWholeAnalysis> wholeAnalysisList = new ArrayList<>();
         for(String key2:knowledgeTotalMap.keySet()){
             KnowledgePointWholeAnalysis  knowledgePointWholeAnalysis = new KnowledgePointWholeAnalysis();

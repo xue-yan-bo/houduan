@@ -482,26 +482,7 @@ public class ClientHandler implements Runnable {
 
                             }
                             if(2==result.getButton()){//返回
-                                if(pCurrentMenu!=null){
-                                    if(pCurrentMenu.getParentMenu()!=null){
-                                        pCurrentMenu = pCurrentMenu.getParentMenu();
-                                        nMenuUpdate(out, writer);
-                                    }else{
-                                        pCurrentMenu = null;
-                                        homeworkflag = false;
-                                        emendflag = false;
-                                        work2Boards =new ArrayList<>();
-                                        mainMenu = null;
-                                        nMenuUpdate(out, writer);
-                                    }
-                                }else{
-                                    pCurrentMenu = null;
-                                    homeworkflag = false;
-                                    emendflag = false;
-                                    work2Boards =new ArrayList<>();
-                                    mainMenu = null;
-                                    nMenuUpdate(out, writer);
-                                }
+
                                 if(homeworkflag){
                                     //保存作业记录
                                     if(studentsWriteRecords.size()>0&&pCurrentMenu!=null&&pCurrentMenu.getParentMenu()!=null&&relation!=null){
@@ -533,6 +514,26 @@ public class ClientHandler implements Runnable {
                                         }
                                         studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"2",pageN,studentsEmendRecords,false);
                                     }
+                                }
+                                if(pCurrentMenu!=null){
+                                    if(pCurrentMenu.getParentMenu()!=null){
+                                        pCurrentMenu = pCurrentMenu.getParentMenu();
+                                        nMenuUpdate(out, writer);
+                                    }else{
+                                        pCurrentMenu = null;
+                                        homeworkflag = false;
+                                        emendflag = false;
+                                        work2Boards =new ArrayList<>();
+                                        mainMenu = null;
+                                        nMenuUpdate(out, writer);
+                                    }
+                                }else{
+                                    pCurrentMenu = null;
+                                    homeworkflag = false;
+                                    emendflag = false;
+                                    work2Boards =new ArrayList<>();
+                                    mainMenu = null;
+                                    nMenuUpdate(out, writer);
                                 }
                             }
                             if(4==result.getButton()){//清除
@@ -1052,6 +1053,3 @@ public class ClientHandler implements Runnable {
 
 
 }
-
-
-

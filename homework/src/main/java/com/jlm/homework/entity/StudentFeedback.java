@@ -3,7 +3,10 @@ package com.jlm.homework.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -28,35 +31,38 @@ public class StudentFeedback {
     @Column(name = "student_name")
     private String studentName;
     /**
-     * 班级ID
+     * 班级Id
      */
     @Column(name = "class_id")
     private Long classId;
+
     /**
      * 班级名称
      */
     @Column(name = "class_name")
-    private Long className;
+    private String className;
     /**
      * 学科
      */
     @Column(name = "subject")
-    private Long subject;
+    private String subject;
     /**
      * 反馈内容
      */
-    @Column(name = "feedback_content")
-    private Long feedbackContent;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "feedback_content", columnDefinition = "JSON")
+    private List<StudentsCoordinate> feedbackContent;
     /**
      * 反馈时间
      */
     @Column(name = "feedback_time")
-    private Long feedbackTime;
+    private Date feedbackTime;
     /**
      * 答复内容
      */
-    @Column(name = "reply_content")
-    private List replyContent;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reply_content", columnDefinition = "JSON")
+    private List<AuditLogoCoordinate> replyContent;
     /**
      * 答复人ID
      */
@@ -66,15 +72,15 @@ public class StudentFeedback {
      * 答复人姓名
      */
     @Column(name = "reply_name")
-    private Long replyName;
+    private String replyName;
     /**
      * 答复时间
      */
     @Column(name = "reply_time")
-    private Long replyTime;
+    private Date replyTime;
     /**
      * 创建时间
      */
     @Column(name = "create_time")
-    private Long createTime;
+    private Date createTime;
 }

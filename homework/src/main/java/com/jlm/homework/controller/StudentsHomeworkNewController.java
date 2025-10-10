@@ -2,6 +2,7 @@ package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.StudentHomeworkDto;
 import com.jlm.homework.dto.StudentsHomeworkRequest;
+import com.jlm.homework.entity.AuditLogoCoordinate;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.exception.ParameterNewException;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
@@ -13,6 +14,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Tag(name = "学生作业", description = "学生作业的查询、提交、审批等")
 @RestController
@@ -67,12 +71,75 @@ public class StudentsHomeworkNewController {
         }
         studentsHomework.setAuditStatus("2");
         studentsHomework.setAuditTime(new Date());
+        
+        // 根据老师审批坐标点判断学生作业错误逻辑
+        judgeHomeworkErrorByCoordinate(studentsHomework);
+        
         if(studentsHomework.getEmendStatus()!=null){
             studentsHomework.setEmendStatus(3);
             studentsHomework.setAuditStatus("5");
         }
         studentsHomework=studentsHomeworkNewService.audit(studentsHomework);
         return studentsHomework;
+    }
+    
+    /**
+     * 根据老师审批坐标点判断学生作业错误逻辑
+     * @param studentsHomework 学生作业对象
+     */
+    private void judgeHomeworkErrorByCoordinate(StudentsHomeworkNew studentsHomework) {
+        // 获取老师审批坐标
+        List<AuditLogoCoordinate> auditCoordinates = studentsHomework.getAuditCoordinate();
+        List<AuditLogoCoordinate> auditLogoCoordinates = studentsHomework.getAuditLogoCoordinate();
+        
+        // 存储错误原因和审批建议
+        StringBuilder errorReasonBuilder = new StringBuilder();
+        StringBuilder auditSuggestBuilder = new StringBuilder();
+        
+        // 判断是否有错误标记
+        boolean hasError = false;
+        
+        // 处理老师审批坐标
+        if (auditCoordinates != null && !auditCoordinates.isEmpty()) {
+            hasError = true;
+            errorReasonBuilder.append("发现").append(auditCoordinates.size()).append("处错误点\n");
+            auditSuggestBuilder.append("请检查并修改标记的错误点\n");
+            
+            // 统计错误类型
+            Map<String, Integer> errorTypeCount = new HashMap<>();
+            for (AuditLogoCoordinate coord : auditCoordinates) {
+                if (coord.getSymbol() != null) {
+                    String symbolStr = coord.getSymbol().toString();
+                    errorTypeCount.put(symbolStr, errorTypeCount.getOrDefault(symbolStr, 0) + 1);
+                }
+            }
+            
+            // 添加错误类型统计到错误原因
+            for (Map.Entry<String, Integer> entry : errorTypeCount.entrySet()) {
+                errorReasonBuilder.append("类型'").append(entry.getKey()).append("': "
+                        + entry.getValue()).append("处\n");
+            }
+        }
+        
+        // 处理老师审批标识坐标
+        if (auditLogoCoordinates != null && !auditLogoCoordinates.isEmpty()) {
+            hasError = true;
+            errorReasonBuilder.append("发现").append(auditLogoCoordinates.size()).append("处标识错误\n");
+        }
+        
+        // 如果有错误，设置错误相关字段
+        if (hasError) {
+            studentsHomework.setErrorReason(errorReasonBuilder.toString());
+            studentsHomework.setTeacherAuditSuggest(auditSuggestBuilder.toString());
+            // 设置需要订正
+            studentsHomework.setEmendStatus(1);
+            studentsHomework.setAuditStatus("3"); // 3表示需要订正
+        } else {
+            // 如果没有错误，设置为通过
+            studentsHomework.setErrorReason("无错误");
+            studentsHomework.setTeacherAuditSuggest("作业完成良好，继续保持！");
+            studentsHomework.setAuditStatus("2"); // 2表示审批通过
+        }
     }
 
     /**

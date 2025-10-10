@@ -5,6 +5,7 @@ import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.repository.HomeworkPublishRepository;
 import com.jlm.homework.service.IStudentsHomeworkStatisticsService;
 import com.jlm.homework.service.IWrongTitleStatisticsService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -18,6 +19,9 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -35,6 +39,8 @@ import java.util.concurrent.TimeUnit;
  * 每天凌晨3点为昨日发布的作业生成错题统计
  */
 @Component
+@RestController
+@RequestMapping("/task")
 public class DailyWrongTitleStatisticsTask implements ApplicationListener<ContextRefreshedEvent> {
 
     private static final Logger logger = LoggerFactory.getLogger(DailyWrongTitleStatisticsTask.class);
@@ -55,7 +61,19 @@ public class DailyWrongTitleStatisticsTask implements ApplicationListener<Contex
             startDailyWrongTitleStatisticsTask();
         }
     }
+    @GetMapping("/wrongTitleStatistics")
+    public void wrongTitleStatisticsTask(String startDay, String endDay) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date startDate = null;
+        try {
+            startDate = sdf.parse(startDay);
+            Date endDate = sdf.parse(endDay);
+            generateDailyWrongTitleStatistics(startDate,endDate);
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
 
+    }
     /**
      * 启动每日错题统计定时任务
      */
@@ -80,8 +98,20 @@ public class DailyWrongTitleStatisticsTask implements ApplicationListener<Contex
             @Override
             public void run() {
                 try {
+                    // 计算昨天的日期范围
+                    Calendar calendar = Calendar.getInstance();
+                    calendar.add(Calendar.DAY_OF_MONTH, -1);
+                    calendar.set(Calendar.HOUR_OF_DAY, 0);
+                    calendar.set(Calendar.MINUTE, 0);
+                    calendar.set(Calendar.SECOND, 0);
+                    Date startOfYesterday = calendar.getTime();
+
+                    calendar.set(Calendar.HOUR_OF_DAY, 23);
+                    calendar.set(Calendar.MINUTE, 59);
+                    calendar.set(Calendar.SECOND, 59);
+                    Date endOfYesterday = calendar.getTime();
                     logger.info("开始执行每日错题统计任务...");
-                    generateDailyWrongTitleStatistics();
+                    generateDailyWrongTitleStatistics(startOfYesterday,endOfYesterday);
                     logger.info("每日错题统计任务执行完成");
                 } catch (Exception e) {
                     logger.error("执行每日错题统计任务失败: {}", e.getMessage(), e);
@@ -102,20 +132,9 @@ public class DailyWrongTitleStatisticsTask implements ApplicationListener<Contex
     /**
      * 生成每日错题统计
      */
-    private void generateDailyWrongTitleStatistics() {
+    private void generateDailyWrongTitleStatistics(Date startOfYesterday,Date endOfYesterday ) {
         try {
-            // 计算昨天的日期范围
-            Calendar calendar = Calendar.getInstance();
-            calendar.add(Calendar.DAY_OF_MONTH, -1);
-            calendar.set(Calendar.HOUR_OF_DAY, 0);
-            calendar.set(Calendar.MINUTE, 0);
-            calendar.set(Calendar.SECOND, 0);
-            Date startOfYesterday = calendar.getTime();
-            
-            calendar.set(Calendar.HOUR_OF_DAY, 23);
-            calendar.set(Calendar.MINUTE, 59);
-            calendar.set(Calendar.SECOND, 59);
-            Date endOfYesterday = calendar.getTime();
+
             Specification<HomeworkPublish> specification = new Specification<HomeworkPublish>() {
                 @Override
                 public Predicate toPredicate(Root<HomeworkPublish> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {

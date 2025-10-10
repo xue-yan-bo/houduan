@@ -94,9 +94,13 @@ public class StudentsHomeworkStatisticsServiceImpl implements IStudentsHomeworkS
         studentsHomeworkStatistics.setUnsubmitRate(unsubmitRate);
         studentsHomeworkStatistics.setFastestDuration(fastestDuration);
         studentsHomeworkStatistics.setSlowestDuration(slowestDuration);
-        studentsHomeworkStatistics.setAverageDuration(totalDuration/submitStudentNum);
-        studentsHomeworkStatistics.setAverageAccuracy(totalAccuracy/studentsHomeworkList.size());
-        studentsHomeworkStatistics.setAverageCorrectness(totalAccuracy/studentsHomeworkList.size());
+        if(submitStudentNum!=null&&submitStudentNum!=0){
+            studentsHomeworkStatistics.setAverageDuration(totalDuration/submitStudentNum);
+        }
+        if(studentsHomeworkList.size()!=0) {
+            studentsHomeworkStatistics.setAverageAccuracy(totalAccuracy / studentsHomeworkList.size());
+            studentsHomeworkStatistics.setAverageCorrectness(totalAccuracy / studentsHomeworkList.size());
+        }
         studentsHomeworkStatistics.setCompareLast(0.0);
         studentsHomeworkStatisticsRepository.save(studentsHomeworkStatistics);
     }

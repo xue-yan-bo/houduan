@@ -61,7 +61,7 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
             }
         }
         for(WrongTitleStatistics titleStatistics:wrongTitleStatisticsList){
-            Integer wrongNum =wrongNumMap.get(titleStatistics.getQuestionId());
+            Integer wrongNum =wrongNumMap.get(titleStatistics.getQuestionId()+ titleStatistics.getTitleImage());
             titleStatistics.setWrongStudentNum(wrongNum);
             StudentsHomeworkNew searchStu = new StudentsHomeworkNew();
             searchStu.setClassesId(titleStatistics.getClassId());
@@ -96,6 +96,14 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable;
         pageable = PageRequest.of(pageNum, pageSize, sort);
+        if(wrongTitleBook!=null){
+            if(StringUtils.isEmpty(wrongTitleBook.getHomeworkPublishName())){
+                wrongTitleBook.setHomeworkPublishName(null);
+            }
+            if(StringUtils.isEmpty(wrongTitleBook.getSource())){
+                wrongTitleBook.setSource(null);
+            }
+        }
         return wrongTitleStatisticsRepository.findAll(Example.of(wrongTitleBook),pageable);
     }
 

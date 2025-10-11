@@ -4,6 +4,7 @@ import com.jlm.homework.entity.QuestionBank;
 import com.jlm.homework.entity.StudentFeedback;
 import com.jlm.homework.repository.StudentFeedbackRepository;
 import com.jlm.homework.service.IStudentFeedbackService;
+import jakarta.annotation.Resource;
 import org.springframework.data.domain.*;
 import org.springframework.data.annotation.Reference;
 import org.springframework.stereotype.Repository;
@@ -13,7 +14,7 @@ import java.util.Optional;
 
 @Service
 public class StudentFeedbackServiceImpl implements IStudentFeedbackService {
-    @Reference
+    @Resource
     private StudentFeedbackRepository studentFeedbackRepository;
 
     @Override

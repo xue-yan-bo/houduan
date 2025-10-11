@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "错题统计", description = "错题统计相关接口")
 @RestController
-@RequestMapping("/api/wrong-title-statistics")
+@RequestMapping("/api/wrong-title-book")
 public class WrongTitleStatisticsController {
     @Autowired
     private IWrongTitleStatisticsService wrongTitleBookService;

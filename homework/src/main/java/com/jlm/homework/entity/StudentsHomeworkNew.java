@@ -207,6 +207,12 @@ public class StudentsHomeworkNew implements Serializable {
     private List<CommentsCoordinate> commentsCoordinate;
 
     /**
+     * 老师批注文本
+     */
+    @Column(name = "comment_text")
+    private String commentText;
+
+    /**
      * 章节
      */
     @Column(name = "chapter")
@@ -266,6 +272,12 @@ public class StudentsHomeworkNew implements Serializable {
     private List<CommentsCoordinate> commentsCoordinate2;
 
     /**
+     * 老师2次批注文本
+     */
+    @Column(name = "comment_text2")
+    private String commentText2;
+
+    /**
      *  1需要订正 2 学生订正完成 3老师再次审批
      */
     @Column(name = "emend_status")
@@ -299,4 +311,15 @@ public class StudentsHomeworkNew implements Serializable {
      */
     @Column(name = "daily_practice_preview")
     private String dailyPracticePreview;
+    /**
+     * 作业相关文件
+     */
+    @Transient
+    private List<StudentsHomeworkCorrect> homeworkCorrectList;
+
+    /**
+     * 作业相关文件
+     */
+    @Transient
+    private List<StudentsHomeworkCorrect> homeworkCorrectList2;
 }

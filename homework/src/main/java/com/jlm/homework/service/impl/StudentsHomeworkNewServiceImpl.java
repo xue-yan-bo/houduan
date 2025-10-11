@@ -4,10 +4,7 @@ import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
 import com.jlm.homework.feign.SchoolFeignClient;
 import com.jlm.homework.feign.StudentFeignClient;
-import com.jlm.homework.repository.ExerciseBookQuestionRepository;
-import com.jlm.homework.repository.HomeworkPublishRepository;
-import com.jlm.homework.repository.StudentsHomeworkNewRepository;
-import com.jlm.homework.repository.WrongTitleBookRepository;
+import com.jlm.homework.repository.*;
 import com.jlm.homework.service.*;
 import com.jlm.homework.util.PiontSignUtil;
 import jakarta.annotation.Resource;
@@ -16,6 +13,8 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.xml.bind.annotation.W3CDomHandler;
+import lombok.extern.log4j.Log4j;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
@@ -29,6 +28,7 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 
+@Slf4j
 @Service
 public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewService {
     @Resource
@@ -51,6 +51,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Resource
     private ExerciseBookQuestionRepository exerciseBookQuestionRepository;
+
+    @Resource
+    private StudentsHomeworkCorrectRepository studentsHomeworkCorrectRepository;
+
+    @Autowired
+    private IStudentFeedbackService studentFeedbackService;
 
     @Override
     public void createStudentsHomeworkByHomeworkPublish(HomeworkPublish homeworkPublish) {
@@ -269,6 +275,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 studentsHomework.setStudentWriteDataList(writeDatas);
                 List<HomeworkStudentWriteData> writeDatas2=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"2");
                 studentsHomework.setStudentWriteDataList2(writeDatas2);
+                StudentsHomeworkCorrect search = new  StudentsHomeworkCorrect();
+                search.setStudentsHomeworkId(studentsHomework.getId());
+                search.setType(1);
+                List<StudentsHomeworkCorrect> correctList = studentsHomeworkCorrectRepository.findAll(Example.of(search));
+                studentsHomework.setHomeworkCorrectList(correctList);
+                search.setType(2);
+                List<StudentsHomeworkCorrect> correctList2 = studentsHomeworkCorrectRepository.findAll(Example.of(search));
+                studentsHomework.setHomeworkCorrectList2(correctList2);
             }
         }
         return studentsHomeworkList;
@@ -402,6 +416,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             homework.setStudentWriteDataList(writeDatas);
             List<HomeworkStudentWriteData> writeDatas2=homeworkStudentWriteDataService.findByStudentRecordId(homework.getId(),"2");
             homework.setStudentWriteDataList2(writeDatas2);
+            StudentsHomeworkCorrect search = new  StudentsHomeworkCorrect();
+            search.setStudentsHomeworkId(homework.getId());
+            search.setType(1);
+            List<StudentsHomeworkCorrect> correctList = studentsHomeworkCorrectRepository.findAll(Example.of(search));
+            homework.setHomeworkCorrectList(correctList);
+            search.setType(2);
+            List<StudentsHomeworkCorrect> correctList2 = studentsHomeworkCorrectRepository.findAll(Example.of(search));
+            studentsHomework.setHomeworkCorrectList2(correctList2);
         }
         return studentsHomeworkList;
     }
@@ -542,6 +564,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         studentsHomework.setStudentWriteDataList(writeDatas);
         List<HomeworkStudentWriteData> writeDatas2=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"2");
         studentsHomework.setStudentWriteDataList2(writeDatas2);
+        StudentsHomeworkCorrect search = new  StudentsHomeworkCorrect();
+        search.setStudentsHomeworkId(studentsHomework.getId());
+        search.setType(1);
+        List<StudentsHomeworkCorrect> correctList = studentsHomeworkCorrectRepository.findAll(Example.of(search));
+        studentsHomework.setHomeworkCorrectList(correctList);
+        search.setType(2);
+        List<StudentsHomeworkCorrect> correctList2 = studentsHomeworkCorrectRepository.findAll(Example.of(search));
+        studentsHomework.setHomeworkCorrectList2(correctList2);
         return studentsHomework;
     }
 
@@ -1231,9 +1261,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             compleRate = BigDecimal.valueOf(submitNum / homeworkNum).setScale(4, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100));
         }
         statisticsDto.setCompleRate(compleRate);
-        Double averageDuration = Double.valueOf(totalTime / homeworkNum);
+        Double averageDuration = BigDecimal.valueOf(totalTime).divide(BigDecimal.valueOf(homeworkNum),2,BigDecimal.ROUND_HALF_UP).doubleValue() ;
         statisticsDto.setAverageDuration(averageDuration);
-        Double averageAccuracy = totalAccuracy/homeworkNum;
+        Double averageAccuracy = BigDecimal.valueOf(totalAccuracy).divide(BigDecimal.valueOf(homeworkNum),2,BigDecimal.ROUND_HALF_UP).doubleValue() ;
         statisticsDto.setAverageAccuracy(averageAccuracy);
 
         List<GradeDayAccuracy> gradeDayAccuracyList = new ArrayList<>();
@@ -1526,7 +1556,30 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Override
     public StudentsHomeworkNew audit(StudentsHomeworkNew studentsHomework) {
+        if(studentsHomework.getHomeworkCorrectList()!=null&&!studentsHomework.getHomeworkCorrectList().isEmpty()){
+            for(StudentsHomeworkCorrect correct:studentsHomework.getHomeworkCorrectList()){
+                correct.setStudentsHomeworkId(studentsHomework.getId());
+                correct.setFileType("录音");
+                correct.setCreaterType(1);
+                correct.setType(1);
+                correct.setCreateTime(new Date());
+                studentsHomeworkCorrectRepository.save(correct);
+            }
+
+        }
+        if(studentsHomework.getHomeworkCorrectList2()!=null&&!studentsHomework.getHomeworkCorrectList2().isEmpty()){
+            for(StudentsHomeworkCorrect correct:studentsHomework.getHomeworkCorrectList2()){
+                correct.setStudentsHomeworkId(studentsHomework.getId());
+                correct.setFileType("录音");
+                correct.setCreaterType(1);
+                correct.setType(2);
+                correct.setCreateTime(new Date());
+                studentsHomeworkCorrectRepository.save(correct);
+            }
+
+        }
         studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
+
         HomeworkPublish homeworkPublish=homeworkPublishRepository.getById(studentsHomework.getHomeworkPublishId());
         StudentsHomeworkNew newSerach=new StudentsHomeworkNew();
         newSerach.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
@@ -1705,5 +1758,26 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         studentHomeworkDto.setSubmitted(submitted);
         studentHomeworkDto.setUnsubmitted(unsubmitted);
         return studentHomeworkDto;
+    }
+
+    @Override
+    public void saveFeedbackRecords(Long studentId,String subject, List<StudentsWriteRecord> studentsFeedbackRecords) {
+        StudentFeedback feedback = new StudentFeedback();
+        Date now  = new Date();
+        feedback.setFeedbackContent(studentsFeedbackRecords);
+        feedback.setFeedbackTime(now);
+        feedback.setSubject(subject);
+        feedback.setStudentId(studentId);
+        ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
+        if(resultDto!=null&&resultDto.getData()!=null){
+            Student student  = resultDto.getData();
+            feedback.setStudentName(student.getStudentName());
+            feedback.setClassId(student.getClassesId());
+            feedback.setClassName(student.getClassesName());
+            log.info("学生信息：id"+student.getStudentId()+"姓名："+student.getStudentName());
+        }
+        feedback.setCreateTime(now);
+        studentFeedbackService.save(feedback);
+        log.info("--------完成反馈信息保存-------");
     }
 }

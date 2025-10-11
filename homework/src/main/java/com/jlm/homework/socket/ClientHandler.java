@@ -30,11 +30,13 @@ public class ClientHandler implements Runnable {
     public static boolean mrnuflag = false;
     public static boolean homeworkflag = false;
     public static boolean emendflag = false;
+    public static boolean feedbackflag = false;
     public static List<HomeWork2Board> work2Boards = new ArrayList<>();
     public static List<HomeWork2Board> emendBoards = new ArrayList<>();
     public static MenuT mainMenu = null; //主菜单
     public static MenuT homeworkMenu = null; //作业模式
     public static MenuT emendMenu = null; //订正模式
+    public static MenuT feedbackMenu = null; //反馈模式
 
 
     private InetSocketAddress realRemoteAddress;
@@ -42,6 +44,7 @@ public class ClientHandler implements Runnable {
 
     List<StudentsWriteRecord> studentsWriteRecords =new ArrayList<>();
     List<StudentsWriteRecord> studentsEmendRecords =new ArrayList<>();
+    List<StudentsWriteRecord> studentsFeedbackRecords =new ArrayList<>();
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
@@ -147,7 +150,7 @@ public class ClientHandler implements Runnable {
                                     writeRecord.setPressure(result.getPressure());
                                     writeRecord.setTimestamp(result.getTimestamp());
                                     studentsWriteRecords.add(writeRecord);
-                                }if(emendflag&&pCurrentMenu!=null){//作业
+                                }else if(emendflag&&pCurrentMenu!=null){//订正
                                     System.out.println("=============订正数据发送====");
                                     StudentsWriteRecord writeRecord = new StudentsWriteRecord();
                                     writeRecord.setX(result.getX());
@@ -155,6 +158,14 @@ public class ClientHandler implements Runnable {
                                     writeRecord.setPressure(result.getPressure());
                                     writeRecord.setTimestamp(result.getTimestamp());
                                     studentsEmendRecords.add(writeRecord);
+                                }else if(feedbackflag&&pCurrentMenu!=null){//反馈
+                                    System.out.println("=============反馈数据发送====");
+                                    StudentsWriteRecord writeRecord = new StudentsWriteRecord();
+                                    writeRecord.setX(result.getX());
+                                    writeRecord.setY(result.getY());
+                                    writeRecord.setPressure(result.getPressure());
+                                    writeRecord.setTimestamp(result.getTimestamp());
+                                    studentsFeedbackRecords.add(writeRecord);
                                 }else {//课堂
                                     System.out.println("=============课堂数据发送====");
                                     result.setUserId(relation.getUserId());
@@ -344,6 +355,22 @@ public class ClientHandler implements Runnable {
                                             nMenuUpdate(out,writer);
                                         }
                                     }
+                                    if("反馈模式".equals(name)){
+                                        List<MenuItemT> feedbackItems = new ArrayList<>();
+
+                                        feedbackItems.add(new MenuItemT(1,null,"语文", null));
+                                        feedbackItems.add(new MenuItemT(2,null,"数学", null));
+                                        feedbackItems.add(new MenuItemT(3,null,"英语", null));
+                                        feedbackItems.add(new MenuItemT(4,null,"历史", null));
+                                        feedbackItems.add(new MenuItemT(5,null,"政治", null));
+                                        feedbackMenu = new MenuT(null,feedbackItems,0,0,feedbackItems.size(),feedbackItems.size());
+                                        pCurrentMenu = feedbackMenu;
+                                        feedbackflag = true;
+                                        pCurrentMenu.setShowStartItem(0);
+                                        pCurrentMenu.setShowEndItem(feedbackItems.size());
+                                        pCurrentMenu.setSelectItem(0);
+                                        nMenuUpdate(out,writer);
+                                    }
                                 }
                                 if(homeworkflag){//末级菜单确认保存数据
                                     System.out.println("=============作业数据保存====");
@@ -398,7 +425,6 @@ public class ClientHandler implements Runnable {
                                             studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId,"1", pageN, studentsWriteRecords,true);
                                             pCurrentMenu = null;
                                             work2Boards = new ArrayList<>();
-                                            mainMenu = null;
                                             homeworkflag = false;
                                             nMenuUpdate(out, writer);
                                         }
@@ -453,11 +479,26 @@ public class ClientHandler implements Runnable {
                                             studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId,"2", pageN, studentsEmendRecords,true);
                                             pCurrentMenu = null;
                                             work2Boards = new ArrayList<>();
-                                            mainMenu = null;
                                             homeworkflag = false;
                                             emendflag = false;
                                             nMenuUpdate(out, writer);
                                         }
+                                    }
+                                }else if(feedbackflag) {//末级菜单反馈数据保存
+                                    System.out.println("=============保存反馈数据====");
+                                    //保存反馈数据
+                                    if (studentsFeedbackRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
+                                        MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                        String name = itemT.getDesc();
+                                        System.out.println("=============保存反馈数据====科目："+name);
+                                        studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,studentsFeedbackRecords);
+                                        System.out.println("=============保存反馈数据完成====");
+                                        pCurrentMenu = null;
+                                        studentsFeedbackRecords = new ArrayList<>();
+                                        homeworkflag = false;
+                                        emendflag = false;
+                                        feedbackflag = false;
+                                        nMenuUpdate(out, writer);
                                     }
                                 }else if(StringUtils.isNotEmpty(relation.getUserId())) {
                                     System.out.println("=============课堂数据发送====");
@@ -472,6 +513,7 @@ public class ClientHandler implements Runnable {
 
                                 mainItems.add(new MenuItemT(1,null,"作业模式", null));
                                 mainItems.add(new MenuItemT(2,null,"订正模式", null));
+                                mainItems.add(new MenuItemT(3,null,"反馈模式", null));
                                 mainMenu = new MenuT(null,mainItems,0,0,mainItems.size(),mainItems.size());
                                 pCurrentMenu = mainMenu;
                                 pCurrentMenu.setShowStartItem(0);
@@ -515,6 +557,22 @@ public class ClientHandler implements Runnable {
                                         studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"2",pageN,studentsEmendRecords,false);
                                     }
                                 }
+                                if(feedbackflag){
+                                    //保存反馈数据
+                                    if (studentsFeedbackRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
+                                        MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                        String name = itemT.getDesc();
+                                        System.out.println("=============保存反馈数据====科目："+name);
+                                        studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,studentsFeedbackRecords);
+                                        System.out.println("=============保存反馈数据完成====");
+                                        pCurrentMenu = null;
+                                        studentsFeedbackRecords = new ArrayList<>();
+                                        homeworkflag = false;
+                                        emendflag = false;
+                                        feedbackflag = false;
+                                        nMenuUpdate(out, writer);
+                                    }
+                                }
                                 if(pCurrentMenu!=null){
                                     if(pCurrentMenu.getParentMenu()!=null){
                                         pCurrentMenu = pCurrentMenu.getParentMenu();
@@ -523,8 +581,11 @@ public class ClientHandler implements Runnable {
                                         pCurrentMenu = null;
                                         homeworkflag = false;
                                         emendflag = false;
+                                        feedbackflag = false;
+                                        studentsWriteRecords = new ArrayList<>();
+                                        studentsEmendRecords = new ArrayList<>();
+                                        studentsFeedbackRecords = new ArrayList<>();
                                         work2Boards =new ArrayList<>();
-                                        mainMenu = null;
                                         nMenuUpdate(out, writer);
                                     }
                                 }else{
@@ -532,7 +593,6 @@ public class ClientHandler implements Runnable {
                                     homeworkflag = false;
                                     emendflag = false;
                                     work2Boards =new ArrayList<>();
-                                    mainMenu = null;
                                     nMenuUpdate(out, writer);
                                 }
                             }
@@ -557,28 +617,13 @@ public class ClientHandler implements Runnable {
                                         }
                                         studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"1",pageN,studentsWriteRecords,false);
                                     }
-                                    if(emendflag){
-                                        //保存作业记录
-                                        if(studentsEmendRecords.size()>0&&pCurrentMenu!=null&&pCurrentMenu.getParentMenu()!=null&&relation!=null){
-                                            MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
-                                            String name = itemT.getDesc();
-                                            Long homeworkId = itemT.getObjectId();
-                                            Integer pageN = 1;
-                                            if(name.contains(" ")) {
-                                                int num = name.lastIndexOf(" ");
-                                                pageN = Integer.valueOf(name.substring(num+1, name.length()));
-                                            }else{
-                                                pageN = 1;
-                                            }
-                                            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"2",pageN,studentsEmendRecords,false);
-                                        }
-                                    }
+
                                     pCurrentMenu = null;
                                     emendflag = false;
                                     homeworkflag = false;
                                     emendflag = false;
+                                    studentsWriteRecords = new ArrayList<>();
                                     work2Boards =new ArrayList<>();
-                                    mainMenu = null;
                                     homeworkMenu = null;
                                     emendMenu = null;
                                     nMenuUpdate(out, writer);
@@ -601,18 +646,25 @@ public class ClientHandler implements Runnable {
                                     emendflag = false;
                                     homeworkflag = false;
                                     emendflag = false;
+                                    studentsEmendRecords = new ArrayList<>();
                                     work2Boards =new ArrayList<>();
-                                    mainMenu = null;
                                     homeworkMenu = null;
                                     emendMenu = null;
                                     nMenuUpdate(out, writer);
+                                }else if(feedbackflag){
+                                     studentsFeedbackRecords = new ArrayList<>();
+                                     pCurrentMenu = null;
+                                     homeworkflag = false;
+                                     emendflag = false;
+                                     feedbackflag = false;
+                                     nMenuUpdate(out, writer);
+
                                 }else if(mrnuflag){
                                     pCurrentMenu = null;
                                     emendflag = false;
                                     homeworkflag = false;
                                     emendflag = false;
                                     work2Boards =new ArrayList<>();
-                                    mainMenu = null;
                                     homeworkMenu = null;
                                     emendMenu = null;
                                     nMenuUpdate(out, writer);
@@ -672,7 +724,7 @@ public class ClientHandler implements Runnable {
                                     }
 
                                 }else if(emendflag){
-                                    //保存作业记录
+                                    //保存dindzhemg记录
                                     if(studentsEmendRecords.size()>0&&pCurrentMenu!=null&&pCurrentMenu.getParentMenu()!=null&&relation!=null){
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                         String name = itemT.getDesc();
@@ -685,6 +737,29 @@ public class ClientHandler implements Runnable {
                                             pageN = 1;
                                         }
                                         studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"2",pageN,studentsEmendRecords,false);
+                                    }
+                                    if (pCurrentMenu.getSelectItem() > pCurrentMenu.getShowStartItem()) {
+                                        Integer selectItem = pCurrentMenu.getSelectItem();
+                                        selectItem = selectItem - 1;
+                                        pCurrentMenu.setSelectItem(selectItem);
+                                        nMenuUpdate(out, writer);
+                                    } else {
+                                        if (pCurrentMenu.getSelectItem() > 0) {
+                                            pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem() - 1);
+                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() - 1);
+                                            pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem() - 1);
+                                            nMenuUpdate(out, writer);
+                                        }
+                                    }
+                                }else if(feedbackflag){
+                                    //保存反馈数据
+                                    if (studentsFeedbackRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
+                                        MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                        String name = itemT.getDesc();
+                                        System.out.println("=============保存反馈数据====科目："+name);
+                                        studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,studentsFeedbackRecords);
+                                        System.out.println("=============保存反馈数据完成====");
+
                                     }
                                     if (pCurrentMenu.getSelectItem() > pCurrentMenu.getShowStartItem()) {
                                         Integer selectItem = pCurrentMenu.getSelectItem();
@@ -766,6 +841,29 @@ public class ClientHandler implements Runnable {
                                             pageN = 1;
                                         }
                                         studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"2",pageN,studentsEmendRecords,false);
+                                    }
+                                    if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
+                                        Integer selectItem = pCurrentMenu.getSelectItem();
+                                        selectItem = selectItem + 1;
+                                        pCurrentMenu.setSelectItem(selectItem);
+                                        nMenuUpdate(out, writer);
+                                    } else {
+                                        if (pCurrentMenu.getSelectItem() < pCurrentMenu.getMaxItems() - 1) {
+                                            pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem() + 1);
+                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() + 1);
+                                            pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem() + 1);
+                                            nMenuUpdate(out, writer);
+                                        }
+                                    }
+                                }else if(feedbackflag) {
+                                    //保存反馈数据
+                                    if (studentsFeedbackRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
+                                        MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                        String name = itemT.getDesc();
+                                        System.out.println("=============保存反馈数据====科目："+name);
+                                        studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,studentsFeedbackRecords);
+                                        System.out.println("=============保存反馈数据完成====");
+
                                     }
                                     if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
                                         Integer selectItem = pCurrentMenu.getSelectItem();

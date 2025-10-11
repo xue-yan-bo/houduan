@@ -53,4 +53,6 @@ public interface IStudentsHomeworkNewService {
     StudentsHomeworkNew audit(StudentsHomeworkNew studentsHomework);
 
     StudentHomeworkDto homeworkPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
+
+    void saveFeedbackRecords(Long studentId,String subject ,List<StudentsWriteRecord> studentsFeedbackRecords);
 }

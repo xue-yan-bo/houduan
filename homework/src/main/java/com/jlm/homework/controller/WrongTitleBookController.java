@@ -42,7 +42,7 @@ public class WrongTitleBookController {
      * @param wrongTitleBook
      * @return
      */
-    @GetMapping("/page")
+    @GetMapping("/pageList")
     public Page<WrongTitleBook> getWrongTitleBookList(@RequestParam(defaultValue = "1")Integer pageNum,
                                                             @RequestParam(defaultValue = "10") Integer pageSize,
                                                             WrongTitleBook wrongTitleBook) {

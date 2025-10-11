@@ -51,7 +51,7 @@ public class StudentFeedback {
      */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "feedback_content", columnDefinition = "JSON")
-    private List<StudentsCoordinate> feedbackContent;
+    private List<StudentsWriteRecord> feedbackContent;
     /**
      * 反馈时间
      */

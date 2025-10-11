@@ -8,6 +8,7 @@ import com.jlm.homework.repository.WrongTitleBookRepository;
 import com.jlm.homework.service.IWrongTitleBookService;
 import com.jlm.homework.util.PiontSignUtil;
 import jakarta.annotation.Resource;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
@@ -145,6 +146,14 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable;
         pageable = PageRequest.of(pageNum, pageSize, sort);
+        if(wrongTitleBook!=null){
+            if(StringUtils.isEmpty(wrongTitleBook.getHomeworkPublishName())){
+                wrongTitleBook.setHomeworkPublishName(null);
+            }
+            if(StringUtils.isEmpty(wrongTitleBook.getSource())){
+                wrongTitleBook.setSource(null);
+            }
+        }
         return wrongTitleBookRepository.findAll(Example.of(wrongTitleBook),pageable);
     }
 }

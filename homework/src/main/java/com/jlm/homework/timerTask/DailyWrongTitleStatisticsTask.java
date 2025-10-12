@@ -18,6 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,6 +41,7 @@ import java.util.concurrent.TimeUnit;
  * 每天凌晨3点为昨日发布的作业生成错题统计
  */
 @Component
+@EnableScheduling
 @RestController
 @RequestMapping("/task")
 public class DailyWrongTitleStatisticsTask implements ApplicationListener<ContextRefreshedEvent> {
@@ -128,7 +131,28 @@ public class DailyWrongTitleStatisticsTask implements ApplicationListener<Contex
         
         logger.info("每日错题统计定时任务已启动，首次执行时间：{}", firstExecuteTime);
     }
+    //@Scheduled(cron = "0 3 * * * ?")
+    public void wrongTitleStatisticsTask(){
+        try {
+            // 计算昨天的日期范围
+            Calendar calendar = Calendar.getInstance();
+            calendar.add(Calendar.DAY_OF_MONTH, -1);
+            calendar.set(Calendar.HOUR_OF_DAY, 0);
+            calendar.set(Calendar.MINUTE, 0);
+            calendar.set(Calendar.SECOND, 0);
+            Date startOfYesterday = calendar.getTime();
 
+            calendar.set(Calendar.HOUR_OF_DAY, 23);
+            calendar.set(Calendar.MINUTE, 59);
+            calendar.set(Calendar.SECOND, 59);
+            Date endOfYesterday = calendar.getTime();
+            logger.info("开始执行每日错题统计任务...");
+            generateDailyWrongTitleStatistics(startOfYesterday,endOfYesterday);
+            logger.info("每日错题统计任务执行完成");
+        } catch (Exception e) {
+            logger.error("执行每日错题统计任务失败: {}", e.getMessage(), e);
+        }
+    }
     /**
      * 生成每日错题统计
      */

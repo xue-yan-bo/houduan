@@ -35,8 +35,8 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
         Map<String,Integer> wrongNumMap=new HashMap<>();
         List<WrongTitleStatistics> wrongTitleStatisticsList=new ArrayList<>();
         for(WrongTitleBook titleBook:wrongTitleBookList){
-            String qkey = titleBook.getQuestionId() + titleBook.getSourceImageUrl();
-            if(wrongNumMap.containsKey(titleBook.getQuestionId())){
+            String qkey = titleBook.getQuestionId() +":"+ titleBook.getTitleBigNo()+":"+titleBook.getTitleSmallNo();
+            if(wrongNumMap.containsKey(qkey)){
                 wrongNumMap.put(qkey,wrongNumMap.get(titleBook.getQuestionId())+1);
             }else {
                 wrongNumMap.put(qkey,1);
@@ -61,7 +61,8 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
             }
         }
         for(WrongTitleStatistics titleStatistics:wrongTitleStatisticsList){
-            Integer wrongNum =wrongNumMap.get(titleStatistics.getQuestionId()+ titleStatistics.getTitleImage());
+            String qkey = titleStatistics.getQuestionId() +":"+ titleStatistics.getTitleBigNo()+":"+titleStatistics.getTitleSmallNo();
+            Integer wrongNum =wrongNumMap.get(qkey);
             titleStatistics.setWrongStudentNum(wrongNum);
             StudentsHomeworkNew searchStu = new StudentsHomeworkNew();
             searchStu.setClassesId(titleStatistics.getClassId());

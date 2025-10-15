@@ -1,5 +1,6 @@
 package com.jlm.homework.service;
 
+import com.jlm.homework.entity.WrongTitleBook;
 import com.jlm.homework.entity.WrongTitleStatistics;
 import org.springframework.data.domain.Page;
 

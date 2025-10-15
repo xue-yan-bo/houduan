@@ -204,12 +204,12 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                 Calendar calendar = Calendar.getInstance();
                 try {
-
+                    SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                     if (StringUtils.isNotEmpty(homeworkPublishRequest.getPublishTime())) {
 
                         Date publishTime = sdf.parse(homeworkPublishRequest.getPublishTime());
 
-                        Date publishTime1 = sdf.parse(homeworkPublishRequest.getPublishTime() +" 23:59:59");
+                        Date publishTime1 = sdf1.parse(homeworkPublishRequest.getPublishTime() +" 23:59:59");
                         cond2 = criteriaBuilder.between(root.get("publishTime"), publishTime, publishTime1);
                     } else {
                         cond2 = criteriaBuilder.conjunction();
@@ -217,7 +217,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                     if (StringUtils.isNotEmpty(homeworkPublishRequest.getDeadline())) {
 
                         Date deadline = sdf.parse(homeworkPublishRequest.getDeadline());
-                        Date deadline1 = sdf.parse(homeworkPublishRequest.getDeadline() +" 23:59:59");
+                        Date deadline1 = sdf1.parse(homeworkPublishRequest.getDeadline() +" 23:59:59");
                         cond3 = criteriaBuilder.between(root.get("deadline"), deadline, deadline1);
                     } else {
                         cond3 = criteriaBuilder.conjunction();

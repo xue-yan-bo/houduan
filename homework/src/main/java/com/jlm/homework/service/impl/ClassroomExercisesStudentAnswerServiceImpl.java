@@ -58,7 +58,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                 wrongTitleBook.setQuestionId(question.getId());
                 wrongTitleBook.setStudentId(Long.parseLong(studentAnswer.getStudentId()));
                 wrongTitleBook.setStudentName(studentAnswer.getStudentName());
-                wrongTitleBook.setTitleBigNo(studentAnswer.getTitleNumber());
+                wrongTitleBook.setTitleBigNo(studentAnswer.getTitleNumber()+"");
                 wrongTitleBook.setTitleContext(studentAnswer.getQuestionContent());
                 wrongTitleBook.setTitleAnswer(studentAnswer.getAnswer());
                 wrongTitleBook.setStudentAnswer(studentAnswer.getStudentAnswer());

@@ -308,17 +308,17 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }else {
                         condition1 = criteriaBuilder.conjunction();
                     }
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                     Calendar calendar = Calendar.getInstance();
                     Predicate condition2 = null;
                     if(StringUtils.isNotEmpty(startDate)){
                         Date start = null;
 
-                        start = sdf.parse(startDate);
+                        start = sdf.parse(startDate +" 00:00:00");
 
                         calendar.setTime(start);
 
-                        Date end = sdf.parse(endDate);
+                        Date end = sdf.parse(endDate +" 23:59:59");
                         condition2 = criteriaBuilder.between(root.<Date>get("publishTime"),start,end);
                     }else {
                         condition2 = criteriaBuilder.conjunction();
@@ -330,14 +330,16 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 return null;
             }
         };
-        List<HomeworkPublish> homeworkPublishList=homeworkPublishRepository.findAll(specification);
+        Sort sort = Sort.by(Sort.Direction.DESC,"id");
+        List<HomeworkPublish> homeworkPublishList=homeworkPublishRepository.findAll(specification,sort);
         List<StudentsHomeworkNew> studentsHomeworkList = new ArrayList<>();
         for(HomeworkPublish homeworkPublish:homeworkPublishList){
             StudentsHomeworkNew  studentsHomeworkNew=new StudentsHomeworkNew();
             studentsHomeworkNew.setHomeworkPublishId(homeworkPublish.getId());
             studentsHomeworkNew.setClassesId(classId);
             studentsHomeworkNew.setSubject(subject);
-            List<StudentsHomeworkNew> studentsHomeworkNewList = studentsHomeworkNewRepository.findAll(Example.of(studentsHomeworkNew));
+            Sort sort1 = Sort.by(Sort.Direction.DESC,"accuracy","createTime");
+            List<StudentsHomeworkNew> studentsHomeworkNewList = studentsHomeworkNewRepository.findAll(Example.of(studentsHomeworkNew),sort1);
             studentsHomeworkList.addAll(studentsHomeworkNewList);
         }
         Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNum);
@@ -1152,7 +1154,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Override
     public HomeworkStatisticsDto getHomeworkStatistics(String startDate, String endDate) {
         HomeworkStatisticsDto statisticsDto = new HomeworkStatisticsDto();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
 
             @Override
@@ -1162,9 +1164,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     Calendar calendar = Calendar.getInstance();
                     Predicate condition = null;
                     if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
-                        Date start = sdf.parse(startDate);
+                        Date start = sdf.parse(startDate + " 00:00:00");
                         calendar.setTime(start);
-                        Date end = sdf.parse(endDate);
+                        Date end = sdf.parse(endDate + " 23:59:59");
                         condition = criteriaBuilder.between(root.<Date>get("createTime"),start,end);
                     }else {
                         condition = criteriaBuilder.conjunction();
@@ -1183,8 +1185,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         Integer homeworkNum=studentsHomeworkList.size();
         statisticsDto.setHomeworkNum(homeworkNum);
         Integer submitNum=0;
+        Integer auditNum = 0;
         Double totalTime=0.0;
         Double totalAccuracy=0.0;
+
         Map<String,Double> gradeDayAccuracyMap = new HashMap<>();
         Map<String,Integer> gradeDayNum= new HashMap<>();
         Map<String,Integer> subjectTimeNumMap = new HashMap<>();
@@ -1198,6 +1202,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     time =Double.valueOf(homework.getSubmitTime().getTime()- homework.getStartTime().getTime())/1000/60;
 
                 }
+            }
+            if(homework.getAuditTime()!=null){
+                auditNum ++;
             }
             totalTime += time;
             String gradeday = homework.getGrade()+":"+sdf.format(homework.getCreateTime());
@@ -1257,10 +1264,15 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
         }
         BigDecimal compleRate = BigDecimal.ZERO;
-        if(submitNum!=0) {
-            compleRate = BigDecimal.valueOf(submitNum / homeworkNum).setScale(4, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100));
+        if(submitNum!=0&&homeworkNum!=0) {
+            compleRate = BigDecimal.valueOf(submitNum).divide(BigDecimal.valueOf(homeworkNum),4, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100));
+        }
+        BigDecimal auditRate = BigDecimal.ZERO;
+        if(auditNum!=0&&homeworkNum!=0) {
+            auditRate = BigDecimal.valueOf(auditNum).divide(BigDecimal.valueOf(homeworkNum),4, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100));
         }
         statisticsDto.setCompleRate(compleRate);
+        statisticsDto.setAuditRate(auditRate);
         Double averageDuration = BigDecimal.valueOf(totalTime).divide(BigDecimal.valueOf(homeworkNum),2,BigDecimal.ROUND_HALF_UP).doubleValue() ;
         statisticsDto.setAverageDuration(averageDuration);
         Double averageAccuracy = BigDecimal.valueOf(totalAccuracy).divide(BigDecimal.valueOf(homeworkNum),2,BigDecimal.ROUND_HALF_UP).doubleValue() ;
@@ -1307,12 +1319,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             String day = gradeDay.split(":")[1];
             gradeAuditRate.setGrade(grade);
             gradeAuditRate.setDay(day);
-            BigDecimal auditRate = BigDecimal.ZERO;
+            BigDecimal auditRate1 = BigDecimal.ZERO;
             if(gradeDayAuditNum.containsKey(gradeDay)&&gradeDayNum.containsKey(gradeDay)) {
                 auditRate = BigDecimal.valueOf(gradeDayAuditNum.get(gradeDay) / gradeDayNum.get(gradeDay))
                         .setScale(4, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100));
             }
-            gradeAuditRate.setAuditRate(auditRate);
+            gradeAuditRate.setAuditRate(auditRate1);
             gradeAuditRateList.add(gradeAuditRate);
         }
         statisticsDto.setGradeAuditRateList(gradeAuditRateList);

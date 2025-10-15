@@ -16,4 +16,6 @@ public interface IWrongTitleBookService {
     void addWrongBook(WrongTitleBook wrongTitleBook);
 
     Page<WrongTitleBook> getPage(Integer pageNum, Integer pageSize, WrongTitleBook wrongTitleBook);
+
+
 }

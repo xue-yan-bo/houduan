@@ -16,6 +16,11 @@ public class HomeworkStatisticsDto {
      * 作业完成率
      */
     private BigDecimal compleRate;
+
+    /**
+     * 作业批改率
+     */
+    private BigDecimal auditRate;
     /**
      * 平均时长
      */

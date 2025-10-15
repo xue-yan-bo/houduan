@@ -42,6 +42,7 @@ public class ClientHandler implements Runnable {
     private InetSocketAddress realRemoteAddress;
     private boolean headerParsed = false;
 
+    List<HandwritingParseResult> studentCalssRecords =new ArrayList<>();
     List<StudentsWriteRecord> studentsWriteRecords =new ArrayList<>();
     List<StudentsWriteRecord> studentsEmendRecords =new ArrayList<>();
     List<StudentsWriteRecord> studentsFeedbackRecords =new ArrayList<>();
@@ -133,7 +134,6 @@ public class ClientHandler implements Runnable {
                 
                 try {
 
-
                     // 根据数据类型进行解析
                     if (dataType == 0x01) { // 手写数据
                         List<HandwritingParseResult> results = ParseTcpDataUtil.parseHandwritingTcpPackets(fullPacketBuffer);
@@ -171,6 +171,12 @@ public class ClientHandler implements Runnable {
                                     result.setUserId(relation.getUserId());
                                     // 发送解析结果给客户端
                                     writer.println("服务器回复: " + result.toString());
+                                    /*if(result.getPressure()>0){
+                                        studentCalssRecords.add(result);
+                                    }else{
+                                        messagingTemplate.convertAndSend("/topic/writingData", studentCalssRecords);
+                                        studentCalssRecords = new ArrayList<>();
+                                    }*/
                                     // 通过WebSocket发送解析结果给前端
                                     messagingTemplate.convertAndSend("/topic/writingData", result);
                                 }
@@ -182,6 +188,12 @@ public class ClientHandler implements Runnable {
                                     // 发送解析结果给客户端
                                     writer.println("服务器回复: " + result.toString());
                                     // 通过WebSocket发送解析结果给前端
+                                    /*if(result.getPressure()>0){
+                                        studentCalssRecords.add(result);
+                                    }else{
+                                        messagingTemplate.convertAndSend("/topic/writingData", studentCalssRecords);
+                                        studentCalssRecords = new ArrayList<>();
+                                    }*/
                                     messagingTemplate.convertAndSend("/topic/writingData", result);
                                 }else {
                                     System.out.println("=========没有获取到学生信息！======");
@@ -385,12 +397,12 @@ public class ClientHandler implements Runnable {
                                                     studentsHomeworkNewService.saveStartTime(board.getHomeworkId());
                                                     if((board.getPageSize()!=null&&board.getPageSize()>0)){
                                                         for(int i=0;i<board.getPageSize();i++){
-                                                            String desc = homeworkName.length()>6?homeworkName.substring(0,6):homeworkName+" " +(i+1);
+                                                            String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName+" " +(i+1);
                                                             MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                             itemTList.add(menuItemT);
                                                         }
                                                     }else{
-                                                        String desc = homeworkName.length()>6?homeworkName.substring(0,6):homeworkName+" 1";
+                                                        String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName+" 1";
                                                         MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                         itemTList.add(menuItemT);
                                                     }
@@ -440,12 +452,12 @@ public class ClientHandler implements Runnable {
                                                     String homeworkName = board.getHomeworkName();
                                                     if((board.getPageSize()!=null&&board.getPageSize()>0)){
                                                         for(int i=0;i<board.getPageSize();i++){
-                                                            String desc = homeworkName.length()>6?homeworkName.substring(0,5):homeworkName +" " +(i+1);
+                                                            String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName +" " +(i+1);
                                                             MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                             itemTList.add(menuItemT);
                                                         }
                                                     }else{
-                                                        String desc = homeworkName.length()>6?homeworkName.substring(0,6):homeworkName+" 1";
+                                                        String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName+" 1";
                                                         MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                         itemTList.add(menuItemT);
                                                     }
@@ -887,6 +899,13 @@ public class ClientHandler implements Runnable {
                             if(0==result.getButton()){
                                 System.out.println("++++++++++++按键松开++++++++++");
 
+                            }
+                        }else{
+                            System.out.println("=========没有获取到学生信息！======");
+                            relation=smartDeviceUserRelationService.selectByIpAddress(clientIP);
+                            if(relation==null) {
+                                System.out.println("请检测" + clientIP + "与学生的绑定或者重启智能版");
+                                writer.println("请检测" + clientIP + "与学生的绑定或者重启智能版");
                             }
                         }
 

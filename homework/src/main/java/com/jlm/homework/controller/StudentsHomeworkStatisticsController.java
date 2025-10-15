@@ -80,7 +80,7 @@ public class StudentsHomeworkStatisticsController {
         List<StudentChapterAccuracy> studentChapterAccuracyList = new ArrayList<>();
         studentChapterAccuracyList=studentsHomeworkNewService.studentChapterStatistics(subject,classId,chapter);
         Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNum);
-        int end = pageNum*pageSize>studentChapterAccuracyList.size()?studentChapterAccuracyList.size():pageNum;
+        int end = pageNum*pageSize>studentChapterAccuracyList.size()?studentChapterAccuracyList.size():pageNum*pageSize;
         List<StudentChapterAccuracy> content  = studentChapterAccuracyList.subList((pageNum-1)*pageSize,end);
         Page<StudentChapterAccuracy> page = new PageImpl<>(content, pageable, studentChapterAccuracyList.size());
         return page;

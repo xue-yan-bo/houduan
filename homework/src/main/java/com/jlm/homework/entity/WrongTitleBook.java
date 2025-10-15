@@ -85,13 +85,13 @@ public class WrongTitleBook {
      */
      @Column(name = "title_big_no")
      @ApiModelProperty(value ="大题号")
-     private Integer titleBigNo;
+     private String titleBigNo;
      /**
      * 小题号
      */
     @Column(name = "title_small_no")
     @ApiModelProperty(value ="小题号")
-     private Integer titleSmallNo;
+     private String titleSmallNo;
      /**
      * 题内容
      */

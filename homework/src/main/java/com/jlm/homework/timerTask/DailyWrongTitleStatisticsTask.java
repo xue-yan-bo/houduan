@@ -1,3 +1,4 @@
+/*
 package com.jlm.homework.timerTask;
 
 import com.jlm.homework.entity.CurrentUserInfo;
@@ -36,10 +37,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+*/
 /**
  * 每日错题统计定时任务
  * 每天凌晨3点为昨日发布的作业生成错题统计
- */
+ *//*
+
 @Component
 @EnableScheduling
 @RestController
@@ -77,9 +80,11 @@ public class DailyWrongTitleStatisticsTask implements ApplicationListener<Contex
         }
 
     }
-    /**
+    */
+/**
      * 启动每日错题统计定时任务
-     */
+     *//*
+
     private void startDailyWrongTitleStatisticsTask() {
         // 计算首次执行时间：今天凌晨3点或明天凌晨3点
         Calendar calendar = Calendar.getInstance();
@@ -153,9 +158,11 @@ public class DailyWrongTitleStatisticsTask implements ApplicationListener<Contex
             logger.error("执行每日错题统计任务失败: {}", e.getMessage(), e);
         }
     }
-    /**
+    */
+/**
      * 生成每日错题统计
-     */
+     *//*
+
     private void generateDailyWrongTitleStatistics(Date startOfYesterday,Date endOfYesterday ) {
         try {
 
@@ -214,3 +221,4 @@ public class DailyWrongTitleStatisticsTask implements ApplicationListener<Contex
 
 
 }
+*/

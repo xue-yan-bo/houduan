@@ -44,12 +44,12 @@ public class ExerciseBookQuestion implements Serializable {
      * 大题号
      */
     @Column(name = "title_big_no")
-    private Integer titleBigNo;
+    private String titleBigNo;
     /**
      * 小题号
      */
     @Column(name = "title_small_no")
-    private Integer titleSmallNo;
+    private String titleSmallNo;
     /**
      * 题所在坐标
      */

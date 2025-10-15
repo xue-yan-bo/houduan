@@ -1,14 +1,19 @@
 package com.jlm.homework.service.impl;
 
+import com.jlm.homework.dto.Result;
+import com.jlm.homework.dto.ResultDto;
+import com.jlm.homework.entity.Student;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.entity.WrongTitleBook;
 import com.jlm.homework.entity.WrongTitleStatistics;
+import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.StudentsHomeworkNewRepository;
 import com.jlm.homework.repository.WrongTitleBookRepository;
 import com.jlm.homework.repository.WrongTitleStatisticsRepository;
 import com.jlm.homework.service.IWrongTitleStatisticsService;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +30,9 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
 
     @Resource
     private StudentsHomeworkNewRepository studentsHomeworkNewRepository;
+
+    @Autowired
+    private StudentFeignClient studentFeignClient;
 
 
     public void createWrongTitleStatistics(Long homeworkPublishId,Long classId){
@@ -107,5 +115,6 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
         }
         return wrongTitleStatisticsRepository.findAll(Example.of(wrongTitleBook),pageable);
     }
+
 
 }

@@ -828,7 +828,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }
                 }else if(m<=60){
                     if(auditNumMap.containsKey(60)){
-                        auditNumMap.put(60,auditNumMap.get(30)+1);
+                        auditNumMap.put(60,auditNumMap.get(60)+1);
                     }else{
                         auditNumMap.put(60,1);
                     }
@@ -846,27 +846,28 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }
                 }
 
-                //今日
-                String createDate = sdf.format(studentsHomework.getCreateTime());
-                String className = studentsHomework.getClassesName();
-                if(today.equals(createDate)){
-                    if(classTotalMap.containsKey(className)){
-                        classTotalMap.put(className,classTotalMap.get(className) + 1);
-                    }else {
-                        classTotalMap.put(className,1);
-                    }
-                }
-                if(studentsHomework.getSubmitTime()!=null){
-                    String day = sdf.format(studentsHomework.getSubmitTime());
-                    if(day.equals(today)){
-                        if(classSubmitMap.containsKey(className)){
-                            classSubmitMap.put(className,classSubmitMap.get(className)+1);
-                        }else{
-                            classSubmitMap.put(className,1);
-                        }
-                    }
-                }
 
+
+            }
+            //今日
+            String createDate = sdf.format(studentsHomework.getCreateTime());
+            String className = studentsHomework.getClassesName();
+            if(today.equals(createDate)){
+                if(classTotalMap.containsKey(className)){
+                    classTotalMap.put(className,classTotalMap.get(className) + 1);
+                }else {
+                    classTotalMap.put(className,1);
+                }
+            }
+            if(studentsHomework.getSubmitTime()!=null){
+                String day = sdf.format(studentsHomework.getSubmitTime());
+                if(day.equals(today)){
+                    if(classSubmitMap.containsKey(className)){
+                        classSubmitMap.put(className,classSubmitMap.get(className)+1);
+                    }else{
+                        classSubmitMap.put(className,1);
+                    }
+                }
             }
             if(studentsHomework.getAuditTime()!=null){
                 String auditDate = sdf.format(studentsHomework.getAuditTime());
@@ -926,20 +927,11 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         }
         schoolHomeworkData.setTodayHomeworkSubmit(todayHomeworkSubmit);
         //今日审批
-        Specification<HomeworkPublish> specification = new Specification<HomeworkPublish>() {
-
-            @Override
-            public Predicate toPredicate(Root<HomeworkPublish> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                List<Predicate> list = new ArrayList<>();
-                if(!publishHomeworkIdList.isEmpty()){
-                    Predicate predicate = criteriaBuilder.in(root.get("id").in(publishHomeworkIdList));
-                    list.add(predicate);
-                }
-                Predicate[] p =  new Predicate[list.size()];
-                return criteriaBuilder.and(list.toArray(p));
-            }
-        };
-        List<HomeworkPublish> publishList=homeworkPublishRepository.findAll(specification);
+        List<HomeworkPublish> publishList=new ArrayList<>();
+        for(Long publishId:publishHomeworkIdList){
+            HomeworkPublish homeworkPublish=homeworkPublishRepository.findById(publishId).get();
+            publishList.add(homeworkPublish);
+        }
         schoolHomeworkData.setTodayHomeworkAuditList(publishList);
         ExerciseBookRequest exerciseBookRequest = new ExerciseBookRequest();
         exerciseBookRequest.setSchoolId(schoolId);
@@ -1201,6 +1193,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 if(homework.getStartTime()!=null){
                     time =Double.valueOf(homework.getSubmitTime().getTime()- homework.getStartTime().getTime())/1000/60;
 
+                }else if(homework.getCreateTime()!=null){
+                    time =Double.valueOf(homework.getSubmitTime().getTime()- homework.getCreateTime().getTime())/1000/60;
                 }
             }
             if(homework.getAuditTime()!=null){
@@ -1273,7 +1267,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         }
         statisticsDto.setCompleRate(compleRate);
         statisticsDto.setAuditRate(auditRate);
-        Double averageDuration = BigDecimal.valueOf(totalTime).divide(BigDecimal.valueOf(homeworkNum),2,BigDecimal.ROUND_HALF_UP).doubleValue() ;
+        Double averageDuration = 0.0;
+        if(submitNum!=0) {
+            averageDuration = BigDecimal.valueOf(totalTime).divide(BigDecimal.valueOf(submitNum), 2, BigDecimal.ROUND_HALF_UP).doubleValue();
+        }
         statisticsDto.setAverageDuration(averageDuration);
         Double averageAccuracy = BigDecimal.valueOf(totalAccuracy).divide(BigDecimal.valueOf(homeworkNum),2,BigDecimal.ROUND_HALF_UP).doubleValue() ;
         statisticsDto.setAverageAccuracy(averageAccuracy);
@@ -1414,6 +1411,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         if("1".equals(type)) {
             studentsHomework.setAuditStatus("1");
         }else if("2".equals(type)) {
+            studentsHomework.setEmendStatus(2);
             studentsHomework.setAuditStatus("4");
         }
 
@@ -1759,7 +1757,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         Integer submitted=0;
         Integer total=0;
         for(StudentsHomeworkNew homework:studentsHomeworkList) {
-            if(homework.getSubmitStatus()!=null&&homework.getSubmitStatus()==1){
+            if(homework.getSubmitTime()!=null){
                 submitted++;
             }else{
                 unsubmitted++;

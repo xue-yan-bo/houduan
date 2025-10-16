@@ -145,6 +145,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
 
     @Override
     public void addWrongBook(WrongTitleBook wrongTitleBook) {
+        wrongTitleBook.setCreateTime(new Date());
         wrongTitleBookRepository.save(wrongTitleBook);
         this.addClassWrongTitle(wrongTitleBook);
     }

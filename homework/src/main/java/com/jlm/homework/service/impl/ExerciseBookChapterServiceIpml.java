@@ -28,7 +28,13 @@ public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterServi
         }
         ExerciseBookChapter chapter = new ExerciseBookChapter();
         chapter.setExerciseBookId(list.get(0).getExerciseBookId());
-        exerciseBookChapterRepository.delete(chapter);
+        List<ExerciseBookChapter> chapters=exerciseBookChapterRepository.findAll(Example.of(chapter));
+        if(chapters!=null&&chapters.size()>0){
+            for(ExerciseBookChapter chapter1:chapters){
+                exerciseBookChapterRepository.deleteById(chapter1.getId());
+            }
+        }
+
         for (ExerciseBookChapter exerciseBookChapter : list) {
             List<ExerciseBookQuestion> questionList = exerciseBookChapter.getChapterDirectCropAreas();
             List<BookKnowledgePoint> knowledgePointList = exerciseBookChapter.getKnowledgePointList();
@@ -36,7 +42,12 @@ public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterServi
             BookKnowledgePoint point = new BookKnowledgePoint();
             point.setExerciseBookChapterId(exerciseBookChapter.getId());
             String knowledgePoints = "";
-            bookKnowledgePointRepository.delete(point);
+            List<BookKnowledgePoint> points=bookKnowledgePointRepository.findAll(Example.of(point));
+            if(points!=null&&points.size()>0){
+                for(BookKnowledgePoint point1:points){
+                    bookKnowledgePointRepository.deleteById(point1.getId());
+                }
+            }
             for (BookKnowledgePoint bookKnowledgePoint : knowledgePointList) {
                 bookKnowledgePoint.setExerciseBookChapterId(exerciseBookChapter.getId());
                 bookKnowledgePoint.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
@@ -46,7 +57,12 @@ public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterServi
             ExerciseBookQuestion question = new ExerciseBookQuestion();
             question.setExerciseBookId(exerciseBookChapter.getExerciseBookId());
             question.setExerciseBookChapterId(exerciseBookChapter.getId());
-            exerciseBookQuestionRepository.delete(question);
+            List<ExerciseBookQuestion> questions=exerciseBookQuestionRepository.findAll(Example.of(question));
+            if(questions!=null&&questions.size()>0){
+                for(ExerciseBookQuestion question1:questions){
+                    exerciseBookQuestionRepository.deleteById(question1.getId());
+                }
+            }
             if (questionList != null && !questionList.isEmpty()) {
                 for (ExerciseBookQuestion exerciseBookQuestion : questionList) {
                     exerciseBookQuestion.setExerciseBookChapterId(exerciseBookChapter.getId());

@@ -311,6 +311,12 @@ public class StudentsHomeworkNew implements Serializable {
      */
     @Column(name = "daily_practice_preview")
     private String dailyPracticePreview;
+
+    /**
+     * 分数
+     */
+    @Column(name = "score")
+    private Double score;
     /**
      * 作业相关文件
      */

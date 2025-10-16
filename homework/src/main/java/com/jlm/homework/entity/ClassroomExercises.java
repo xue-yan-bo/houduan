@@ -131,4 +131,9 @@ public class ClassroomExercises {
      */
     @Column(name = "exercises_type")
     private Integer exercisesType;
+    /**
+     * 使用状态，0未被引用、1被引用
+     */
+    @Column(name = "use_status")
+    private Integer useStatus;
 }

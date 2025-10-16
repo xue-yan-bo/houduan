@@ -69,15 +69,19 @@ public class StudentsHomeworkNewController {
         if(studentsHomework.getId()==null){
             throw new ParameterNewException("审批的学生作业ID不能为空!");
         }
-        studentsHomework.setAuditStatus("2");
+        //studentsHomework.setAuditStatus("2");
         studentsHomework.setAuditTime(new Date());
         
         // 根据老师审批坐标点判断学生作业错误逻辑
         judgeHomeworkErrorByCoordinate(studentsHomework);
         
-        if(studentsHomework.getEmendStatus()!=null){
+        if(studentsHomework.getEmendStatus()!=null
+                &&Integer.valueOf(2).compareTo(studentsHomework.getEmendStatus())==0){
             studentsHomework.setEmendStatus(3);
             studentsHomework.setAuditStatus("5");
+        }else if(studentsHomework.getAuditStatus()==null
+                ||Integer.valueOf(studentsHomework.getAuditStatus())<2){
+
         }
         studentsHomework=studentsHomeworkNewService.audit(studentsHomework);
         return studentsHomework;
@@ -128,13 +132,15 @@ public class StudentsHomeworkNewController {
         }
         
         // 如果有错误，设置错误相关字段
-        if (hasError) {
+        if (hasError&&studentsHomework.getEmendStatus()==null) {
             studentsHomework.setErrorReason(errorReasonBuilder.toString());
             studentsHomework.setTeacherAuditSuggest(auditSuggestBuilder.toString());
             // 设置需要订正
             studentsHomework.setEmendStatus(1);
             studentsHomework.setAuditStatus("3"); // 3表示需要订正
-        } else {
+        } else if(studentsHomework.getEmendStatus()==null
+                &&studentsHomework.getAuditStatus()!=null
+                &&Integer.valueOf(studentsHomework.getAuditStatus())<2){
             // 如果没有错误，设置为通过
             studentsHomework.setErrorReason("无错误");
             studentsHomework.setTeacherAuditSuggest("作业完成良好，继续保持！");

@@ -45,6 +45,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         }
         classroomExercises.setExercisesType(1);//随堂检测
         classroomExercises.setCreateTime(new Date());
+        classroomExercises.setUseStatus(0);
         classroomExercises =classroomExercisesRepository.save(classroomExercises);
         classroomExercisesQuestionService.saveQuestionList(classroomExercises.getId(),questionList);
         return classroomExercises.getId();
@@ -214,11 +215,11 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             classroomExercises.setDeleteFlag(0);
             if(2==exercisesType){
-                classroomExercises.setHomeworkName(teacherName+sdf.format(new Date())+"堂课互动");
+                classroomExercises.setHomeworkName(teacherName+sdf.format(new Date())+"课堂互动");
             }else if(3==exercisesType){
                 classroomExercises.setHomeworkName(teacherName+sdf.format(new Date())+"纸笔直播");
             }
-
+            classroomExercises.setUseStatus(1);
             classroomExercises.setCreateTime(new Date());
             classroomExercises =classroomExercisesRepository.save(classroomExercises);
             classroomExercisesId = classroomExercises.getId();
@@ -238,6 +239,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
                 classroomExercises.setClassNames(Arrays.asList(student.getClassesName()));
                 classroomExercises.setGradeId(student.getGradeId());
                 classroomExercises.setGradeName(student.getGradeName());
+                classroomExercises.setUseStatus(1);
                 classroomExercisesRepository.save(classroomExercises);
             }
         }
@@ -275,7 +277,8 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
                         condition = criteriaBuilder.between(root.<Date>get("publishTime"),startDate1,endDate1);
                         list.add(condition);
                     }
-
+                    Predicate condition1 = criteriaBuilder.equal(root.get("useStatus"),1);
+                    list.add(condition1);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -294,9 +297,9 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         for(ClassroomExercises exercises :exercisesList){
             if(1==exercises.getExercisesType()){
                 classroomExercisesNum++;
-            }if(2==exercises.getExercisesType()){
+            }else if(2==exercises.getExercisesType()){
                 classroomInteractionNum++;
-            }else{
+            }else if(3==exercises.getExercisesType()){
                 purePenPlowNum++;
             }
         }
@@ -348,7 +351,55 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
                         Predicate con2 = criteriaBuilder.equal(root.get("exercisesType"),exercisesType);
                         list.add(con2);
                     }
+                    Predicate con3 = criteriaBuilder.equal(root.get("useStatus"),1);
+                    list.add(con3);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
 
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        Page<ClassroomExercises> page=  classroomExercisesRepository.findAll(specification,pageable);
+        List<ClassroomExercises> exercisesList=page.getContent();
+        for(ClassroomExercises item:exercisesList){
+            List<ClassroomExercisesQuestion> questionList=classroomExercisesQuestionService.selectQuestionList(item.getId());
+            item.setQuestionList(questionList);
+        }
+        return page;
+    }
+
+    @Override
+    public Page<ClassroomExercises> selectPurchaseList(Integer pageNum, Integer pageSize, Long classId, String homeworkName, String startTime, String endTime, Integer exercisesType) {
+        pageNum = pageNum == null ? 0 : pageNum-1;
+        pageSize = pageSize == null ? 10 : pageSize;
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
+        Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Specification<ClassroomExercises> specification = new Specification<ClassroomExercises>() {
+            @Override
+            public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                try {
+                    if(classId!=null){
+                        Predicate con = criteriaBuilder.like(root.get("classIds").as(String.class),"%"+classId+"%");
+                        list.add(con);
+                    }
+                    if(StringUtils.isNotEmpty(homeworkName)){
+                        Predicate con1 = criteriaBuilder.like(root.get("homeworkName").as(String.class),"%"+homeworkName+"%");
+                        list.add(con1);
+                    }
+                    if(StringUtils.isNotEmpty(startTime)&&StringUtils.isNotEmpty(endTime)){
+                        Date startDate1 = sdf.parse(startTime);
+                        Date endDate1 = sdf.parse(endTime);
+                        Predicate condition = criteriaBuilder.between(root.<Date>get("createTime"),startDate1,endDate1);
+                        list.add(condition);
+                    }
+                    if(exercisesType!=null){
+                        Predicate con2 = criteriaBuilder.equal(root.get("exercisesType"),exercisesType);
+                        list.add(con2);
+                    }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

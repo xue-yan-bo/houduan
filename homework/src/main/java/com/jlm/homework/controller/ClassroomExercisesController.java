@@ -71,7 +71,7 @@ public class ClassroomExercisesController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             Long classId,String homeworkName,String startTime,String endTime) {
         Integer exercisesType=1;
-        Page<ClassroomExercises> list = classroomExercisesService.classInteractList(pageNum,pageSize, classId,homeworkName,startTime,endTime,exercisesType);
+        Page<ClassroomExercises> list = classroomExercisesService.selectPurchaseList(pageNum,pageSize, classId,homeworkName,startTime,endTime,exercisesType);
 
         return list;
     }

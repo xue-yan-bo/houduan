@@ -22,4 +22,6 @@ public interface IClassroomExercisesQuestionService {
     List<ClassroomExercisesQuestion> findQuestionList(Long classId, String startDate, String endDate);
 
     List<ClassroomExercisesData> classroomExercisesData(Long classroomExercisesId, Long classId);
+
+    void saveQuestion(ClassroomExercisesQuestion cpQuestion);
 }

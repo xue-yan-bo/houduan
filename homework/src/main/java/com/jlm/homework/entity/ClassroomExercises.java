@@ -136,4 +136,10 @@ public class ClassroomExercises {
      */
     @Column(name = "use_status")
     private Integer useStatus;
+
+    /**
+     * 父ID
+     */
+    @Column(name = "parent_id")
+    private Long parentId;
 }

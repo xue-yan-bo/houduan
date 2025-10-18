@@ -12,6 +12,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
@@ -180,12 +181,13 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
     @Override
     public Long teacherStartAnswer(Long classroomExercisesId, Long classId ,Long schoolId,Integer exercisesType) {
         ClassroomExercises classroomExercises = new ClassroomExercises();
-
+        Integer useStatus = 0;
         if(classroomExercisesId==0&&schoolId==null){//老师黑板现场出题
             schoolId = userService.getCurrentSchoolIdSafely();
 
         }else if(classroomExercisesId!=0){
             classroomExercises=classroomExercisesRepository.findById(classroomExercisesId).get();
+            useStatus = classroomExercises.getUseStatus();
             if(schoolId==null||schoolId==0) {
                 schoolId = classroomExercises.getSchoolId();
             }
@@ -200,8 +202,9 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         if(studentList.size()==0){
             throw new RuntimeException("该班级还没有学生呢，请检查！");
         }
+        boolean saveflag = true;
         String className = null;
-        if(classroomExercisesId==null||classroomExercisesId == 0){
+        if(classroomExercisesId==null||classroomExercisesId == 0||(1==exercisesType&&useStatus!=null&&1==useStatus)){
             CurrentUserInfo userInfo=userService.getCurrentUserInfo();
             String teacherName ="";
             if(userInfo!=null){
@@ -214,15 +217,66 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             classroomExercises.setSchoolId(schoolId);
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             classroomExercises.setDeleteFlag(0);
+            List<ClassroomExercisesQuestion> exercisesQuestionList= null;
             if(2==exercisesType){
                 classroomExercises.setHomeworkName(teacherName+sdf.format(new Date())+"课堂互动");
             }else if(3==exercisesType){
                 classroomExercises.setHomeworkName(teacherName+sdf.format(new Date())+"纸笔直播");
+            }else if(1==exercisesType&&1==useStatus&&classroomExercisesId!=null&&classroomExercisesId!=0){
+                saveflag = false;
+                exercisesQuestionList=classroomExercisesQuestionService.selectQuestionList(classroomExercisesId);
+                ClassroomExercises exercises = new ClassroomExercises();
+                exercises.setParentId(classroomExercisesId);
+                exercises.setId(null);
+                exercises.setHomeworkName(classroomExercises.getHomeworkName()+"-复测");
+                exercises.setExercisesType(exercises.getExercisesType());
+                exercises.setGradeId(classroomExercises.getGradeId());
+                exercises.setGradeName(classroomExercises.getGradeName());
+                exercises.setClassIds(classroomExercises.getClassIds());
+                exercises.setClassNames(classroomExercises.getClassNames());
+                exercises.setSchoolId(classroomExercises.getSchoolId());
+                exercises.setDeleteFlag(0);
+                exercises.setScheduledReleaseFlag(0);
+                exercises.setSubject(classroomExercises.getSubject());
+                exercises.setPublishTime(new Date());
+                exercises.setCreateTime(new Date());
+                exercises.setTestSource(classroomExercises.getTestSource());
+                exercises.setPublishStatus(classroomExercises.getPublishStatus());
+                exercises.setUseStatus(1);
+                exercises.setExercisesType(1);
+                exercises=classroomExercisesRepository.save(exercises);
+                //classroomExercises.setId(exercises.getId());
+                classroomExercisesId = exercises.getId();
+                if(exercisesQuestionList!=null&&exercisesQuestionList.size()>0){
+                    for(ClassroomExercisesQuestion question:exercisesQuestionList){
+                        ClassroomExercisesQuestion cpQuestion = new  ClassroomExercisesQuestion();
+                        cpQuestion.setId(null);
+                        cpQuestion.setClassroomExercisesId(classroomExercisesId);
+                        cpQuestion.setCreateTime(new Date());
+                        cpQuestion.setOptions(question.getOptions());
+                        cpQuestion.setParse(question.getParse());
+                        cpQuestion.setAnswer(question.getAnswer());
+                        cpQuestion.setQuestionType(question.getQuestionType());
+                        cpQuestion.setDifficulty(question.getDifficulty());
+                        cpQuestion.setClassIds(question.getClassIds());
+                        cpQuestion.setClassNames(question.getClassNames());
+                        cpQuestion.setKnowledgePoint(question.getKnowledgePoint());
+                        cpQuestion.setQuestionBankId(question.getQuestionBankId());
+                        cpQuestion.setSubject(question.getSubject());
+                        cpQuestion.setQuestionContent(question.getQuestionContent());
+                        cpQuestion.setTitleNumber(question.getTitleNumber());
+                        classroomExercisesQuestionService.saveQuestion(cpQuestion);
+                    }
+                }
             }
             classroomExercises.setUseStatus(1);
             classroomExercises.setCreateTime(new Date());
-            classroomExercises =classroomExercisesRepository.save(classroomExercises);
-            classroomExercisesId = classroomExercises.getId();
+            if(saveflag) {
+                classroomExercises = classroomExercisesRepository.save(classroomExercises);
+                classroomExercisesId = classroomExercises.getId();
+            }
+
+
 
         }else{
             ClassroomExercisesStudentRecord studentRecord=new ClassroomExercisesStudentRecord();
@@ -230,6 +284,8 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             studentRecord.setClassroomExercisesId(classroomExercisesId);
             List<ClassroomExercisesStudentRecord> recordList=classroomExercisesStudentRecordRepository.findAll(Example.of(studentRecord));
             if(recordList!=null&&recordList.size()>0){
+                classroomExercises.setUseStatus(1);
+                classroomExercisesRepository.save(classroomExercises);
                 return classroomExercisesId;
             }
         }

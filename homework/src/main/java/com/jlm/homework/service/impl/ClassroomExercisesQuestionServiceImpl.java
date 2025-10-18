@@ -291,5 +291,10 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
         return exercisesDataList;
     }
 
+    @Override
+    public void saveQuestion(ClassroomExercisesQuestion cpQuestion) {
+        classroomExercisesQuestionRepository.save(cpQuestion);
+    }
+
 
 }

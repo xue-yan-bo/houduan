@@ -147,6 +147,16 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     public void addWrongBook(WrongTitleBook wrongTitleBook) {
         wrongTitleBook.setCreateTime(new Date());
         wrongTitleBookRepository.save(wrongTitleBook);
+        Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findById(wrongTitleBook.getStudentsHomeworkId());
+        if(optional!=null&&optional.isPresent()){
+            StudentsHomeworkNew homeworkNew = optional.get();
+            if(homeworkNew.getAccuracy()==null){
+                homeworkNew.setAccuracy(98.0);
+            }else{
+                homeworkNew.setAccuracy(homeworkNew.getAccuracy()-2);
+            }
+            studentsHomeworkNewRepository.save(homeworkNew);
+        }
         this.addClassWrongTitle(wrongTitleBook);
     }
     private void addClassWrongTitle(WrongTitleBook wrongTitleBook) {

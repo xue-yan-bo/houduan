@@ -4,10 +4,12 @@ import com.jlm.homework.dto.AverageDurationAnalyse;
 import com.jlm.homework.dto.ClassroomExercisesData;
 import com.jlm.homework.dto.DayTitleVolume;
 import com.jlm.homework.dto.TitleVolumeAnalyse;
+import com.jlm.homework.entity.ClassroomExercises;
 import com.jlm.homework.entity.ClassroomExercisesQuestion;
 import com.jlm.homework.entity.ClassroomExercisesStudentAnswer;
 import com.jlm.homework.entity.QuestionBank;
 import com.jlm.homework.repository.ClassroomExercisesQuestionRepository;
+import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.service.IClassroomExercisesQuestionService;
 import com.jlm.homework.service.IQuestionBankService;
@@ -34,15 +36,21 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
     @Autowired
     private IQuestionBankService questionBankService;
     @Resource
+    private ClassroomExercisesRepository classroomExercisesRepository;
+    @Resource
     private ClassroomExercisesStudentAnswerRepository classroomExercisesStudentAnswerRepository;
     @Override
     public void saveQuestionList(Long classroomExercisesId, List<ClassroomExercisesQuestion> questionList) {
         if(questionList==null||questionList.isEmpty()){
             return;
         }
-
+        ClassroomExercises classroomExercises =classroomExercisesRepository.findById(classroomExercisesId).get();
         for(ClassroomExercisesQuestion question : questionList){
             question.setClassroomExercisesId(classroomExercisesId);
+            if(question.getClassIds()==null){
+                question.setClassIds(classroomExercises.getClassIds());
+                question.setClassNames(classroomExercises.getClassNames());
+            }
             if(question.getQuestionBankId()!=null){
                 QuestionBank questionBank=questionBankService.getById(question.getQuestionBankId());
                 if(questionBank!=null){
@@ -51,6 +59,9 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
                     question.setOptions(questionBank.getOptions());
                     question.setParse(questionBank.getParse());
                     question.setSubject(questionBank.getSubject());
+                    if("math".equals(questionBank.getSubject())){
+                        question.setSubject("数学");
+                    }
                 }
             }
             question.setCreateTime(new Date());
@@ -73,6 +84,9 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
                     exercisesQuestion.setOptions(questionBank.getOptions());
                     exercisesQuestion.setParse(questionBank.getParse());
                     exercisesQuestion.setSubject(questionBank.getSubject());
+                    if("math".equals(questionBank.getSubject())){
+                        exercisesQuestion.setSubject("数学");
+                    }
                 }
             }
 

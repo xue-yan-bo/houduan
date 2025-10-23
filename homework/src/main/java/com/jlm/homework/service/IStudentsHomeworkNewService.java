@@ -55,4 +55,6 @@ public interface IStudentsHomeworkNewService {
     StudentHomeworkDto homeworkPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 
     void saveFeedbackRecords(Long studentId,String subject ,List<StudentsWriteRecord> studentsFeedbackRecords);
+
+    String aIaudit(Long studentsHomeworkId);
 }

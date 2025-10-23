@@ -108,13 +108,13 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             }else{
                 answerNumMap.put(studentAnswer.getTitleNumber(), 1);
             }
-            if(studentAnswer.getRightFlag()==1) {//正确数量
+            if(studentAnswer.getRightFlag()!=null&&studentAnswer.getRightFlag()==1) {//正确数量
                 if (answerRightMap.containsKey(studentAnswer.getTitleNumber())) {
                     answerRightMap.put(studentAnswer.getTitleNumber(), answerRightMap.get(studentAnswer.getTitleNumber()) + 1);
                 } else {
                     answerRightMap.put(studentAnswer.getTitleNumber(), 1);
                 }
-            }else if(studentAnswer.getRightFlag()==0){//错误数量
+            }else if(studentAnswer.getRightFlag()!=null&&studentAnswer.getRightFlag()==0){//错误数量
                 if (answerWrongMap.containsKey(studentAnswer.getTitleNumber())) {
                     answerWrongMap.put(studentAnswer.getTitleNumber(), answerWrongMap.get(studentAnswer.getTitleNumber()) + 1);
                 } else {
@@ -137,18 +137,25 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
         Map<Integer,Double> answerOverviewMap = new HashMap<>();
         for(Integer key : answerNumMap.keySet()) {
             totalAnwers =  totalAnwers + answerNumMap.get(key);
-            totalRightAnswers =  totalRightAnswers + answerRightMap.get(key);
+            if(answerRightMap.get(key)!=null) {
+                totalRightAnswers = totalRightAnswers + answerRightMap.get(key);
+            }
             if(maxWrongAnswers<answerNumMap.get(key)) {
                 maxWrongNumber = key;
                 maxWrongAnswers =  answerNumMap.get(key);
             }
-            Double answerOverview= BigDecimal.valueOf(answerNumMap.get(key)).divide(BigDecimal.valueOf(studentTotal),4,BigDecimal.ROUND_HALF_UP)
-                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+            Double answerOverview = 0.0;
+            if(answerNumMap.get(key)!=null&&studentTotal!=null&&studentTotal!=0) {
+                answerOverview = BigDecimal.valueOf(answerNumMap.get(key)).divide(BigDecimal.valueOf(studentTotal), 4, BigDecimal.ROUND_HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).doubleValue();
+            }
             answerOverviewMap.put(key,answerOverview);
             StudentAnswerDto studentAnswerDto = new StudentAnswerDto();
             studentAnswerDto.setTitleNumber(key);
             studentAnswerDto.setAnswerStudentNumber(answerNumMap.get(key));
-            studentAnswerDto.setUnanswerStudentNumber(studentTotal-answerNumMap.get(key));
+            if(answerNumMap.get(key)!=null) {
+                studentAnswerDto.setUnanswerStudentNumber(studentTotal - answerNumMap.get(key));
+            }
             studentAnswerDto.setRightNumber(answerRightMap.get(key));
             studentAnswerDto.setWrongNumber(answerWrongMap.get(key));
             studentAnswerDto.setCorrectAnswer(correctAnswerMap.get(key));
@@ -160,7 +167,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                 Integer titleNumer =  Integer.getInteger(titleN);
                 if(titleNumer==key){
                     Integer answerNum=variousAnswersNum.get(ansersKey);
-                    if(answerNumMap.get(key)!=0) {
+                    if(answerNum!=null&&answerNumMap.get(key)!=null&&answerNumMap.get(key)!=0) {
                         Double answerRate = new BigDecimal(answerNum).divide(new BigDecimal(answerNumMap.get(key)), 4, BigDecimal.ROUND_HALF_UP)
                                 .multiply(BigDecimal.valueOf(100l)).doubleValue();
                         variousAnswersProp.put(answerN, answerRate);
@@ -170,7 +177,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             studentAnswerDto.setVariousAnswersProp(variousAnswersProp);
             studentAnswerDtoList.add(studentAnswerDto);
         }
-        if(totalAnwers!=0) {
+        if(totalRightAnswers!=null&&totalAnwers!=null&&totalAnwers!=0) {
             Double totalAccuracy = BigDecimal.valueOf(totalRightAnswers).divide(BigDecimal.valueOf(totalAnwers), 4, BigDecimal.ROUND_HALF_UP)
                     .multiply(BigDecimal.valueOf(100)).doubleValue();
             statistics.setTotalAccuracy(totalAccuracy);
@@ -230,7 +237,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             }else  {
                 studentKnowledgeNum.put(key,1);
             }
-            if(studentAnswer.getRightFlag()==1){
+            if(studentAnswer.getRightFlag()!=null&&studentAnswer.getRightFlag()==1){
                 if(studentKnowledgeRightNum.containsKey(key)){
                     studentKnowledgeRightNum.put(key,studentKnowledgeRightNum.get(key)+1);
                 }else {
@@ -248,6 +255,9 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             String studentId = key.split(":")[0];
             String knowledgePoint = key.split(":")[1];
             String subjectName = key.split(":")[2];
+            if(StringUtils.isEmpty(knowledgePoint)&&StringUtils.isEmpty(studentId)){
+                continue;
+            }
             studentKnowledgePointAnalysis.setKnowledgePoint(knowledgePoint);
             studentKnowledgePointAnalysis.setSubject(subjectName);
             studentKnowledgePointAnalysis.setStudentId(studentId);
@@ -256,9 +266,12 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             }else {
                 knowledgeTotalMap.put(knowledgePoint,1);
             }
-            Double masteryRate = BigDecimal.valueOf(studentKnowledgeRightNum.get(key))
-                    .divide(BigDecimal.valueOf(studentKnowledgeNum.get(key)),4,BigDecimal.ROUND_HALF_UP)
-                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+            Double masteryRate = 0.0;
+            if(studentKnowledgeRightNum.get(key)!=null&&studentKnowledgeNum.get(key)!=null&&studentKnowledgeNum.get(key)!=0) {
+                masteryRate = BigDecimal.valueOf(studentKnowledgeRightNum.get(key))
+                        .divide(BigDecimal.valueOf(studentKnowledgeNum.get(key)), 4, BigDecimal.ROUND_HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).doubleValue();
+            }
             if(Double.valueOf(100).equals(masteryRate)){
                 if(knowledgeNumMap.containsKey(knowledgePoint)){
                     knowledgeNumMap.put(knowledgePoint,knowledgeNumMap.get(knowledgePoint)+1);
@@ -269,8 +282,10 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             studentKnowledgePointAnalysis.setMasteryRate(masteryRate);
             studentKnowledgePointAnalysis.setStudentName(studentNameMap.get(studentId));
             String classInfo=classMap.get(studentId);
-            studentKnowledgePointAnalysis.setClassId(Long.valueOf(classInfo.split(":")[0]));
-            studentKnowledgePointAnalysis.setClassName(classInfo.split(":")[1]);
+            if(StringUtils.isNotEmpty(classInfo)&&classInfo.contains(":")) {
+                studentKnowledgePointAnalysis.setClassId(Long.valueOf(classInfo.split(":")[0]));
+                studentKnowledgePointAnalysis.setClassName(classInfo.split(":")[1]);
+            }
             studentKnowledgePointAnalysisList.add(studentKnowledgePointAnalysis);
         }
         Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNum);
@@ -283,9 +298,13 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             KnowledgePointWholeAnalysis  knowledgePointWholeAnalysis = new KnowledgePointWholeAnalysis();
             knowledgePointWholeAnalysis.setKnowledgePoint(key2);
             knowledgePointWholeAnalysis.setMasterQuantity(knowledgeNumMap.get(key2));
-            Double masteryRate = BigDecimal.valueOf(knowledgeNumMap.get(key2))
-                    .divide(BigDecimal.valueOf(knowledgeTotalMap.get(key2)),4,BigDecimal.ROUND_HALF_UP)
-                    .multiply(BigDecimal.valueOf(100)).doubleValue();
+            Double masteryRate = 0.0;
+            if(knowledgeNumMap.get(key2)!=null&&knowledgeTotalMap.get(key2)!=null&&knowledgeTotalMap.get(key2)!=0){
+                masteryRate = BigDecimal.valueOf(knowledgeNumMap.get(key2))
+                        .divide(BigDecimal.valueOf(knowledgeTotalMap.get(key2)),4,BigDecimal.ROUND_HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).doubleValue();
+            }
+
             knowledgePointWholeAnalysis.setMasteryRate(masteryRate);
             wholeAnalysisList.add(knowledgePointWholeAnalysis);
         }

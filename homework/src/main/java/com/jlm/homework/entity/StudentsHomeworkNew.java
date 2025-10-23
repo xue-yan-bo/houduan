@@ -318,6 +318,16 @@ public class StudentsHomeworkNew implements Serializable {
     @Column(name = "score")
     private Double score;
     /**
+     * AI批阅结果
+     */
+    @Column(name = "ai_audit")
+    private String aiAudit;
+    /**
+     * AI批阅订正结果
+     */
+    @Column(name = "ai_audit2")
+    private String aiAudit2;
+    /**
      * 作业相关文件
      */
     @Transient

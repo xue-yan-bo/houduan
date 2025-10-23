@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 // 客户端处理线程
 public class ClientHandler implements Runnable {
     
-    public static int save_size = 1500;
+    public static int save_size = 2000;
     public static Long homeId = null;
     public static Integer page_num = null;
     public static MenuT pCurrentMenu = null; //当前菜单
@@ -153,7 +153,7 @@ public class ClientHandler implements Runnable {
                                     writeRecord.setTimestamp(result.getTimestamp());
                                     studentsWriteRecords.add(writeRecord);
                                     if(studentsWriteRecords.size()>=save_size&&homeId!=null&&page_num!=null){
-                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeId,"1", page_num, studentsWriteRecords,true);
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeId,"1", page_num, studentsWriteRecords,false);
                                         studentsWriteRecords = new ArrayList<>();
                                     }
                                 }else if(emendflag&&pCurrentMenu!=null){//订正
@@ -165,7 +165,7 @@ public class ClientHandler implements Runnable {
                                     writeRecord.setTimestamp(result.getTimestamp());
                                     studentsEmendRecords.add(writeRecord);
                                     if(studentsEmendRecords.size()>=save_size&&homeId!=null&&page_num!=null){
-                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeId,"2", page_num, studentsEmendRecords,true);
+                                        studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeId,"2", page_num, studentsEmendRecords,false);
                                         studentsEmendRecords = new ArrayList<>();
                                     }
                                 }else if(feedbackflag&&pCurrentMenu!=null){//反馈
@@ -268,8 +268,8 @@ public class ClientHandler implements Runnable {
                                                 if(board.getSubject().trim().equals(name)){
                                                     String homeworkName = board.getHomeworkName();
                                                     studentsHomeworkNewService.saveStartTime(board.getHomeworkId());
-                                                    homeId = board.getHomeworkId();
-                                                    page_num = 1;
+                                                    //homeId = board.getHomeworkId();
+                                                    //page_num = 1;
                                                     if((board.getPageSize()!=null&&board.getPageSize()>0)){
                                                         for(int i=0;i<board.getPageSize();i++){
                                                             String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName+" " +(i+1);
@@ -290,6 +290,19 @@ public class ClientHandler implements Runnable {
                                             pCurrentMenu.setShowEndItem(itemTList.size());
                                             pCurrentMenu.setSelectItem(0);
                                             nMenuUpdate(out,writer);
+                                            if(pCurrentMenu!=null) {
+                                                MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                                if (itemT.getObjectId() != null) {
+                                                    String name1 = itemT.getDesc();
+                                                    homeId = itemT.getObjectId();
+                                                    if (name1.contains(" ")) {
+                                                        int num = name1.lastIndexOf(" ");
+                                                        page_num = Integer.valueOf(name1.substring(num + 1, name1.length()));
+                                                    } else {
+                                                        page_num = 1;
+                                                    }
+                                                }
+                                            }
                                         }else {
                                             System.out.println("没有相关作业！");
 
@@ -337,8 +350,8 @@ public class ClientHandler implements Runnable {
                                                 String name = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem()).getDesc();
                                                 if(board.getSubject().equals(name)){
                                                     String homeworkName = board.getHomeworkName();
-                                                    homeId = board.getHomeworkId();
-                                                    page_num = 1;
+                                                    //homeId = board.getHomeworkId();
+                                                    //page_num = 1;
                                                     if((board.getPageSize()!=null&&board.getPageSize()>0)){
                                                         for(int i=0;i<board.getPageSize();i++){
                                                             String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName +" " +(i+1);
@@ -359,6 +372,19 @@ public class ClientHandler implements Runnable {
                                             pCurrentMenu.setShowEndItem(itemTList.size());
                                             pCurrentMenu.setSelectItem(0);
                                             nMenuUpdate(out,writer);
+                                            if(pCurrentMenu!=null) {
+                                                MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                                if (itemT.getObjectId() != null) {
+                                                    String name1 = itemT.getDesc();
+                                                    homeId = itemT.getObjectId();
+                                                    if (name1.contains(" ")) {
+                                                        int num = name1.lastIndexOf(" ");
+                                                        page_num = Integer.valueOf(name1.substring(num + 1, name1.length()));
+                                                    } else {
+                                                        page_num = 1;
+                                                    }
+                                                }
+                                            }
                                         }
                                     }else {
                                         //保存作业记录
@@ -861,15 +887,17 @@ public class ClientHandler implements Runnable {
                                 }else{
                                     messagingTemplate.convertAndSend("/topic/lastPage", relation.getUserId());
                                 }
-                                MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
-                                if(itemT.getObjectId()!=null) {
-                                    String name = itemT.getDesc();
-                                    homeId = itemT.getObjectId();
-                                    if (name.contains(" ")) {
-                                        int num = name.lastIndexOf(" ");
-                                        page_num = Integer.valueOf(name.substring(num + 1, name.length()));
-                                    } else {
-                                        page_num = 1;
+                                if(pCurrentMenu!=null) {
+                                    MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                    if (itemT.getObjectId() != null) {
+                                        String name = itemT.getDesc();
+                                        homeId = itemT.getObjectId();
+                                        if (name.contains(" ")) {
+                                            int num = name.lastIndexOf(" ");
+                                            page_num = Integer.valueOf(name.substring(num + 1, name.length()));
+                                        } else {
+                                            page_num = 1;
+                                        }
                                     }
                                 }
                             }
@@ -998,15 +1026,17 @@ public class ClientHandler implements Runnable {
                                 }else{
                                     messagingTemplate.convertAndSend("/topic/nextPage", relation.getUserId());
                                 }
-                                MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
-                                if(itemT.getObjectId()!=null) {
-                                    String name = itemT.getDesc();
-                                    homeId = itemT.getObjectId();
-                                    if (name.contains(" ")) {
-                                        int num = name.lastIndexOf(" ");
-                                        page_num = Integer.valueOf(name.substring(num + 1, name.length()));
-                                    } else {
-                                        page_num = 1;
+                                if(pCurrentMenu!=null) {
+                                    MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                    if (itemT.getObjectId() != null) {
+                                        String name = itemT.getDesc();
+                                        homeId = itemT.getObjectId();
+                                        if (name.contains(" ")) {
+                                            int num = name.lastIndexOf(" ");
+                                            page_num = Integer.valueOf(name.substring(num + 1, name.length()));
+                                        } else {
+                                            page_num = 1;
+                                        }
                                     }
                                 }
                             }

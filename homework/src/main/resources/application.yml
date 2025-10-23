@@ -177,3 +177,7 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+
+zhipu:
+  ai:
+    api-key: "7abc333508dd4d71b83dcb6f5a511eee.rjwsPZyUfDN5abhn"

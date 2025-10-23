@@ -41,12 +41,20 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
     @Override
     public Long create(ClassroomExercises classroomExercises) {
         List<ClassroomExercisesQuestion> questionList=classroomExercises.getQuestionList();
+        ClassroomExercises finalClassroomExercises = classroomExercises;
+        questionList.stream().forEach(question->{
+            question.setClassIds(finalClassroomExercises.getClassIds());
+            question.setClassNames(finalClassroomExercises.getClassNames());
+        });
         if(classroomExercises.getSchoolId()==null){
             classroomExercises.setSchoolId(userService.getCurrentSchoolIdSafely());
         }
         classroomExercises.setExercisesType(1);//随堂检测
         classroomExercises.setCreateTime(new Date());
         classroomExercises.setUseStatus(0);
+        if("math".equals(classroomExercises.getSubject())){
+            classroomExercises.setSubject("数学");
+        }
         classroomExercises =classroomExercisesRepository.save(classroomExercises);
         classroomExercisesQuestionService.saveQuestionList(classroomExercises.getId(),questionList);
         return classroomExercises.getId();
@@ -161,10 +169,12 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
                 int rightNum = 0;
                 int wrongNum = 0;
                 for (ClassroomExercisesStudentAnswer studentAnswer : studentAnswerList) {
-                    if (1 == studentAnswer.getRightFlag()) {
-                        rightNum++;
-                    } else if (0 == studentAnswer.getRightFlag()) {
-                        wrongNum++;
+                    if(studentAnswer.getRightFlag()!=null) {
+                        if (1 == studentAnswer.getRightFlag()) {
+                            rightNum++;
+                        } else if (0 == studentAnswer.getRightFlag()) {
+                            wrongNum++;
+                        }
                     }
                 }
                 exerciseTypeErrorRate.setRightNum(rightNum);
@@ -351,12 +361,14 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         int classroomExercisesNum = 0;
         int classroomInteractionNum =0;
         for(ClassroomExercises exercises :exercisesList){
-            if(1==exercises.getExercisesType()){
-                classroomExercisesNum++;
-            }else if(2==exercises.getExercisesType()){
-                classroomInteractionNum++;
-            }else if(3==exercises.getExercisesType()){
-                purePenPlowNum++;
+            if(exercises.getExercisesType()!=null) {
+                if (1 == exercises.getExercisesType()) {
+                    classroomExercisesNum++;
+                } else if (2 == exercises.getExercisesType()) {
+                    classroomInteractionNum++;
+                } else if (3 == exercises.getExercisesType()) {
+                    purePenPlowNum++;
+                }
             }
         }
         classroomData.setClassroomExercisesNum(classroomExercisesNum);

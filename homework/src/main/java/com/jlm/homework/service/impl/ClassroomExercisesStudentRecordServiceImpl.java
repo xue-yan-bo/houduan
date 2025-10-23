@@ -1,14 +1,19 @@
 package com.jlm.homework.service.impl;
 
+import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.dto.ExerciseWriteData;
 import com.jlm.homework.dto.StudentWriteDto;
-import com.jlm.homework.entity.ClassroomExercises;
-import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
-import com.jlm.homework.entity.ClassroomStudentWriteData;
+import com.jlm.homework.entity.*;
 import com.jlm.homework.repository.ClassroomExercisesRepository;
+import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentRecordRepository;
+import com.jlm.homework.service.IClassroomExercisesQuestionService;
 import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
 import com.jlm.homework.service.IClassroomStudentWriteDataService;
+import com.jlm.homework.util.CoordinateImageGenerator;
+import com.jlm.homework.util.ImageOverlayUtil;
+import com.jlm.homework.util.WritingDataRenderer;
+import com.jlm.homework.util.ZhipuAIImageAnalysisUtil;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -21,8 +26,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExercisesStudentRecordService {
@@ -32,6 +42,15 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
     private ClassroomExercisesStudentRecordRepository classroomExercisesStudentRecordRepository;
     @Autowired
     private IClassroomStudentWriteDataService classroomStudentWriteDataService;
+
+    @Autowired
+    private IClassroomExercisesQuestionService classroomExercisesQuestionService;
+
+    @Autowired
+    private ZhipuAIConfig zhipuAIConfig;
+
+    @Resource
+    private ClassroomExercisesStudentAnswerRepository classroomExercisesStudentAnswerRepository;
     @Override
     public List<ClassroomExercisesStudentRecord> selectByClassroomExercisesId(Long classroomExercisesId) {
         ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
@@ -131,6 +150,31 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             }
 
         }
+        final Long exercisesId =classroomExercisesId;
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<Integer> future = executor.submit(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
+                for (ClassroomExercisesStudentRecord record : studentRecordList) {
+                    aiParseWriteRecord(record.getId());
+                }
+
+                return 123;
+            }
+        });
+
+        System.out.println("Doing something else while waiting for the result...");
+        Integer result = null; // 获取结果，如果结果尚未计算完成，将阻塞等待
+        try {
+            result = future.get();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("Result: " + result);
+        executor.shutdown();
     }
 
     @Override
@@ -170,6 +214,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         }
         return recordList;
     }
+
+
 
     public List<ClassroomExercisesStudentRecord> selectByClassAndDate(Long classroomExercisesId, Long classId, Date date) {
         ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
@@ -224,5 +270,103 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             studentRecord.setStudentWriteDataList(writeDataList);
         }
         return recordList;
+    }
+
+    @Override
+    public void aiParseWriteRecord(Long studentRecordId) {
+        Optional<ClassroomExercisesStudentRecord> optional=classroomExercisesStudentRecordRepository.findById(studentRecordId);
+        if(optional==null||!optional.isPresent()){
+            return;
+        }
+        ClassroomExercisesStudentRecord studentRecord = optional.get();
+        try {
+            List<ClassroomExercisesQuestion> questionList = classroomExercisesQuestionService.selectQuestionList(studentRecord.getClassroomExercisesId());
+            List<ClassroomStudentWriteData> writeDataList=classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
+            if(writeDataList==null||writeDataList.size()<=0){
+                return;
+            }
+            BufferedImage image = WritingDataRenderer.drawWritingData(writeDataList.get(0).getStudentsWriteRecords(), 794, 1123);
+            String imageUrl = "随堂检测-"+studentRecord.getClassroomExercisesId()+"-"+studentRecord.getStudentName()+".png";
+            CoordinateImageGenerator.saveImage(image,imageUrl);
+            ZhipuAIImageAnalysisUtil aiImageAnalysisUtil=zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            String aiText=aiImageAnalysisUtil.recognizeTextInImage(imageUrl);
+            System.out.println("学生书写答案："+aiText);
+            if(aiText!=null){
+                String text=aiText.substring(aiText.indexOf("<|begin_of_box|>")+16,aiText.indexOf("<|end_of_box|>"));
+                List<ClassroomExercisesStudentAnswer> studentAnswerList = new ArrayList<>();
+                Pattern pattern = Pattern.compile("(\\d+)([^\\d]*)(\\d+)");
+                Matcher matcher = pattern.matcher(text);
+                if(text.length()==questionList.size()){
+                    for(int i=0;i<questionList.size();i++){
+                        ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
+                        answer.setTitleNumber(i+1);
+                        answer.setStudentAnswer(text.substring(i,i+1));
+                        studentAnswerList.add(answer);
+                    }
+                }else if(matcher.find()){
+                    Pattern pattern1 = Pattern.compile("(\\d+)\\s*([A-Z])");
+                    Matcher matcher1 = pattern1.matcher(text);
+
+                    while (matcher1.find()) {
+                        String key = matcher1.group(1);
+                        String value = matcher1.group(2);
+                        ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
+                        answer.setTitleNumber(Integer.getInteger(key));
+                        answer.setStudentAnswer(value);
+                        studentAnswerList.add(answer);
+                    }
+                }else if(text.contains(" ")){
+                    List<String> answerList = Arrays.stream(text.split(" ")).toList();
+                    for (int i = 0; i < answerList.size(); i++) {
+                        ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
+                        answer.setTitleNumber(i+1);
+                        answer.setStudentAnswer(answerList.get(i));
+                        studentAnswerList.add(answer);
+                    }
+                }else if(text.contains("\\n")){
+                    String[] lines = text.split("\\r?\\n");
+                    for (int i=0;i<lines.length;i++) {
+                        String line = lines[i];
+                        // 去除空格并检查是否有字母
+                        String trimmed = line.trim();
+                        if (!trimmed.isEmpty() && trimmed.length() >= 1) {
+                            ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
+                            answer.setTitleNumber(i+1);
+                            answer.setStudentAnswer(trimmed);
+                            studentAnswerList.add(answer);
+                        }
+                    }
+                }else {
+                    System.out.println("无法解析学生所写");
+                }
+                if(studentAnswerList.size()>0){
+                    for(ClassroomExercisesStudentAnswer answer:studentAnswerList){
+                        for(ClassroomExercisesQuestion question:questionList){
+                            if(answer.getTitleNumber().compareTo(question.getTitleNumber())==0){
+                                answer.setExerciseQuestionId(question.getId());
+                                answer.setStudentId(studentRecord.getStudentId()+"");
+                                answer.setStudentName(studentRecord.getStudentName());
+                                answer.setClassroomExercisesId(studentRecord.getClassroomExercisesId());
+                                answer.setClassId(studentRecord.getClassId());
+                                answer.setClassName(studentRecord.getClassName());
+                                answer.setExercisesStudentRecordId(studentRecord.getId());
+                                answer.setQuestionContent(question.getQuestionContent());
+                                answer.setAnswer(question.getAnswer());
+                                answer.setSubject(question.getSubject());
+                                answer.setKnowledgePoint(question.getKnowledgePoint());
+                                if(question.getAnswer()!=null&&question.getAnswer().equals(answer.getStudentAnswer())){
+                                    answer.setRightFlag(1);
+                                }
+                                answer.setCreateTime(new Date());
+                                classroomExercisesStudentAnswerRepository.save(answer);
+                            }
+
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

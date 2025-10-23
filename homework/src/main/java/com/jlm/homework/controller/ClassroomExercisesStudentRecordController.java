@@ -93,4 +93,14 @@ public class ClassroomExercisesStudentRecordController {
         List<StudentWriteDto> recordList= classroomExercisesStudentRecordService.getLiveStreamtRecord(classroomExercisesId,classId);
         return recordList;
     }
+
+
+    /**
+     * AI分析学生书写记录
+     */
+    @GetMapping("/aiParseWriteRecord")
+    @Operation(summary = "AI分析学生书写记录")
+    public void aiParseWriteRecord(Long studentRecordId){
+        classroomExercisesStudentRecordService.aiParseWriteRecord(studentRecordId);
+    }
 }

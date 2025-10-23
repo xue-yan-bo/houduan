@@ -18,4 +18,6 @@ public interface IClassroomExercisesStudentRecordService {
     List<StudentWriteDto> getLiveStreamtRecord(Long classroomExercisesId, Long classId);
 
     List<ClassroomExercisesStudentRecord> getClassInteractRecord(Long classroomExercisesId, Long classId);
+
+    void aiParseWriteRecord(Long studentRecordId);
 }

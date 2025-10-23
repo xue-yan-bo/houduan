@@ -1,12 +1,16 @@
 package com.jlm.homework.service.impl;
 
+import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
 import com.jlm.homework.feign.SchoolFeignClient;
 import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.*;
 import com.jlm.homework.service.*;
+import com.jlm.homework.util.CoordinateImageGenerator;
+import com.jlm.homework.util.ImageOverlayUtil;
 import com.jlm.homework.util.PiontSignUtil;
+import com.jlm.homework.util.ZhipuAIImageAnalysisUtil;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -21,12 +25,14 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
+import java.util.concurrent.*;
 
 @Slf4j
 @Service
@@ -57,6 +63,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Autowired
     private IStudentFeedbackService studentFeedbackService;
+
+    @Autowired
+    private ZhipuAIConfig zhipuAIConfig;
 
     @Override
     public void createStudentsHomeworkByHomeworkPublish(HomeworkPublish homeworkPublish) {
@@ -101,6 +110,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         studentsHomework.setDailyPracticeld(homeworkPublish.getDailyPracticeld());
                         studentsHomework.setDailyPracticeName(homeworkPublish.getDailyPracticeName());
                         studentsHomework.setDailyPracticePreview(homeworkPublish.getDailyPracticePreview());
+                        studentsHomework.setChapter(homeworkPublish.getChapter());
                         studentsHomeworkNewRepository.save(studentsHomework);
                     }
                 } catch (Exception e) {
@@ -1420,7 +1430,66 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         HomeworkPublish homeworkPublish=homeworkPublishRepository.findById(studentsHomework.getHomeworkPublishId()).get();
         homeworkPublish.setAuditStatus(1);
         homeworkPublishRepository.save(homeworkPublish);
+        //异步处理AI智能审批
+        if(studentsHomework.getTopicImages()!=null&&studentsHomework.getTopicImages().size()>0&&isFinish){
+            ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            Future<Integer> future = executor.submit(new Callable<Integer>() {
+                @Override
+                public Integer call() throws Exception {
+                    String titleImage = "";
+                    for(int i=0;i<studentsHomework.getTopicImages().size();i++) {
 
+                        String imageUrl = studentsHomework.getTopicImages().get(i);
+                        List<HomeworkStudentWriteData> homeworkStudentWriteDataList=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),type);
+
+                        for(HomeworkStudentWriteData writeData1:homeworkStudentWriteDataList){
+                            if(writeData1.getPageNum()==(i+1)) {
+                                List<StudentsWriteRecord> records = writeData1.getStudentsWriteRecords();
+                                BufferedImage resultImage = ImageOverlayUtil.overlayWritingDataFromUrl(imageUrl, records);
+                                // 保存结果图片
+                                String imageName = studentsHomework.getHomeworkPublishName()+"_"+studentsHomework.getStudentName()+"_"+writeData1.getPageNum()+"页作业.png";
+                                CoordinateImageGenerator.saveImage(resultImage, imageName);
+                                //试题识别
+                                titleImage = util.recognizePiyueInImage(imageName);
+                                if(titleImage.contains("<|begin_of_box|>")){
+                                    titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
+                                }
+                                if(titleImage.contains("<|end_of_box|>")){
+                                    titleImage = titleImage.substring(0,titleImage.indexOf("<|end_of_box|>"));
+                                }
+                                System.out.println("批阅结果: " + titleImage);
+                                titleImage = titleImage +"\n"+titleImage;
+                                File imageFile = new File(imageName);
+                                imageFile.delete();
+                            }
+                        }
+                    }
+                    if("1".equals(type)){
+                        studentsHomework.setAiAudit(titleImage);
+                    }else if("2".equals(type)){
+                        studentsHomework.setAiAudit2(titleImage);
+                    }
+
+                    studentsHomeworkNewRepository.save(studentsHomework);
+                    return 123;
+                }
+            });
+
+            System.out.println("Doing something else while waiting for the result...");
+            Integer result = null; // 获取结果，如果结果尚未计算完成，将阻塞等待
+            try {
+                result = future.get();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Result: " + result);
+
+            executor.shutdown();
+
+        }
     }
 
     @Override
@@ -1789,5 +1858,54 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         feedback.setCreateTime(now);
         studentFeedbackService.save(feedback);
         log.info("--------完成反馈信息保存-------");
+    }
+
+    @Override
+    public String aIaudit(Long studentsHomeworkId) {
+        StudentsHomeworkNew studentsHomework = this.getById(studentsHomeworkId);
+        String auditImages = "";
+        //异步处理AI智能审批
+        if(studentsHomework.getTopicImages()!=null&&studentsHomework.getTopicImages().size()>0){
+            try {
+
+                    ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+                    for(int i=0;i<studentsHomework.getTopicImages().size();i++) {
+                        String imageUrl = studentsHomework.getTopicImages().get(i);
+                        List<HomeworkStudentWriteData> homeworkStudentWriteDataList=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"1");
+
+                        for(HomeworkStudentWriteData writeData1:homeworkStudentWriteDataList){
+                            if(writeData1.getPageNum()==(i+1)) {
+                                List<StudentsWriteRecord> records = writeData1.getStudentsWriteRecords();
+                                BufferedImage resultImage = null;
+
+                                    resultImage = ImageOverlayUtil.overlayWritingDataFromUrl(imageUrl, records);
+
+                                // 保存结果图片
+                                String imageName = studentsHomework.getHomeworkPublishName()+"_"+studentsHomework.getStudentName()+"_"+writeData1.getPageNum()+"页作业.png";
+                                CoordinateImageGenerator.saveImage(resultImage, imageName);
+                                //试题识别
+
+                                String titleImage = util.recognizePiyueInImage(imageName);
+                                if(titleImage.contains("<|begin_of_box|>")){
+                                    titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
+                                }
+                                if(titleImage.contains("<|end_of_box|>")){
+                                    titleImage = titleImage.substring(0,titleImage.indexOf("<|end_of_box|>"));
+                                }
+                                System.out.println("批阅结果: " + titleImage);
+                                auditImages = auditImages +","+titleImage;
+                                //File imageFile = new File(imageName);
+                                //imageFile.delete();
+                            }
+                        }
+                    }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+        }
+        studentsHomework.setAiAudit(auditImages);
+        studentsHomeworkNewRepository.save(studentsHomework);
+        return auditImages;
     }
 }

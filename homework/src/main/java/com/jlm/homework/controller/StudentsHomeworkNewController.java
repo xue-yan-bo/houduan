@@ -202,4 +202,18 @@ public class StudentsHomeworkNewController {
         Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewService.geemendPage(pageNum,pageSize,studentsHomework);
         return studentsHomeworkList;
     }
+
+    /**
+     * 订正分页
+     * @param studentsHomeworkId
+     * @return
+     */
+    @GetMapping("/aIaudit")
+    @Operation(summary = "订正分页")
+    public String aIaudit(Long studentsHomeworkId){
+        String auditAiImage=studentsHomeworkNewService.aIaudit(studentsHomeworkId);
+        return auditAiImage;
+    }
+
+
 }

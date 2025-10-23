@@ -60,7 +60,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             homeworkPublish.setPublishStatus(0);
         }
 
-        if(StringUtils.isNotEmpty(homeworkPublish.getSubject())) {
+        if(StringUtils.isEmpty(homeworkPublish.getSubject())) {
             String subject = null;
             if (homeworkPublish.getExerciseBookId() != null) {
                 ExerciseBookEntity exerciseBook = exerciseBookServer.findById(homeworkPublish.getExerciseBookId());

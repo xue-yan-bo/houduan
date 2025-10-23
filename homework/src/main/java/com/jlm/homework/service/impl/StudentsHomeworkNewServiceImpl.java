@@ -1438,6 +1438,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 @Override
                 public Integer call() throws Exception {
                     String titleImage = "";
+                    if(studentsHomework.getTopicImages()==null||studentsHomework.getTopicImages().size()==0){
+                        return 0;
+                    }
                     for(int i=0;i<studentsHomework.getTopicImages().size();i++) {
 
                         String imageUrl = studentsHomework.getTopicImages().get(i);

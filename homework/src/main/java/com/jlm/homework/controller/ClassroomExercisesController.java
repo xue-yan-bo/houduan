@@ -68,7 +68,7 @@ public class ClassroomExercisesController {
     @GetMapping("/queryList")
     public Page<ClassroomExercises> selectPurchaseList(
             @RequestParam(defaultValue = "1")Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(defaultValue = "100") Integer pageSize,
             Long classId,String homeworkName,String startTime,String endTime) {
         Integer exercisesType=1;
         Page<ClassroomExercises> list = classroomExercisesService.selectPurchaseList(pageNum,pageSize, classId,homeworkName,startTime,endTime,exercisesType);

@@ -27,6 +27,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -151,30 +152,17 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
 
         }
         final Long exercisesId =classroomExercisesId;
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<Integer> future = executor.submit(new Callable<Integer>() {
-            @Override
-            public Integer call() throws Exception {
+        FutureTask<String> futureTask = new FutureTask<>(() -> {
                 List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
                 for (ClassroomExercisesStudentRecord record : studentRecordList) {
                     aiParseWriteRecord(record.getId());
                 }
 
-                return 123;
-            }
-        });
+                return "异步-OK";
 
-        System.out.println("Doing something else while waiting for the result...");
-        Integer result = null; // 获取结果，如果结果尚未计算完成，将阻塞等待
-        try {
-            result = future.get();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        }
-        System.out.println("Result: " + result);
-        executor.shutdown();
+        });
+        Thread thread = new Thread(futureTask);
+        thread.start();
     }
 
     @Override
@@ -294,7 +282,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             if(aiText!=null){
                 String text=aiText.substring(aiText.indexOf("<|begin_of_box|>")+16,aiText.indexOf("<|end_of_box|>"));
                 List<ClassroomExercisesStudentAnswer> studentAnswerList = new ArrayList<>();
-                Pattern pattern = Pattern.compile("(\\d+)([^\\d]*)(\\d+)");
+                Pattern pattern = Pattern.compile("(\\d+、)(.+?)(?=\\d+、|$)");
                 Matcher matcher = pattern.matcher(text);
                 if(text.length()==questionList.size()){
                     for(int i=0;i<questionList.size();i++){
@@ -304,16 +292,22 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                         studentAnswerList.add(answer);
                     }
                 }else if(matcher.find()){
-                    Pattern pattern1 = Pattern.compile("(\\d+)\\s*([A-Z])");
-                    Matcher matcher1 = pattern1.matcher(text);
+                    while (matcher.find()) {
+                        try {
+                            Integer key = Integer.parseInt(matcher.group(1).trim());
+                            String value = matcher.group(2).trim();
 
-                    while (matcher1.find()) {
-                        String key = matcher1.group(1);
-                        String value = matcher1.group(2);
-                        ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
-                        answer.setTitleNumber(Integer.getInteger(key));
-                        answer.setStudentAnswer(value);
-                        studentAnswerList.add(answer);
+                            if (!value.isEmpty()) {
+                                ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
+                                answer.setTitleNumber(key);
+                                answer.setStudentAnswer(value);
+                                studentAnswerList.add(answer);
+
+                            }
+                        } catch (NumberFormatException e) {
+                            // 忽略无法解析为数字的情况
+                            continue;
+                        }
                     }
                 }else if(text.contains(" ")){
                     List<String> answerList = Arrays.stream(text.split(" ")).toList();
@@ -354,7 +348,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                                 answer.setAnswer(question.getAnswer());
                                 answer.setSubject(question.getSubject());
                                 answer.setKnowledgePoint(question.getKnowledgePoint());
-                                if(question.getAnswer()!=null&&question.getAnswer().equals(answer.getStudentAnswer())){
+                                if(question.getAnswer()!=null&&(question.getAnswer().contains(answer.getStudentAnswer())||
+                                        answer.getStudentAnswer().contains(question.getAnswer()))){
                                     answer.setRightFlag(1);
                                 }
                                 answer.setCreateTime(new Date());
@@ -365,6 +360,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                     }
                 }
             }
+            File file = new File(imageUrl);
+            file.delete();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

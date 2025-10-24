@@ -238,7 +238,10 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
                 ClassroomExercises exercises = new ClassroomExercises();
                 exercises.setParentId(classroomExercisesId);
                 exercises.setId(null);
-                exercises.setHomeworkName(classroomExercises.getHomeworkName()+"-复测");
+                ClassroomExercises countSaerch = new ClassroomExercises();
+                countSaerch.setParentId(classroomExercisesId);
+                long count=classroomExercisesRepository.count(Example.of(countSaerch));
+                exercises.setHomeworkName(classroomExercises.getHomeworkName()+"-复测"+(count+1));
                 exercises.setExercisesType(exercises.getExercisesType());
                 exercises.setGradeId(classroomExercises.getGradeId());
                 exercises.setGradeName(classroomExercises.getGradeName());
@@ -441,7 +444,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
     @Override
     public Page<ClassroomExercises> selectPurchaseList(Integer pageNum, Integer pageSize, Long classId, String homeworkName, String startTime, String endTime, Integer exercisesType) {
         pageNum = pageNum == null ? 0 : pageNum-1;
-        pageSize = pageSize == null ? 10 : pageSize;
+        pageSize = pageSize == null ? 100 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

@@ -2,6 +2,7 @@ package com.jlm.homework.util;
 
 import com.jlm.homework.entity.HomeworkStudentWriteData;
 import com.jlm.homework.entity.StudentsWriteRecord;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.xwpf.usermodel.*;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import javax.imageio.ImageIO;
@@ -28,6 +29,9 @@ public class DocumentAndCoordinatesRenderer {
      * @throws IOException 下载异常
      */
     public static File downloadDocument(String documentUrl) throws IOException {
+        if(StringUtils.isEmpty(documentUrl)){
+            throw new IOException("文档URL不能为空！");
+        }
         File tempFile = File.createTempFile("temp_doc", ".docx");
         tempFile.deleteOnExit(); // JVM退出时自动删除
         

@@ -69,7 +69,7 @@ public class StudentsHomeworkNewController {
         if(studentsHomework.getId()==null){
             throw new ParameterNewException("审批的学生作业ID不能为空!");
         }
-        //studentsHomework.setAuditStatus("2");
+
         studentsHomework.setAuditTime(new Date());
         
         // 根据老师审批坐标点判断学生作业错误逻辑
@@ -81,7 +81,7 @@ public class StudentsHomeworkNewController {
             studentsHomework.setAuditStatus("5");
         }else if(studentsHomework.getAuditStatus()==null
                 ||Integer.valueOf(studentsHomework.getAuditStatus())<2){
-
+            studentsHomework.setAuditStatus("2");
         }
         studentsHomework=studentsHomeworkNewService.audit(studentsHomework);
         return studentsHomework;

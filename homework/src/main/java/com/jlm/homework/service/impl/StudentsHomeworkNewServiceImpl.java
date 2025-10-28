@@ -1431,66 +1431,75 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         //异步处理AI智能审批
         if(isFinish){
             FutureTask<String> futureTask = new FutureTask<>(() -> {
+                String auditImages = "";
+                //异步处理AI智能审批
                 ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
-
-                String titleImage = "";
                 List<HomeworkStudentWriteData> homeworkStudentWriteDataList=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),type);
                 if(studentsHomework.getTopicImages()!=null&&studentsHomework.getTopicImages().size()>0
                         &&!studentsHomework.getTopicImagesStr().endsWith(".docx")&&!studentsHomework.getTopicImagesStr().endsWith(".doc")){
+                    try {
+                        for(int i=0;i<studentsHomework.getTopicImages().size();i++) {
+                            String imageUrl = studentsHomework.getTopicImages().get(i);
 
-                    for(int i=0;i<studentsHomework.getTopicImages().size();i++) {
 
-                        String imageUrl = studentsHomework.getTopicImages().get(i);
+                            for(HomeworkStudentWriteData writeData1:homeworkStudentWriteDataList){
+                                if(writeData1.getPageNum()==(i+1)) {
+                                    List<StudentsWriteRecord> records = writeData1.getStudentsWriteRecords();
+                                    BufferedImage resultImage = null;
 
+                                    resultImage = ImageOverlayUtil.overlayWritingDataFromUrl(imageUrl, records);
 
-                        for(HomeworkStudentWriteData writeData1:homeworkStudentWriteDataList){
-                            if(writeData1.getPageNum()==(i+1)) {
-                                List<StudentsWriteRecord> records = writeData1.getStudentsWriteRecords();
-                                if(records!=null&&records.size()>0) {
-                                    BufferedImage resultImage = ImageOverlayUtil.overlayWritingDataFromUrl(imageUrl, records);
                                     // 保存结果图片
-                                    String imageName = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + "_" + writeData1.getPageNum() + "页作业.png";
+                                    String imageName = studentsHomework.getHomeworkPublishName()+"_"+studentsHomework.getStudentName()+"_"+writeData1.getPageNum()+"页作业.png";
                                     CoordinateImageGenerator.saveImage(resultImage, imageName);
                                     //试题识别
-                                    titleImage = util.recognizePiyueInImage(imageName);
-                                    if (titleImage.contains("<|begin_of_box|>")) {
-                                        titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>") + 16);
+
+                                    String titleImage = util.recognizePiyueInImage(imageName);
+                                    if(titleImage.contains("<|begin_of_box|>")){
+                                        titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
                                     }
-                                    if (titleImage.contains("<|end_of_box|>")) {
-                                        titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+                                    if(titleImage.contains("<|end_of_box|>")){
+                                        titleImage = titleImage.substring(0,titleImage.indexOf("<|end_of_box|>"));
                                     }
                                     System.out.println("批阅结果: " + titleImage);
-                                    titleImage = titleImage + "\n" + titleImage;
+                                    auditImages = auditImages +","+titleImage;
                                     File imageFile = new File(imageName);
                                     imageFile.delete();
                                 }
                             }
                         }
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
 
-                    }
-                }else if(StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())){
+                }else if(StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())) {
+                    try {
+                        String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
+                        DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
+                        //试题识别
 
-                    String outputPath = studentsHomework.getHomeworkPublishName()+"_"+studentsHomework.getStudentName()+".png";
-                    DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
-                    //试题识别
-                    titleImage = util.recognizePiyueInImage(outputPath);
-                    if(titleImage.contains("<|begin_of_box|>")){
-                        titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
+                        String titleImage = util.recognizePiyueInImage(outputPath);
+                        if(titleImage.contains("<|begin_of_box|>")){
+                            titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
+                        }
+                        if(titleImage.contains("<|end_of_box|>")){
+                            titleImage = titleImage.substring(0,titleImage.indexOf("<|end_of_box|>"));
+                        }
+                        System.out.println("批阅结果: " + titleImage);
+                        auditImages = auditImages + "\n" + titleImage;
+                        File imageFile = new File(outputPath);
+                        imageFile.delete();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } catch (InvalidFormatException ife){
+                        throw new RuntimeException(ife);
                     }
-                    if(titleImage.contains("<|end_of_box|>")){
-                        titleImage = titleImage.substring(0,titleImage.indexOf("<|end_of_box|>"));
-                    }
-                    System.out.println("批阅结果: " + titleImage);
-                    titleImage = titleImage +"\n"+titleImage;
-                    File imageFile = new File(outputPath);
-                    imageFile.delete();
                 }
-                if("1".equals(type)){
-                    studentsHomework.setAiAudit(titleImage);
+                if("1".equals(type)) {
+                    studentsHomework.setAiAudit(auditImages);
                 }else if("2".equals(type)){
-                    studentsHomework.setAiAudit2(titleImage);
+                    studentsHomework.setAiAudit2(auditImages);
                 }
-
                 studentsHomeworkNewRepository.save(studentsHomework);
                 return "异步-OK";
 

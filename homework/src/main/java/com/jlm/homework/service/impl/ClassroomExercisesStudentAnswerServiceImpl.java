@@ -120,6 +120,12 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                 } else {
                     answerWrongMap.put(studentAnswer.getTitleNumber(), 1);
                 }
+            }else {
+                if (answerWrongMap.containsKey(studentAnswer.getTitleNumber())) {
+                    answerWrongMap.put(studentAnswer.getTitleNumber(), answerWrongMap.get(studentAnswer.getTitleNumber()) + 1);
+                } else {
+                    answerWrongMap.put(studentAnswer.getTitleNumber(), 1);
+                }
             }
             String key = studentAnswer.getTitleNumber() +":"+studentAnswer.getAnswer();
             if(variousAnswersNum.containsKey(key)) {//答题数量

@@ -181,8 +181,11 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         Optional<WrongTitleStatistics> optional=wrongTitleStatisticsRepository.findOne(Example.of(search));
         if(optional!=null&&optional.isPresent()){
             WrongTitleStatistics wrongTitleStatistics = optional.get();
-            Integer wrongStudentNum = wrongTitleStatistics.getWrongStudentNum()+1;
-            wrongTitleStatistics.setWrongStudentNum(wrongStudentNum);
+            Integer wrongStudentNum = 0;
+            if(wrongTitleStatistics.getWrongStudentNum()!=null) {
+                wrongStudentNum = wrongTitleStatistics.getWrongStudentNum() + 1;
+                wrongTitleStatistics.setWrongStudentNum(wrongStudentNum);
+            }
             if(studentNum!=0){
                 Double wrongRate = BigDecimal.valueOf(wrongStudentNum).divide(BigDecimal.valueOf(studentNum),4,BigDecimal.ROUND_HALF_UP)
                         .doubleValue();

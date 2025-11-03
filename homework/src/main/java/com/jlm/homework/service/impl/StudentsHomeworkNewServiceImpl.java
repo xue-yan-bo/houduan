@@ -517,7 +517,11 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         }
         for(String key:averageAccuracyMap.keySet()){
             AverageAccuracyDto averageAccuracyDto = new AverageAccuracyDto();
-            Double averageAccuracy = averageAccuracyMap.get(key)/studentNumMap.get(key);
+            Double averageAccuracy = 0.0;
+            if(studentNumMap.get(key)!=null&&studentNumMap.get(key)!=0) {
+                averageAccuracy = BigDecimal.valueOf(averageAccuracyMap.get(key)).divide(BigDecimal.valueOf(studentNumMap.get(key)), 2, BigDecimal.ROUND_HALF_UP).doubleValue();
+
+            }
             averageAccuracyDto.setAverageAccuracy(averageAccuracy);
             Long classesId = Long.valueOf(key.substring(0,key.indexOf(",")));
             averageAccuracyDto.setClassId(classesId);
@@ -1155,6 +1159,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     public HomeworkStatisticsDto getHomeworkStatistics(String startDate, String endDate) {
         HomeworkStatisticsDto statisticsDto = new HomeworkStatisticsDto();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat sdf1 = new SimpleDateFormat("yyyy-MM-dd");
         Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
 
             @Override
@@ -1193,6 +1198,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         Map<String,Integer> gradeDayNum= new HashMap<>();
         Map<String,Integer> subjectTimeNumMap = new HashMap<>();
         Map<String,Integer> gradeDayAuditNum= new HashMap<>();
+        Map<String,Integer> gradeDaySubmitNum= new HashMap<>();
         Map<String,Integer> subjectNumMap = new HashMap<>();
         for (StudentsHomeworkNew homework : studentsHomeworkList) {
             Double time = 0.0;
@@ -1204,12 +1210,21 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 }else if(homework.getCreateTime()!=null){
                     time =Double.valueOf(homework.getSubmitTime().getTime()- homework.getCreateTime().getTime())/1000/60;
                 }
+                if(time>60.0){
+                    time = 60.0;
+                }
+                String gradeDaySubmit = homework.getGrade()+":"+sdf1.format(homework.getSubmitTime());
+                if(gradeDaySubmitNum.containsKey(gradeDaySubmit)){
+                    gradeDaySubmitNum.put(gradeDaySubmit,gradeDaySubmitNum.get(gradeDaySubmit)+1);
+                }else{
+                    gradeDaySubmitNum.put(gradeDaySubmit,1);
+                }
             }
             if(homework.getAuditTime()!=null){
                 auditNum ++;
             }
             totalTime += time;
-            String gradeday = homework.getGrade()+":"+sdf.format(homework.getCreateTime());
+            String gradeday = homework.getGrade()+":"+sdf1.format(homework.getCreateTime());
             //前期为了有数据，准确度设置为0
             if(homework.getAccuracy()==null){
                 homework.setAccuracy(0.0);
@@ -1249,7 +1264,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             }
 
             if(homework.getAuditTime()!=null){
-                String gradeDayAudit = homework.getGrade()+":"+sdf.format(homework.getAuditTime());
+                String gradeDayAudit = homework.getGrade()+":"+sdf1.format(homework.getAuditTime());
                 if(gradeDayAuditNum.containsKey(gradeDayAudit)){
                     gradeDayAuditNum.put(gradeDayAudit,gradeDayAuditNum.get(gradeDayAudit)+1);
                 }else{
@@ -1315,7 +1330,26 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         }
         statisticsDto.setSubjectTimeNumList(subjectTimeNumList);
         /**
-         * 作业正批阅比率
+         * 作业批阅比率
+         */
+        List<GradeAuditRate> gradeSubmitRateList =new ArrayList<>();
+        for(String gradeDay:gradeDaySubmitNum.keySet()){
+            GradeAuditRate gradeAuditRate =  new GradeAuditRate();
+            String grade = gradeDay.split(":")[0];
+            String day = gradeDay.split(":")[1];
+            gradeAuditRate.setGrade(grade);
+            gradeAuditRate.setDay(day);
+            BigDecimal submitRate = BigDecimal.ZERO;
+            if(gradeDaySubmitNum.containsKey(gradeDay)&&gradeDayNum.containsKey(gradeDay)) {
+                submitRate = BigDecimal.valueOf(gradeDaySubmitNum.get(gradeDay)).divide(BigDecimal.valueOf(gradeDayNum.get(gradeDay)),4,BigDecimal.ROUND_HALF_UP)
+                        .multiply(BigDecimal.valueOf(100));
+            }
+            gradeAuditRate.setAuditRate(submitRate);
+            gradeSubmitRateList.add(gradeAuditRate);
+        }
+        statisticsDto.setGradeSubmitRateList(gradeSubmitRateList);
+        /**
+         * 作业批阅比率
          */
         List<GradeAuditRate> gradeAuditRateList =new ArrayList<>();
         for(String gradeDay:gradeDayAuditNum.keySet()){
@@ -1326,8 +1360,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             gradeAuditRate.setDay(day);
             BigDecimal auditRate1 = BigDecimal.ZERO;
             if(gradeDayAuditNum.containsKey(gradeDay)&&gradeDayNum.containsKey(gradeDay)) {
-                auditRate = BigDecimal.valueOf(gradeDayAuditNum.get(gradeDay) / gradeDayNum.get(gradeDay))
-                        .setScale(4, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100));
+                auditRate1 = BigDecimal.valueOf(gradeDayAuditNum.get(gradeDay)).divide(BigDecimal.valueOf(gradeDayNum.get(gradeDay)),4,BigDecimal.ROUND_HALF_UP)
+                        .multiply(BigDecimal.valueOf(100));
             }
             gradeAuditRate.setAuditRate(auditRate1);
             gradeAuditRateList.add(gradeAuditRate);
@@ -1494,6 +1528,20 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     } catch (InvalidFormatException ife){
                         throw new RuntimeException(ife);
                     }
+                }
+
+                String prompt = "根据以上批阅，给出学生答题的整体分数和正确率，返回格式为 分数： ，正确率： ";
+                String scoreAndAccuracy = util.analyze(prompt);
+                System.out.println("批阅得分: " + scoreAndAccuracy);
+                try {
+                    String scoreStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("分数：")+3,scoreAndAccuracy.indexOf("，正确率")).trim();
+                    String accuracyStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("正确率：")+4).trim();
+                    Double score = Double.parseDouble(scoreStr);
+                    Double accuracy = Double.parseDouble(accuracyStr);
+                    studentsHomework.setScore(score);
+                    studentsHomework.setAccuracy(accuracy);
+                } catch (Exception e) {
+                    System.out.println("+++++解析分数错误 " + scoreAndAccuracy);
                 }
                 if("1".equals(type)) {
                     studentsHomework.setAiAudit(auditImages);
@@ -1945,6 +1993,20 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             } catch (InvalidFormatException ife){
                 throw new RuntimeException(ife);
             }
+        }
+
+        try {
+            String prompt = "根据以上批阅，给出学生答题的整体分数和正确率，返回格式为 分数： ，正确率： ";
+            String scoreAndAccuracy = util.analyze(prompt);
+            System.out.println("批阅得分: " + scoreAndAccuracy);
+            String scoreStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("分数：")+3,scoreAndAccuracy.indexOf("，正确率")).trim();
+            String accuracyStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("正确率：")+4).trim();
+            Double score = Double.parseDouble(scoreStr);
+            Double accuracy = Double.parseDouble(accuracyStr);
+            studentsHomework.setScore(score);
+            studentsHomework.setAccuracy(accuracy);
+        } catch (Exception e) {
+            System.out.println("+++++解析分数错误++++++++++ "+e.getMessage() );
         }
         studentsHomework.setAiAudit(auditImages);
         studentsHomeworkNewRepository.save(studentsHomework);

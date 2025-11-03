@@ -277,88 +277,58 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             String imageUrl = "随堂检测-"+studentRecord.getClassroomExercisesId()+"-"+studentRecord.getStudentName()+".png";
             CoordinateImageGenerator.saveImage(image,imageUrl);
             ZhipuAIImageAnalysisUtil aiImageAnalysisUtil=zhipuAIConfig.zhipuAIImageAnalysisUtil();
-            String aiText=aiImageAnalysisUtil.recognizeTextInImage(imageUrl);
+            String prompt = "请根据试题和学生书写笔记，批阅学生作答结果，试题如下：\n";
+            for(ClassroomExercisesQuestion question:questionList){
+                String titleStr = question.getTitleNumber() +".  "+question.getQuestionContent() + " 标准答案："+question.getAnswer()+" \n";
+                prompt = prompt + titleStr;
+            }
+            prompt = prompt + " 请输出题号、学生作答文字内容、批阅结果，格式如 1.  作答:A ，批阅:正确。";
+            String aiText=aiImageAnalysisUtil.analyzeImage(imageUrl,prompt);
             System.out.println("学生书写答案："+aiText);
             if(aiText!=null) {
                 String text = aiText.substring(aiText.indexOf("<|begin_of_box|>") + 16, aiText.indexOf("<|end_of_box|>"));
                 List<ClassroomExercisesStudentAnswer> studentAnswerList = new ArrayList<>();
-                if ((text.contains("1. ")||text.contains("1、 "))
-                        && (text.contains("2. ")||text.contains("2、 "))
-                        && (text.contains("3. ")||text.contains("3、 "))) {
+                if ((questionList.size()<=2 &&(text.contains("1. ")||text.contains("1、 ")||text.contains(":1")))
+                        || ((text.contains("1. ")||text.contains("1、 ")||text.contains(":1"))
+                        && (text.contains("2. ")||text.contains("2、 ")||text.contains(":1"))
+                        && (text.contains("3. ")||text.contains("3、 ")||text.contains(":1")))) {
                     for (int i = 0; i < questionList.size(); i++) {
-                        ClassroomExercisesQuestion question = questionList.get(i);
-                        if (question.getTitleNumber() != null && (text.contains(question.getTitleNumber() + ". ") || text.contains(question.getTitleNumber() + "、 "))) {
-                            Integer nextTitleNumber = question.getTitleNumber() + 1;
-                            String answerStr = null;
-                            if (text.contains(nextTitleNumber + ". ")) {
-                                answerStr = text.substring(text.indexOf(question.getTitleNumber() + ". ") + 3, text.indexOf(nextTitleNumber + ". "));
-                            } else if (text.contains(nextTitleNumber + "、 ")) {
-                                answerStr = text.substring(text.indexOf(question.getTitleNumber() + "、 ") + 3, text.indexOf(nextTitleNumber + "、 "));
-                            } else if (text.contains(question.getTitleNumber() + ". ")) {
-                                answerStr = text.substring(text.indexOf(question.getTitleNumber() + ". ") + 3);
-                            } else if (text.contains(question.getTitleNumber() + "、 ")) {
-                                answerStr = text.substring(text.indexOf(question.getTitleNumber() + "、 ") + 3);
-                            }
-                            ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
-                            answer.setTitleNumber(question.getTitleNumber());
-                            answer.setStudentAnswer(answerStr);
-                            studentAnswerList.add(answer);
-
-                        }
-                    }
-                } else {
-                    Pattern pattern = Pattern.compile("(\\d+、)(.+?)(?=\\d+、|$)");
-                    Matcher matcher = pattern.matcher(text);
-                    if (text.length() == questionList.size()) {
-                        for (int i = 0; i < questionList.size(); i++) {
-                            ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
-                            answer.setTitleNumber(i + 1);
-                            answer.setStudentAnswer(text.substring(i, i + 1));
-                            studentAnswerList.add(answer);
-                        }
-                    } else if (matcher.find()) {
-                        while (matcher.find()) {
-                            try {
-                                Integer key = Integer.parseInt(matcher.group(1).trim());
-                                String value = matcher.group(2).trim();
-
-                                if (!value.isEmpty()) {
-                                    ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
-                                    answer.setTitleNumber(key);
-                                    answer.setStudentAnswer(value);
-                                    studentAnswerList.add(answer);
+                        try {
+                            ClassroomExercisesQuestion question = questionList.get(i);
+                            if (question.getTitleNumber() != null && (text.contains(question.getTitleNumber() + ". ") || text.contains(question.getTitleNumber() + "、 "))) {
+                                Integer nextTitleNumber = question.getTitleNumber() + 1;
+                                String answerStr = null;
+                                if (text.contains(nextTitleNumber + ". ")) {
+                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + ". ") + 3, text.indexOf(nextTitleNumber + ". "));
+                                } else if (text.contains(nextTitleNumber + "、 ")) {
+                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + "、 ") + 3, text.indexOf(nextTitleNumber + "、 "));
+                                } else if (text.contains(question.getTitleNumber() + ". ")) {
+                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + ". ") + 3);
+                                } else if (text.contains(question.getTitleNumber() + "、 ")) {
+                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + "、 ") + 3);
+                                }
+                                String studAnswer = "";
+                                String piyue="";
+                                if(answerStr.contains("作答")&&answerStr.contains("批阅")){
+                                    studAnswer = answerStr.substring(answerStr.indexOf("作答")+3,answerStr.indexOf("批阅"));
+                                    piyue = answerStr.substring(answerStr.indexOf("批阅"));
 
                                 }
-                            } catch (NumberFormatException e) {
-                                // 忽略无法解析为数字的情况
-                                continue;
-                            }
-                        }
-                    } else if (text.contains(" ")) {
-                        List<String> answerList = Arrays.stream(text.split(" ")).toList();
-                        for (int i = 0; i < answerList.size(); i++) {
-                            ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
-                            answer.setTitleNumber(i + 1);
-                            answer.setStudentAnswer(answerList.get(i));
-                            studentAnswerList.add(answer);
-                        }
-                    } else if (text.contains("\\n")) {
-                        String[] lines = text.split("\\r?\\n");
-                        for (int i = 0; i < lines.length; i++) {
-                            String line = lines[i];
-                            // 去除空格并检查是否有字母
-                            String trimmed = line.trim();
-                            if (!trimmed.isEmpty() && trimmed.length() >= 1) {
                                 ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
-                                answer.setTitleNumber(i + 1);
-                                answer.setStudentAnswer(trimmed);
+                                answer.setTitleNumber(question.getTitleNumber());
+                                answer.setStudentAnswer(studAnswer);
+                                if(piyue.contains("正确")){
+                                    answer.setRightFlag(1);
+                                }else{
+                                    answer.setRightFlag(0);
+                                }
                                 studentAnswerList.add(answer);
-                            }
-                        }
-                    } else {
-                        System.out.println("无法解析学生所写");
-                    }
 
+                            }
+                        } catch (Exception e) {
+                            continue;
+                        }
+                    }
                 }
                 if (studentAnswerList.size() > 0) {
                     for (ClassroomExercisesStudentAnswer answer : studentAnswerList) {
@@ -375,24 +345,6 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                                 answer.setAnswer(question.getAnswer());
                                 answer.setSubject(question.getSubject());
                                 answer.setKnowledgePoint(question.getKnowledgePoint());
-                                String answerStr=question.getAnswer();
-                                if(!answerStr.isEmpty()&&answerStr.contains(",")){
-                                    answerStr = answerStr.replace(","," ");
-                                }else if(answerStr.contains("，")){
-                                    answerStr = answerStr.replace("，"," ");
-                                }
-                                String studentAnswer = answer.getStudentAnswer();
-                                if(!studentAnswer.isEmpty()&&studentAnswer.contains("\n")){
-                                    studentAnswer = studentAnswer.replace("\n","");
-                                }
-                                if (question.getAnswer() != null && (question.getAnswer().contains(studentAnswer) ||
-                                        answer.getStudentAnswer().contains(question.getAnswer()))
-                                        ||answerStr.contains(studentAnswer.trim())
-                                        ||answer.getStudentAnswer().contains(answerStr.trim())) {
-                                    answer.setRightFlag(1);
-                                }else if(question.getAnswer() != null){
-                                    answer.setRightFlag(0);
-                                }
                                 answer.setCreateTime(new Date());
                                 classroomExercisesStudentAnswerRepository.save(answer);
                             }

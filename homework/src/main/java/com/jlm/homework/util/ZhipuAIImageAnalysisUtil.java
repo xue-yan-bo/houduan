@@ -99,6 +99,49 @@ public class ZhipuAIImageAnalysisUtil {
     }
 
     /**
+     * 分析问题内容
+     * @param prompt 提示词，指导模型如何分析图片
+     * @return 分析结果JSON字符串
+     * @throws IOException 文件读取或API调用异常
+     */
+    public String analyze(String prompt) throws IOException {
+
+
+        // 1. 准备请求参数
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+
+        // 构建messages参数
+        Map<String, Object> message = new HashMap<>();
+        message.put("role", "user");
+
+        // 构建content数组，包含文本和图片
+        Map<String, String> textContent = new HashMap<>();
+        textContent.put("type", "text");
+        textContent.put("text", prompt);
+
+
+
+        // 根据智谱AI API要求，image_url应该是一个对象而不是字符串
+        message.put("content", new Object[]{textContent});
+        requestBody.put("messages", new Object[]{message});
+
+        // 3. 设置请求头
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + apiKey);
+        headers.set("Accept", "application/json");
+
+        // 4. 发送请求
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                BASE_URL + "chat/completions", request, String.class);
+
+        // 5. 处理响应
+        return parseAndFormatResponse(response.getBody());
+    }
+
+    /**
      * 简化的图片描述生成
      * @param imagePath 图片文件路径
      * @return 图片内容描述

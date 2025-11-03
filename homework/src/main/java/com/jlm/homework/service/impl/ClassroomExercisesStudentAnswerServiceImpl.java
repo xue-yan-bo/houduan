@@ -127,7 +127,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                     answerWrongMap.put(studentAnswer.getTitleNumber(), 1);
                 }
             }
-            String key = studentAnswer.getTitleNumber() +":"+studentAnswer.getAnswer();
+            String key = studentAnswer.getTitleNumber() +":"+studentAnswer.getStudentAnswer();
             if(variousAnswersNum.containsKey(key)) {//答题数量
                 variousAnswersNum.put(key, variousAnswersNum.get(key) + 1);
             }else{
@@ -162,16 +162,19 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             if(answerNumMap.get(key)!=null) {
                 studentAnswerDto.setUnanswerStudentNumber(studentTotal - answerNumMap.get(key));
             }
-            studentAnswerDto.setRightNumber(answerRightMap.get(key));
-            studentAnswerDto.setWrongNumber(answerWrongMap.get(key));
+            studentAnswerDto.setRightNumber(answerRightMap.get(key)==null?0:answerRightMap.get(key));
+            studentAnswerDto.setWrongNumber(answerWrongMap.get(key)==null?0:answerWrongMap.get(key));
             studentAnswerDto.setCorrectAnswer(correctAnswerMap.get(key));
             Map<String,Double> variousAnswersProp = new HashMap<>();
 
             for(String ansersKey:variousAnswersNum.keySet()){
                 String titleN = ansersKey.split(":")[0];
                 String answerN = ansersKey.split(":")[1];
-                Integer titleNumer =  Integer.getInteger(titleN);
-                if(titleNumer==key){
+                if("null".equals(titleN)) {
+                    continue;
+                }
+                Integer titleNumer =  Integer.parseInt(titleN);
+                if(titleNumer!=null&&titleNumer.compareTo(key)==0){
                     Integer answerNum=variousAnswersNum.get(ansersKey);
                     if(answerNum!=null&&answerNumMap.get(key)!=null&&answerNumMap.get(key)!=0) {
                         Double answerRate = new BigDecimal(answerNum).divide(new BigDecimal(answerNumMap.get(key)), 4, BigDecimal.ROUND_HALF_UP)
@@ -188,6 +191,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                     .multiply(BigDecimal.valueOf(100)).doubleValue();
             statistics.setTotalAccuracy(totalAccuracy);
         }
+        statistics.setAnswerOverviewMap(answerOverviewMap);
         statistics.setMaxWrongRateQuestion(maxWrongNumber);
         statistics.setStudentAnswerDtoList(studentAnswerDtoList);
         return statistics;
@@ -234,8 +238,10 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
         List<ClassroomExercisesStudentAnswer> studentAnswerList = classroomExercisesStudentAnswerRepository.findAll(specification);
         Map<String,Integer> studentKnowledgeNum = new HashMap<>();
         Map<String,Integer> studentKnowledgeRightNum = new HashMap<>();
+        Map<String,Integer> knowledgetitleMap = new HashMap<>();
         Map<String,String> studentNameMap = new HashMap<>();
         Map<String,String> classMap = new HashMap<>();
+        Map<String,Integer> knowledgeRightNumMap = new HashMap<>();
         for(ClassroomExercisesStudentAnswer studentAnswer:studentAnswerList){
             String key = studentAnswer.getStudentId()+":"+studentAnswer.getKnowledgePoint()+":"+studentAnswer.getSubject();
             if(studentKnowledgeNum.containsKey(key)){
@@ -243,11 +249,22 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             }else  {
                 studentKnowledgeNum.put(key,1);
             }
+            String knowledgePoint = studentAnswer.getKnowledgePoint();
+            if(knowledgetitleMap.containsKey(knowledgePoint)){
+                knowledgetitleMap.put(knowledgePoint,knowledgetitleMap.get(knowledgePoint)+1);
+            }else{
+                knowledgetitleMap.put(knowledgePoint,1);
+            }
             if(studentAnswer.getRightFlag()!=null&&studentAnswer.getRightFlag()==1){
                 if(studentKnowledgeRightNum.containsKey(key)){
                     studentKnowledgeRightNum.put(key,studentKnowledgeRightNum.get(key)+1);
                 }else {
                     studentKnowledgeRightNum.put(key,1);
+                }
+                if(knowledgeRightNumMap.containsKey(knowledgePoint)){
+                    knowledgeRightNumMap.put(knowledgePoint,knowledgeRightNumMap.get(knowledgePoint)+1);
+                }else {
+                    knowledgeRightNumMap.put(knowledgePoint,1);
                 }
             }
             studentNameMap.put(studentAnswer.getStudentId(),studentAnswer.getStudentName());
@@ -255,6 +272,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
         }
         List<StudentKnowledgePointAnalysis> studentKnowledgePointAnalysisList = new ArrayList<>();
         Map<String,Integer> knowledgeNumMap = new HashMap<>();
+
         Map<String,Integer> knowledgeTotalMap = new HashMap<>();
         for(String key:studentKnowledgeNum.keySet()){
             StudentKnowledgePointAnalysis  studentKnowledgePointAnalysis =new StudentKnowledgePointAnalysis();
@@ -275,16 +293,17 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             Double masteryRate = 0.0;
             if(studentKnowledgeRightNum.get(key)!=null&&studentKnowledgeNum.get(key)!=null&&studentKnowledgeNum.get(key)!=0) {
                 masteryRate = BigDecimal.valueOf(studentKnowledgeRightNum.get(key))
-                        .divide(BigDecimal.valueOf(studentKnowledgeNum.get(key)), 4, BigDecimal.ROUND_HALF_UP)
+                        .divide(BigDecimal.valueOf(studentKnowledgeNum.get(key)), 6, BigDecimal.ROUND_HALF_UP)
                         .multiply(BigDecimal.valueOf(100)).doubleValue();
             }
-            if(Double.valueOf(100).equals(masteryRate)){
+            if(Double.valueOf(70).equals(masteryRate)){
                 if(knowledgeNumMap.containsKey(knowledgePoint)){
                     knowledgeNumMap.put(knowledgePoint,knowledgeNumMap.get(knowledgePoint)+1);
                 }else {
                     knowledgeNumMap.put(knowledgePoint,1);
                 }
             }
+
             studentKnowledgePointAnalysis.setMasteryRate(masteryRate);
             studentKnowledgePointAnalysis.setStudentName(studentNameMap.get(studentId));
             String classInfo=classMap.get(studentId);
@@ -303,11 +322,11 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
         for(String key2:knowledgeTotalMap.keySet()){
             KnowledgePointWholeAnalysis  knowledgePointWholeAnalysis = new KnowledgePointWholeAnalysis();
             knowledgePointWholeAnalysis.setKnowledgePoint(key2);
-            knowledgePointWholeAnalysis.setMasterQuantity(knowledgeNumMap.get(key2));
+            knowledgePointWholeAnalysis.setMasterQuantity(knowledgeNumMap.get(key2)==null?0:knowledgeNumMap.get(key2));
             Double masteryRate = 0.0;
-            if(knowledgeNumMap.get(key2)!=null&&knowledgeTotalMap.get(key2)!=null&&knowledgeTotalMap.get(key2)!=0){
-                masteryRate = BigDecimal.valueOf(knowledgeNumMap.get(key2))
-                        .divide(BigDecimal.valueOf(knowledgeTotalMap.get(key2)),4,BigDecimal.ROUND_HALF_UP)
+            if(knowledgeRightNumMap.get(key2)!=null&&knowledgeRightNumMap.get(key2)!=null&&knowledgetitleMap.get(key2)!=0){
+                masteryRate = BigDecimal.valueOf(knowledgeRightNumMap.get(key2))
+                        .divide(BigDecimal.valueOf(knowledgetitleMap.get(key2)),6,BigDecimal.ROUND_HALF_UP)
                         .multiply(BigDecimal.valueOf(100)).doubleValue();
             }
 

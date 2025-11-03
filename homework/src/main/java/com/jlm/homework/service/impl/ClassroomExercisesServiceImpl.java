@@ -179,7 +179,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
                 }
                 exerciseTypeErrorRate.setRightNum(rightNum);
                 Double errorRate = BigDecimal.valueOf(wrongNum).divide(BigDecimal.valueOf(studentAnswerList.size()), 4, BigDecimal.ROUND_HALF_UP)
-                        .multiply(BigDecimal.valueOf(100)).doubleValue();
+                        .doubleValue();
                 exerciseTypeErrorRate.setErrorRate(errorRate);
             }
             typeErrorRateList.add(exerciseTypeErrorRate);

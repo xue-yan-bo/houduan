@@ -39,7 +39,11 @@ public class HomeworkStatisticsDto {
      */
     private List<SubjectTimeNum> subjectTimeNumList;
     /**
-     * 作业正批阅比率
+     * 作业提交比率
+     */
+    private List<GradeAuditRate> gradeSubmitRateList;
+    /**
+     * 作业批阅比率
      */
     private List<GradeAuditRate> gradeAuditRateList;
     /**

@@ -975,17 +975,22 @@ public class ClientHandler implements Runnable {
                                     }
                                     if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
                                         Integer selectItem = pCurrentMenu.getSelectItem();
-                                        selectItem = selectItem + 1;
-                                        pCurrentMenu.setSelectItem(selectItem);
+                                        if(selectItem+1<pCurrentMenu.getPItems().size()) {
+                                            selectItem = selectItem + 1;
+                                            pCurrentMenu.setSelectItem(selectItem);
 
-                                        nMenuUpdate(out, writer);
+                                            nMenuUpdate(out, writer);
+                                        }
                                     } else {
                                         if (pCurrentMenu.getSelectItem() < pCurrentMenu.getMaxItems() - 1) {
-                                            Integer selectId = pCurrentMenu.getSelectItem() + 1;
-                                            pCurrentMenu.setShowStartItem(selectId);
-                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() + 1);
-                                            pCurrentMenu.setSelectItem(selectId);
-                                            nMenuUpdate(out, writer);
+                                            Integer selectItem = pCurrentMenu.getSelectItem();
+                                            if(selectItem+1<pCurrentMenu.getPItems().size()) {
+                                                Integer selectId = pCurrentMenu.getSelectItem() + 1;
+                                                pCurrentMenu.setShowStartItem(selectId);
+                                                pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() + 1);
+                                                pCurrentMenu.setSelectItem(selectId);
+                                                nMenuUpdate(out, writer);
+                                            }
                                         }
                                     }
 
@@ -1012,17 +1017,22 @@ public class ClientHandler implements Runnable {
                                     }
                                     if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
                                         Integer selectItem = pCurrentMenu.getSelectItem();
-                                        selectItem = selectItem + 1;
-                                        pCurrentMenu.setSelectItem(selectItem);
-                                        nMenuUpdate(out, writer);
+                                        if(selectItem+1<pCurrentMenu.getPItems().size()) {
+                                            selectItem = selectItem + 1;
+                                            pCurrentMenu.setSelectItem(selectItem);
+                                            nMenuUpdate(out, writer);
+                                        }
 
                                     } else {
                                         if (pCurrentMenu.getSelectItem() < pCurrentMenu.getMaxItems() - 1) {
-                                            Integer selectId = pCurrentMenu.getSelectItem() + 1;
-                                            pCurrentMenu.setShowStartItem(selectId);
-                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() + 1);
-                                            pCurrentMenu.setSelectItem(selectId);
-                                            nMenuUpdate(out, writer);
+                                            Integer selectItem = pCurrentMenu.getSelectItem();
+                                            if(selectItem+1<pCurrentMenu.getPItems().size()) {
+                                                Integer selectId = pCurrentMenu.getSelectItem() + 1;
+                                                pCurrentMenu.setShowStartItem(selectId);
+                                                pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() + 1);
+                                                pCurrentMenu.setSelectItem(selectId);
+                                                nMenuUpdate(out, writer);
+                                            }
                                         }
                                     }
                                 }else if(feedbackflag) {
@@ -1037,29 +1047,40 @@ public class ClientHandler implements Runnable {
                                     }
                                     if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
                                         Integer selectItem = pCurrentMenu.getSelectItem();
-                                        selectItem = selectItem + 1;
-                                        pCurrentMenu.setSelectItem(selectItem);
-                                        nMenuUpdate(out, writer);
+                                        if(selectItem+1<pCurrentMenu.getPItems().size()) {
+                                            selectItem = selectItem + 1;
+                                            pCurrentMenu.setSelectItem(selectItem);
+                                            nMenuUpdate(out, writer);
+                                        }
                                     } else {
                                         if (pCurrentMenu.getSelectItem() < pCurrentMenu.getMaxItems() - 1) {
-                                            pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem() + 1);
-                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() + 1);
-                                            pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem() + 1);
-                                            nMenuUpdate(out, writer);
+                                            Integer selectItem = pCurrentMenu.getSelectItem();
+                                            if(selectItem+1<pCurrentMenu.getPItems().size()) {
+                                                pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem() + 1);
+                                                pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() + 1);
+                                                pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem() + 1);
+                                                nMenuUpdate(out, writer);
+                                            }
                                         }
                                     }
                                 }else if(pCurrentMenu!=null&&mrnuflag){
                                     if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
                                         Integer selectItem = pCurrentMenu.getSelectItem();
-                                        selectItem = selectItem + 1;
-                                        pCurrentMenu.setSelectItem(selectItem);
-                                        nMenuUpdate(out, writer);
+                                        if(selectItem+1<pCurrentMenu.getPItems().size()){
+                                            selectItem = selectItem + 1;
+                                            pCurrentMenu.setSelectItem(selectItem);
+                                            nMenuUpdate(out, writer);
+                                        }
+
                                     } else {
                                         if (pCurrentMenu.getSelectItem() < pCurrentMenu.getMaxItems() - 1) {
-                                            pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem() + 1);
-                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() + 1);
-                                            pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem() + 1);
-                                            nMenuUpdate(out, writer);
+                                            Integer selectItem = pCurrentMenu.getSelectItem();
+                                            if(selectItem+1<pCurrentMenu.getPItems().size()) {
+                                                pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem() + 1);
+                                                pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() + 1);
+                                                pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem() + 1);
+                                                nMenuUpdate(out, writer);
+                                            }
                                         }
                                     }
 

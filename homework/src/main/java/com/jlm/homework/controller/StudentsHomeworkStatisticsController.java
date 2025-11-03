@@ -63,8 +63,9 @@ public class StudentsHomeworkStatisticsController {
             @RequestParam(defaultValue = "1")Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             String subject,Long classId,String startDate,String endDate){
-        Page<StudentsHomeworkNew>  studentsHomeworkNewList=studentsHomeworkNewService.getClassHomeworkStatistics(pageNum,pageSize,subject,classId,startDate,endDate);
-        return studentsHomeworkNewList;
+        /*Page<StudentsHomeworkNew>  studentsHomeworkNewList=studentsHomeworkNewService.getClassHomeworkStatistics(pageNum,pageSize,subject,classId,startDate,endDate);
+        return studentsHomeworkNewList;*/
+        return null;
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.jlm.homework.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.jlm.homework.entity.*;
 import com.jlm.homework.repository.HomeworkStudentWriteDataRepository;
 import com.jlm.homework.service.IHomeworkStudentWriteDataService;
@@ -76,6 +77,9 @@ public class HomeworkStudentWriteDataServiceImpl implements IHomeworkStudentWrit
                     studentWriteData.setStudentHomeworkId(writeData.getStudentHomeworkId());
                     studentWriteData.setStudentId(writeData.getStudentId());
                     studentWriteData.setPageNum(pageNum);
+                    if(studentWriteData.getOffset()==null&&writeData.getOffset()!=null){
+                        studentWriteData.setOffset(writeData.getOffset());
+                    }
                 }
                 studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
             }else{
@@ -85,6 +89,9 @@ public class HomeworkStudentWriteDataServiceImpl implements IHomeworkStudentWrit
                     studentWriteData.setStudentHomeworkId(writeData.getStudentHomeworkId());
                     studentWriteData.setStudentId(writeData.getStudentId());
                     studentWriteData.setPageNum(pageNum);
+                    if(studentWriteData.getOffset()==null&&writeData.getOffset()!=null){
+                        studentWriteData.setOffset(writeData.getOffset());
+                    }
                     studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
                 }
                 studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
@@ -95,6 +102,9 @@ public class HomeworkStudentWriteDataServiceImpl implements IHomeworkStudentWrit
                 studentWriteData.setStudentHomeworkId(writeData.getStudentHomeworkId());
                 studentWriteData.setStudentId(writeData.getStudentId());
                 studentWriteData.setPageNum(pageNum);
+                if(writeData.getOffset()!=null) {
+                    studentWriteData.setOffset(writeData.getOffset());
+                }
                 studentsWriteRecords = new ArrayList<>();
                 studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
                 studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
@@ -102,11 +112,27 @@ public class HomeworkStudentWriteDataServiceImpl implements IHomeworkStudentWrit
             //最后一个元素，list增加
             if(list.indexOf(writeData)==list.size()-1){
                 if(studentsWriteRecords!=null&&studentsWriteRecords.size()>0){
+                    if(studentWriteData.getOffset()==null&&writeData.getOffset()!=null){
+                        studentWriteData.setOffset(writeData.getOffset());
+                    }
                     studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
                     dataList.add(studentWriteData);
                 }
             }
         }
         return dataList;
+    }
+
+    @Override
+    public void updateOffset(HomeworkStudentWriteData writeData) {
+        HomeworkStudentWriteData search =  new HomeworkStudentWriteData();
+        search.setStudentHomeworkId(writeData.getStudentHomeworkId());
+        search.setPageNum(writeData.getPageNum());
+        search.setType(writeData.getType());
+        List<HomeworkStudentWriteData> writeDataList=homeworkStudentWriteDataRepository.findAll(Example.of(search));
+        for(HomeworkStudentWriteData studentWriteData:writeDataList){
+            studentWriteData.setOffset(writeData.getOffset());
+            homeworkStudentWriteDataRepository.save(studentWriteData);
+        }
     }
 }

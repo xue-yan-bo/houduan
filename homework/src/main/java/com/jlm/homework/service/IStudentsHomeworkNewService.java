@@ -57,4 +57,12 @@ public interface IStudentsHomeworkNewService {
     void saveFeedbackRecords(Long studentId,String subject ,List<StudentsWriteRecord> studentsFeedbackRecords);
 
     String aIaudit(Long studentsHomeworkId);
+
+    Long getSubmitNumByHomeworkPublishId(Long id);
+
+    void saveErrorTitleRecords(Long studentId, String subject, List<StudentsWriteRecord> uploadErrorTitleRecords);
+
+    StudentsHomeworkNew appSubmit(StudentsHomeworkNew studentsHomework);
+
+    StudentsHomeworkNew appEmendSubmit(StudentsHomeworkNew studentsHomework);
 }

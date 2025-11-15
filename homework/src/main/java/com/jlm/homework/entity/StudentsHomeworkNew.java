@@ -21,6 +21,7 @@ import java.util.List;
 @Table(name = "students_homework_new")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class StudentsHomeworkNew implements Serializable {
+    private static final long serialVersionUID = -1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -111,18 +112,13 @@ public class StudentsHomeworkNew implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date submitTime;
     /**
-     * AI审批结果
-     */
-    @Column(name = "ai_audit_results")
-    private String aiAuditResults;
-    /**
      * 创建时间
      */
     @Column(name = "create_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
     /**
-     * 审批状态
+     * 审批状态(0待提交、1待审批、2已审批、3订正待提交、4订正待审批、5订正已审批)
      */
     @Column(name = "audit_status")
     private String auditStatus;
@@ -180,12 +176,6 @@ public class StudentsHomeworkNew implements Serializable {
     @Column(name = "deadline")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date deadline;
-    /**
-     * 学生写作业坐标
-     */
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "students_coordinate", columnDefinition = "JSON")
-    private List<StudentsCoordinate> studentsCoordinate;
     /**
      * 老师审批标识坐标
      */
@@ -245,12 +235,6 @@ public class StudentsHomeworkNew implements Serializable {
         }
     }
 
-    /**
-     * 学生2次写作业坐标
-     */
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "students_coordinate2", columnDefinition = "JSON")
-    private List<StudentsCoordinate> studentsCoordinate2;
     /**
      * 老师2次审批标识坐标
      */
@@ -327,6 +311,13 @@ public class StudentsHomeworkNew implements Serializable {
      */
     @Column(name = "ai_audit2")
     private String aiAudit2;
+
+
+    /**
+     * 订正提交文件路径
+     */
+    @Column(name = "submit_file_url2")
+    private String submitFileUrl2;
     /**
      * 作业相关文件
      */

@@ -8,4 +8,6 @@ public interface IHomeworkStudentWriteDataService {
     void save(HomeworkStudentWriteData homeworkStudentWriteData);
 
     List<HomeworkStudentWriteData> findByStudentRecordId(Long studentHomeworkId,String type);
+
+    void updateOffset(HomeworkStudentWriteData writeData);
 }

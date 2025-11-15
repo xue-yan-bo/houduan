@@ -1,9 +1,12 @@
 package com.jlm.homework.entity;
 
+import ai.z.openapi.service.image.ImageResult;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.Date;
 
@@ -140,4 +143,21 @@ public class WrongTitleBook {
     @Column(name = "create_time")
      private Date createTime;
 
+
+    /**
+     * 创建时间
+     */
+    @Column(name = "write_data_id")
+    private Long writeDataId;
+    /**
+     * 知识点
+     */
+    @Column(name = "knowledge_point")
+    private String knowledgePoint;
+    /**
+     * AI图
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "ai_chart", columnDefinition = "JSON")
+    private ImageResult aiChart;
 }

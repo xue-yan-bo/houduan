@@ -81,6 +81,13 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
+            <exclusions>
+                <!-- 排除所有Retrofit相关依赖，防止Kotlin 2.1.0版本冲突 -->
+                <exclusion>
+                    <groupId>com.squareup.retrofit2</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Resilience4j - 熔断器 -->
@@ -166,6 +173,17 @@
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.3</version>
+        </dependency>
+        <dependency>
+            <groupId>ai.z.openapi</groupId>
+            <artifactId>zai-sdk</artifactId>
+            <version>0.1.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jetbrains.kotlin</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 

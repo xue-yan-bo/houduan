@@ -1,5 +1,7 @@
 package com.jlm.homework.service.impl;
 
+import ai.z.openapi.service.image.ImageResult;
+import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.dto.Result;
 import com.jlm.homework.dto.ResultDto;
 import com.jlm.homework.entity.*;
@@ -8,6 +10,7 @@ import com.jlm.homework.repository.*;
 import com.jlm.homework.service.IWrongTitleBookService;
 import com.jlm.homework.service.IWrongTitleStatisticsService;
 import com.jlm.homework.util.PiontSignUtil;
+import com.jlm.homework.util.ZhipuAIImageAnalysisUtil;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +18,7 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
@@ -37,6 +41,8 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     private WrongTitleStatisticsRepository wrongTitleStatisticsRepository;
     @Autowired
     private StudentFeignClient studentFeignClient;
+    @Autowired
+    private ZhipuAIConfig zhipuAIConfig;
     @Override
     public WrongTitleBook save(WrongTitleBook wrongTitleBook) {
         return wrongTitleBookRepository.save(wrongTitleBook);
@@ -85,6 +91,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                     wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
                                     wrongTitleBook.setTitleSmallNo(question.getTitleSmallNo());
                                     wrongTitleBookRepository.save(wrongTitleBook);
+                                    aiChart(wrongTitleBook.getId());
                                 }
                             }
                         }
@@ -124,6 +131,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                             wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
                             wrongTitleBook.setTitleSmallNo(question.getTitleSmallNo());
                             wrongTitleBookRepository.save(wrongTitleBook);
+                            aiChart(wrongTitleBook.getId());
                         }
                     }
 
@@ -145,8 +153,23 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
 
     @Override
     public void addWrongBook(WrongTitleBook wrongTitleBook) {
+        boolean isNew = true;
+        if(StringUtils.isNotEmpty(wrongTitleBook.getTitleBigNo())&&StringUtils.isNotEmpty(wrongTitleBook.getTitleSmallNo())){
+            WrongTitleBook search = new WrongTitleBook();
+            search.setTitleBigNo(wrongTitleBook.getTitleBigNo());
+            search.setTitleSmallNo(wrongTitleBook.getTitleSmallNo());
+            search.setStudentsHomeworkId(wrongTitleBook.getStudentsHomeworkId());
+            Optional<WrongTitleBook> soWrongTitle = wrongTitleBookRepository.findOne(Example.of(search));
+            if(soWrongTitle!=null&&soWrongTitle.isPresent()){
+                wrongTitleBook.setId(soWrongTitle.get().getId());
+                isNew = false;
+            }
+        }
         wrongTitleBook.setCreateTime(new Date());
         wrongTitleBookRepository.save(wrongTitleBook);
+        if(!isNew){
+            return;
+        }
         Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findById(wrongTitleBook.getStudentsHomeworkId());
         if(optional!=null&&optional.isPresent()){
             StudentsHomeworkNew homeworkNew = optional.get();
@@ -157,7 +180,17 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             }
             studentsHomeworkNewRepository.save(homeworkNew);
         }
+
         this.addClassWrongTitle(wrongTitleBook);
+        FutureTask<String> futureTask = new FutureTask<>(() -> {
+
+            aiChart(wrongTitleBook.getId());
+            return "异步-OK";
+
+
+        });
+        Thread thread = new Thread(futureTask);
+        thread.start();
     }
     private void addClassWrongTitle(WrongTitleBook wrongTitleBook) {
         Integer studentNum = 0;
@@ -203,7 +236,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             newWrongTitle.setTitleSmallNo(wrongTitleBook.getTitleSmallNo());
             newWrongTitle.setSource("作业");
             newWrongTitle.setTitleImage(wrongTitleBook.getTitleImage());
-            if(StringUtils.isEmpty(wrongTitleBook.getTitleImage())){
+            if(StringUtils.isEmpty(wrongTitleBook.getSourceImageUrl())){
                 newWrongTitle.setTitleImage(wrongTitleBook.getSourceImageUrl());
             }
             newWrongTitle.setParse(wrongTitleBook.getParse());
@@ -235,5 +268,53 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             }
         }
         return wrongTitleBookRepository.findAll(Example.of(wrongTitleBook),pageable);
+    }
+
+    @Override
+    public void aiChart(Long wrongTitleId) {
+        Optional<WrongTitleBook> optional=wrongTitleBookRepository.findById(wrongTitleId);
+        if(optional==null||!optional.isPresent()){
+            return;
+        }
+        WrongTitleBook wrongTitleBook = optional.get();
+
+        ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+
+        try {
+            String  resultStr = null;
+            if(StringUtils.isNotEmpty(wrongTitleBook.getTitleContext())){
+                String prompt = "根据题目内容："+wrongTitleBook.getTitleContext() +"     分析该题的知识考点以及生成知识考点的图谱（图片格式）。返回格式为 知识点：   知识图谱：  ";
+                resultStr =util.analyze(prompt);
+
+            }else if(StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())){
+                String prompt = "根据题图片，分析该题的知识考点以及生成知识考点的图谱（图片格式）。返回格式为 知识点：   知识图谱：  ";
+                resultStr=util.analyzeImage2(wrongTitleBook.getSourceImageUrl(),prompt);
+            }else if(StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())){
+                String prompt = "根据题图片，分析该题的知识考点以及生成知识考点的图谱（图片格式）的描述。返回格式为 知识点：   知识图谱：  ";
+                resultStr=util.analyzeImage2(wrongTitleBook.getTitleImage(),prompt);
+            }
+            System.out.println("AI分析结果: " + resultStr);
+            if(StringUtils.isNotEmpty(resultStr)&&resultStr.contains("知识点")&&resultStr.contains("知识图谱")){
+                String knowledgePoint = resultStr.substring(resultStr.indexOf("知识点")+4,resultStr.indexOf("知识图谱"));
+                String aiChart = resultStr.substring(resultStr.indexOf("知识图谱")+5,resultStr.indexOf("<|end_of_box|>"));
+                ImageResult imageResult=util.analyze2(aiChart+",根据以上描述和知识点关系生成知识图谱（知识点清晰可见）。");
+                wrongTitleBook.setKnowledgePoint(knowledgePoint);
+                wrongTitleBook.setAiChart(imageResult);
+                wrongTitleBookRepository.save(wrongTitleBook);
+                WrongTitleStatistics search = new WrongTitleStatistics();
+                search.setHomeworkPublishId(wrongTitleBook.getHomeworkPublishId());
+                search.setClassId(wrongTitleBook.getClassId());
+                search.setTitleBigNo(wrongTitleBook.getTitleBigNo());
+                search.setTitleSmallNo(wrongTitleBook.getTitleSmallNo());
+                wrongTitleStatisticsRepository.findOne(Example.of(search)).ifPresent(
+                        wrongTitleStatistics->{
+                            wrongTitleStatistics.setKnowledgePoint(knowledgePoint);
+                            wrongTitleStatistics.setAiChart(imageResult);
+                            wrongTitleStatisticsRepository.save(wrongTitleStatistics);
+                        });
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

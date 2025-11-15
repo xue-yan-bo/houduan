@@ -9,4 +9,5 @@ public class CommentsCoordinate implements Serializable {
     private Double x;
     private Double y;
     private String text;
+    private Long timestamp;
 }

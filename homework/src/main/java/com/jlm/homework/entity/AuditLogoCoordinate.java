@@ -12,4 +12,6 @@ public class AuditLogoCoordinate implements Serializable {
     private Boolean isStart;
     private Boolean isEnd;
     private String strokeId;
+    private Integer size;
+    private Long timestamp;
 }

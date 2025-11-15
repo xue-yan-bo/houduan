@@ -260,8 +260,12 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 return null;
             }
         };
-
-        return homeworkPublishRepository.findAll(specification,pageable);
+        Page<HomeworkPublish> page =homeworkPublishRepository.findAll(specification,pageable);
+        for(HomeworkPublish publish:page.getContent()){
+            Long submitNum = studentsHomeworkNewService.getSubmitNumByHomeworkPublishId(publish.getId());
+            publish.setSubmitNum(submitNum);
+        }
+        return page;
     }
 
     @Override

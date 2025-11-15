@@ -18,4 +18,5 @@ public interface IWrongTitleBookService {
     Page<WrongTitleBook> getPage(Integer pageNum, Integer pageSize, WrongTitleBook wrongTitleBook);
 
 
+    void aiChart(Long wrongTitleId);
 }

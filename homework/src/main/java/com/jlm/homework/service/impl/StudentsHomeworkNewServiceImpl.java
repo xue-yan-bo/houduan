@@ -13,8 +13,6 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import jakarta.xml.bind.annotation.W3CDomHandler;
-import lombok.extern.log4j.Log4j;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
@@ -51,7 +49,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private IHomeworkStudentWriteDataService homeworkStudentWriteDataService;
 
     @Autowired
-    private WrongTitleBookRepository wrongTitleBookRepository;
+    private IWrongTitleBookService wrongTitleBookService;
 
     @Resource
     private ExerciseBookQuestionRepository exerciseBookQuestionRepository;
@@ -61,6 +59,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Autowired
     private IStudentFeedbackService studentFeedbackService;
+
+    @Autowired
+    private IWrongTitleWriteDataService wrongTitleWriteDataService;
 
     @Autowired
     private ZhipuAIConfig zhipuAIConfig;
@@ -76,6 +77,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             if(StringUtils.isEmpty(subject)){
                 subject = homeworkPublish.getSubject();
             }
+            Integer studentSum = 0;
             for(Long classId:homeworkPublish.getClassId()){
                 if(classId==null){
                     continue;
@@ -87,6 +89,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         throw new RuntimeException(result.getMsg());
                     }
                     List<Student> studentList=result.getRows();
+                    studentSum += studentList.size();
                     for(Student student:studentList){
                         StudentsHomeworkNew studentsHomework = new StudentsHomeworkNew();
                         studentsHomework.setClassesId(classId);
@@ -115,6 +118,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     throw new RuntimeException(e);
                 }
             }
+            homeworkPublish.setStudentSum(studentSum);
+            homeworkPublishRepository.save(homeworkPublish);
         }
     }
 
@@ -1472,6 +1477,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 if(studentsHomework.getTopicImages()!=null&&studentsHomework.getTopicImages().size()>0
                         &&!studentsHomework.getTopicImagesStr().endsWith(".docx")&&!studentsHomework.getTopicImagesStr().endsWith(".doc")){
                     try {
+                        List<String> imageNames = new ArrayList<>();
                         for(int i=0;i<studentsHomework.getTopicImages().size();i++) {
                             String imageUrl = studentsHomework.getTopicImages().get(i);
 
@@ -1486,22 +1492,25 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                     // 保存结果图片
                                     String imageName = studentsHomework.getHomeworkPublishName()+"_"+studentsHomework.getStudentName()+"_"+writeData1.getPageNum()+"页作业.png";
                                     CoordinateImageGenerator.saveImage(resultImage, imageName);
-                                    //试题识别
-
-                                    String titleImage = util.recognizePiyueInImage(imageName);
-                                    if(titleImage.contains("<|begin_of_box|>")){
-                                        titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
-                                    }
-                                    if(titleImage.contains("<|end_of_box|>")){
-                                        titleImage = titleImage.substring(0,titleImage.indexOf("<|end_of_box|>"));
-                                    }
-                                    System.out.println("批阅结果: " + titleImage);
-                                    auditImages = auditImages +","+titleImage;
-                                    File imageFile = new File(imageName);
-                                    imageFile.delete();
+                                    imageNames.add(imageName);
                                 }
                             }
                         }
+                        Map<String,String> resltMap= util.batchRecognizePiyueInImages(imageNames);
+                        for(String key :resltMap.keySet()) {
+                            String titleImage = resltMap.get(key);
+                            if(titleImage.contains("<|begin_of_box|>")){
+                                titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
+                            }
+                            if (titleImage.contains("<|end_of_box|>")) {
+                                titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+                            }
+                            auditImages = auditImages + titleImage;
+                            File imageFile = new File(key);
+                            imageFile.delete();
+                        }
+
+                        System.out.println("批阅结果: " + auditImages);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -1529,19 +1538,53 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         throw new RuntimeException(ife);
                     }
                 }
-
-                String prompt = "根据以上批阅，给出学生答题的整体分数和正确率，返回格式为 分数： ，正确率： ";
-                String scoreAndAccuracy = util.analyze(prompt);
-                System.out.println("批阅得分: " + scoreAndAccuracy);
-                try {
-                    String scoreStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("分数：")+3,scoreAndAccuracy.indexOf("，正确率")).trim();
-                    String accuracyStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("正确率：")+4).trim();
-                    Double score = Double.parseDouble(scoreStr);
-                    Double accuracy = Double.parseDouble(accuracyStr);
-                    studentsHomework.setScore(score);
-                    studentsHomework.setAccuracy(accuracy);
-                } catch (Exception e) {
-                    System.out.println("+++++解析分数错误 " + scoreAndAccuracy);
+                if("1".equals(type)){
+                    try {
+                        String prompt = "根据以上批阅，给出学生答题的整体分数和正确率，并对学生做错题分。 根据以上批阅，给出学生答题的整体分数和正确率，并对学生做错题分。 返回先总体格式为 分数： ，正确率：  \n" +
+                                "后按每道错题分割返回，每道题返回内容格式为 错题分析：大题号： 小题号：  题内容： 学生答案：  解析：     \n";
+                        String scoreAndAccuracy = util.analyze(prompt);
+                        System.out.println("批阅得分: " + scoreAndAccuracy);
+                        if(scoreAndAccuracy.contains("分数：")&&scoreAndAccuracy.contains("正确率：")) {
+                            String scoreStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("分数：") + 3, scoreAndAccuracy.indexOf("正确率") - 1).trim();
+                            String accuracyStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("正确率：") + 4, scoreAndAccuracy.indexOf("%")).trim();
+                            if(scoreStr.trim().contains("分")){
+                                scoreStr = scoreStr.substring(0,scoreStr.indexOf("分"));
+                            }
+                            Double score = Double.parseDouble(scoreStr);
+                            Double accuracy = Double.parseDouble(accuracyStr);
+                            studentsHomework.setScore(score);
+                            studentsHomework.setAccuracy(accuracy);
+                        }
+                        String wrongTitleStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("错题分析："));
+                        System.out.println("错题分析: " + wrongTitleStr);
+                        String[] wrongTitleList = wrongTitleStr.split("\n");
+                        for(int i=0;i<wrongTitleList.length;i++) {
+                            String wrongTitle = wrongTitleList[i];
+                            if (StringUtils.isNotEmpty(wrongTitle.trim())&&wrongTitle.contains("大题号：")&&wrongTitle.contains("解析：")&&wrongTitle.contains("解析：")) {
+                                String titleBigNo = wrongTitle.substring(wrongTitle.indexOf("大题号：") + 4, wrongTitle.indexOf("小题号："));
+                                String titleSmallNo = wrongTitle.substring(wrongTitle.indexOf("小题号：") + 4, wrongTitle.indexOf("题内容："));
+                                String titleContext = wrongTitle.substring(wrongTitle.indexOf("题内容：") + 4, wrongTitle.indexOf("学生答案：")).trim();
+                                String studentAnswer = wrongTitle.substring(wrongTitle.indexOf("学生答案：") + 5, wrongTitle.indexOf("解析：")).trim();
+                                String parse = wrongTitle.substring(wrongTitle.indexOf("解析：") + 3).trim();
+                                WrongTitleBook wrongTitleBook = new WrongTitleBook();
+                                wrongTitleBook.setTitleBigNo(titleBigNo);
+                                wrongTitleBook.setTitleSmallNo(titleSmallNo);
+                                wrongTitleBook.setTitleContext(titleContext);
+                                wrongTitleBook.setStudentAnswer(studentAnswer);
+                                wrongTitleBook.setParse(parse);
+                                wrongTitleBook.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
+                                wrongTitleBook.setStudentsHomeworkId(studentsHomework.getId());
+                                wrongTitleBook.setSource("学生作业：" + studentsHomework.getHomeworkPublishName());
+                                wrongTitleBook.setStudentId(studentsHomework.getStudentId());
+                                wrongTitleBook.setStudentName(studentsHomework.getStudentName());
+                                wrongTitleBook.setClassId(studentsHomework.getClassesId());
+                                wrongTitleBook.setClassName(studentsHomework.getClassesName());
+                                wrongTitleBookService.addWrongBook(wrongTitleBook);
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.out.println("+++++解析分数错误++++++++++ "+e.getMessage() );
+                    }
                 }
                 if("1".equals(type)) {
                     studentsHomework.setAiAudit(auditImages);
@@ -1549,6 +1592,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     studentsHomework.setAiAudit2(auditImages);
                 }
                 studentsHomeworkNewRepository.save(studentsHomework);
+
                 return "异步-OK";
 
 
@@ -1619,7 +1663,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 return criteriaBuilder.and(list.toArray(p));
             }
         };
-        List<StudentsHomeworkNew> homeworkList=studentsHomeworkNewRepository.findAll(specification);
+        Sort sort = Sort.by(Sort.Direction.DESC,"auditTime");
+         List<StudentsHomeworkNew> homeworkList=studentsHomeworkNewRepository.findAll(specification,sort);
         List<HomeWork2Board> homeWork2Boards =  new ArrayList<>();
         for(StudentsHomeworkNew homework:homeworkList){
             HomeWork2Board homeWork2Board = new HomeWork2Board();
@@ -1702,6 +1747,20 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Override
     public StudentsHomeworkNew audit(StudentsHomeworkNew studentsHomework) {
+        if(studentsHomework.getStudentWriteDataList()!=null){
+            for (HomeworkStudentWriteData writeData:studentsHomework.getStudentWriteDataList()) {
+                if(writeData.getOffset()!=null) {
+                    homeworkStudentWriteDataService.updateOffset(writeData);
+                }
+            }
+        }
+        if(studentsHomework.getStudentWriteDataList2()!=null){
+            for (HomeworkStudentWriteData writeData:studentsHomework.getStudentWriteDataList2()) {
+                if(writeData.getOffset()!=null) {
+                    homeworkStudentWriteDataService.updateOffset(writeData);
+                }
+            }
+        }
         if(studentsHomework.getHomeworkCorrectList()!=null&&!studentsHomework.getHomeworkCorrectList().isEmpty()){
             for(StudentsHomeworkCorrect correct:studentsHomework.getHomeworkCorrectList()){
                 correct.setStudentsHomeworkId(studentsHomework.getId());
@@ -1766,7 +1825,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                     wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                                     wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
                                     wrongTitleBook.setTitleSmallNo(question.getTitleSmallNo());
-                                    wrongTitleBookRepository.save(wrongTitleBook);
+                                    wrongTitleBookService.addWrongBook(wrongTitleBook);
                                 }
                             }
                         }
@@ -1805,7 +1864,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                             wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
                             wrongTitleBook.setTitleSmallNo(question.getTitleSmallNo());
-                            wrongTitleBookRepository.save(wrongTitleBook);
+                            wrongTitleBookService.addWrongBook(wrongTitleBook);
                         }
                     }
 
@@ -1844,6 +1903,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }else {
                         condition1 = criteriaBuilder.conjunction();
                     }
+                    Predicate cond1 = null;
+                    if(studentsHomework.getSubmitStatus()!=null){
+                        cond1 = criteriaBuilder.equal(root.get("submitStatus"), studentsHomework.getSubmitStatus());
+                    }else {
+                        cond1 = criteriaBuilder.conjunction();
+                    }
                     Predicate condition2 = null;
                     if(studentsHomework.getClassesId()!=null){
                         condition2 = criteriaBuilder.equal(root.get("classesId"), studentsHomework.getClassesId());
@@ -1877,7 +1942,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         }else {
                             condition5 = criteriaBuilder.conjunction();
                         }
-                        query.where(condition0,condition1,condition2,condition3,condition4,condition5);
+                        query.where(condition0,condition1,cond1,condition2,condition3,condition4,condition5);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -1937,6 +2002,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         if(studentsHomework.getTopicImages()!=null&&studentsHomework.getTopicImages().size()>0
                 &&!studentsHomework.getTopicImagesStr().endsWith(".docx")&&!studentsHomework.getTopicImagesStr().endsWith(".doc")){
             try {
+                List<String> imageNames = new ArrayList<>();
                 for(int i=0;i<studentsHomework.getTopicImages().size();i++) {
                     String imageUrl = studentsHomework.getTopicImages().get(i);
 
@@ -1951,22 +2017,26 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             // 保存结果图片
                             String imageName = studentsHomework.getHomeworkPublishName()+"_"+studentsHomework.getStudentName()+"_"+writeData1.getPageNum()+"页作业.png";
                             CoordinateImageGenerator.saveImage(resultImage, imageName);
-                            //试题识别
+                            imageNames.add(imageName);
 
-                            String titleImage = util.recognizePiyueInImage(imageName);
-                            if(titleImage.contains("<|begin_of_box|>")){
-                                titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
-                            }
-                            if(titleImage.contains("<|end_of_box|>")){
-                                titleImage = titleImage.substring(0,titleImage.indexOf("<|end_of_box|>"));
-                            }
-                            System.out.println("批阅结果: " + titleImage);
-                            auditImages = auditImages +","+titleImage;
-                            File imageFile = new File(imageName);
-                            imageFile.delete();
                         }
                     }
                 }
+                Map<String,String> resltMap= util.batchRecognizePiyueInImages(imageNames);
+                for(String key :resltMap.keySet()) {
+                    String titleImage = resltMap.get(key);
+                    if (titleImage.contains("<|begin_of_box|>")) {
+                        titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
+                    }
+                    if (titleImage.contains("<|end_of_box|>")) {
+                        titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+                    }
+                    auditImages = auditImages + titleImage;
+                    File imageFile = new File(key);
+                    imageFile.delete();
+                }
+
+                System.out.println("批阅结果: " + auditImages);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -1996,20 +2066,268 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         }
 
         try {
-            String prompt = "根据以上批阅，给出学生答题的整体分数和正确率，返回格式为 分数： ，正确率： ";
+            String prompt = "根据以上批阅，给出学生答题的整体分数和正确率，并对学生做错题分。 返回先总体格式为 分数： ，正确率：  \n" +
+                    "后按每道错题分割返回，每道题返回内容格式为  错题分析：大题号： 小题号：  题内容： 学生答案：  解析：     \n";
             String scoreAndAccuracy = util.analyze(prompt);
             System.out.println("批阅得分: " + scoreAndAccuracy);
-            String scoreStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("分数：")+3,scoreAndAccuracy.indexOf("，正确率")).trim();
-            String accuracyStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("正确率：")+4).trim();
-            Double score = Double.parseDouble(scoreStr);
-            Double accuracy = Double.parseDouble(accuracyStr);
-            studentsHomework.setScore(score);
-            studentsHomework.setAccuracy(accuracy);
+            if(scoreAndAccuracy.contains("分数：")&&scoreAndAccuracy.contains("正确率：")) {
+                String scoreStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("分数：") + 3, scoreAndAccuracy.indexOf("正确率")-1).trim();
+                String accuracyStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("正确率：") + 4, scoreAndAccuracy.indexOf("%")).trim();
+                if(scoreStr.trim().contains("分")){
+                    scoreStr = scoreStr.substring(0,scoreStr.indexOf("分"));
+                }
+                Double score = Double.parseDouble(scoreStr);
+                Double accuracy = Double.parseDouble(accuracyStr);
+                studentsHomework.setScore(score);
+                studentsHomework.setAccuracy(accuracy);
+            }
+            String wrongTitleStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("错题分析："));
+            System.out.println("错题分析: " + wrongTitleStr);
+            String[] wrongTitleList = wrongTitleStr.split("\n");
+            for(int i=0;i<wrongTitleList.length;i++) {
+                String wrongTitle = wrongTitleList[i];
+                if (StringUtils.isNotEmpty(wrongTitle.trim())&&wrongTitle.contains("大题号：")) {
+                    String titleBigNo = wrongTitle.substring(wrongTitle.indexOf("大题号：") + 4, wrongTitle.indexOf("小题号："));
+                    String titleSmallNo = wrongTitle.substring(wrongTitle.indexOf("小题号：") + 4, wrongTitle.indexOf("题内容："));
+                    String titleContext = wrongTitle.substring(wrongTitle.indexOf("题内容：") + 4, wrongTitle.indexOf("学生答案：")).trim();
+                    String studentAnswer = wrongTitle.substring(wrongTitle.indexOf("学生答案：") + 5, wrongTitle.indexOf("解析：")).trim();
+                    String parse = wrongTitle.substring(wrongTitle.indexOf("解析：") + 3).trim();
+                    WrongTitleBook wrongTitleBook = new WrongTitleBook();
+                    wrongTitleBook.setTitleBigNo(titleBigNo);
+                    wrongTitleBook.setTitleSmallNo(titleSmallNo);
+                    wrongTitleBook.setTitleContext(titleContext);
+                    wrongTitleBook.setStudentAnswer(studentAnswer);
+                    wrongTitleBook.setParse(parse);
+                    wrongTitleBook.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
+                    wrongTitleBook.setStudentsHomeworkId(studentsHomeworkId);
+                    wrongTitleBook.setSource("学生作业：" + studentsHomework.getHomeworkPublishName());
+                    wrongTitleBook.setStudentId(studentsHomework.getStudentId());
+                    wrongTitleBook.setStudentName(studentsHomework.getStudentName());
+                    wrongTitleBook.setClassId(studentsHomework.getClassesId());
+                    wrongTitleBook.setClassName(studentsHomework.getClassesName());
+                    wrongTitleBookService.addWrongBook(wrongTitleBook);
+                }
+            }
         } catch (Exception e) {
             System.out.println("+++++解析分数错误++++++++++ "+e.getMessage() );
         }
         studentsHomework.setAiAudit(auditImages);
         studentsHomeworkNewRepository.save(studentsHomework);
+
         return auditImages;
+    }
+
+    @Override
+    public Long getSubmitNumByHomeworkPublishId(Long homeworkPublishId) {
+        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
+
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                Predicate condition0 = criteriaBuilder.equal(root.get("homeworkPublishId"), homeworkPublishId);
+                Predicate condition1 = criteriaBuilder.isNotNull(root.get("submitTime"));
+                query.where(condition0,condition1);
+                return null;
+            }
+
+
+        };
+        return studentsHomeworkNewRepository.count(specification);
+    }
+
+    @Override
+    public void saveErrorTitleRecords(Long studentId, String subject, List<StudentsWriteRecord> uploadErrorTitleRecords) {
+        WrongTitleWriteData wrongTitleWriteData = new WrongTitleWriteData();
+        wrongTitleWriteData.setStudentId(studentId);
+        wrongTitleWriteData.setSubject(subject);
+        wrongTitleWriteData.setStudentsWriteRecords(uploadErrorTitleRecords);
+        wrongTitleWriteData.setCreateTime(new Date());
+        wrongTitleWriteDataService.save(wrongTitleWriteData);
+
+        FutureTask<String> futureTask = new FutureTask<>(() -> {
+            String auditImages = "";
+            //异步处理AI智能审批
+            ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
+            BufferedImage image = WritingDataRenderer.drawWritingData(uploadErrorTitleRecords, 794, 1123);
+            String imageUrl = "错题上传-"+studentId+".png";
+            CoordinateImageGenerator.saveImage(image,imageUrl);
+            try {
+                String prompt = "解析图片笔记内容， 按每道题分割返回，每道题返回内容格式为 " +
+                        "错题分析：大题号： 小题号：  题内容： 学生答案：  解析：     \n";
+                String scoreAndAccuracy = util.analyzeImage(imageUrl,prompt);
+                String wrongTitleStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("错题分析："));
+                System.out.println("错题分析: " + wrongTitleStr);
+                String[] wrongTitleList = wrongTitleStr.split("\n");
+                for(int i=0;i<wrongTitleList.length;i++) {
+                    String wrongTitle = wrongTitleList[i];
+                    if (StringUtils.isNotEmpty(wrongTitle.trim())&&wrongTitle.contains("大题号：")&&wrongTitle.contains("解析：")&&wrongTitle.contains("解析：")) {
+                        String titleBigNo = wrongTitle.substring(wrongTitle.indexOf("大题号：") + 4, wrongTitle.indexOf("小题号："));
+                        String titleSmallNo = wrongTitle.substring(wrongTitle.indexOf("小题号：") + 4, wrongTitle.indexOf("题内容："));
+                        String titleContext = wrongTitle.substring(wrongTitle.indexOf("题内容：") + 4, wrongTitle.indexOf("学生答案：")).trim();
+                        String studentAnswer = wrongTitle.substring(wrongTitle.indexOf("学生答案：") + 5, wrongTitle.indexOf("解析：")).trim();
+                        String parse = wrongTitle.substring(wrongTitle.indexOf("解析：") + 3).trim();
+                        WrongTitleBook wrongTitleBook = new WrongTitleBook();
+                        wrongTitleBook.setTitleBigNo(titleBigNo);
+                        wrongTitleBook.setTitleSmallNo(titleSmallNo);
+                        wrongTitleBook.setTitleContext(titleContext);
+                        wrongTitleBook.setStudentAnswer(studentAnswer);
+                        wrongTitleBook.setParse(parse);
+                        wrongTitleBook.setSource("学生智能手写板上传");
+                        wrongTitleBook.setWriteDataId(wrongTitleWriteData.getId());
+                        wrongTitleBook.setStudentId(studentId);
+                        if(resultDto!=null&&resultDto.getData()!=null) {
+                            Student student = resultDto.getData();
+                            wrongTitleBook.setStudentName(student.getStudentName());
+                            wrongTitleBook.setClassId(student.getClassesId());
+                            wrongTitleBook.setClassName(student.getClassesName());
+                        }
+                        wrongTitleBookService.addWrongBook(wrongTitleBook);
+                    }
+                }
+                File file = new File(imageUrl);
+                file.delete();
+            } catch (Exception e) {
+                System.out.println("+++++解析分数错误++++++++++ "+e.getMessage() );
+            }
+
+
+
+            return "异步-OK";
+
+
+        });
+        Thread thread = new Thread(futureTask);
+        thread.start();
+    }
+
+    @Override
+    public StudentsHomeworkNew appSubmit(StudentsHomeworkNew studentsHomework) {
+        studentsHomework =studentsHomeworkNewRepository.save(studentsHomework);
+        StudentsHomeworkNew finalStudentsHomework = studentsHomework;
+        FutureTask<String> futureTask = new FutureTask<>(() -> {
+            ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            try{
+                String auditImages ="";
+                if(StringUtils.isNotEmpty(finalStudentsHomework.getSubmitFileUrl())) {
+                    List<String> imageNames = Arrays.asList(finalStudentsHomework.getSubmitFileUrl().split(","));
+
+                    Map<String, String> resltMap = util.batchRecognizePiyueInImages(imageNames);
+                    for (String key : resltMap.keySet()) {
+                        String titleImage = resltMap.get(key);
+                        if(titleImage.contains("<|begin_of_box|>")){
+                            titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
+                        }
+                        if (titleImage.contains("<|end_of_box|>")) {
+                            titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+                        }
+                        auditImages = auditImages + titleImage;
+                        File imageFile = new File(key);
+                        imageFile.delete();
+                    }
+                    System.out.println("批阅结果: " + auditImages);
+
+                    String prompt = "根据以上批阅，给出学生答题的整体分数和正确率，并对学生做错题分。 返回先总体格式为 分数： ，正确率：  \n" +
+                            "后按每道错题分割返回，每道题返回内容格式为  错题分析：大题号： 小题号：  题内容： 学生答案：  解析：     \n";
+                    String scoreAndAccuracy = util.analyze(prompt);
+                    System.out.println("批阅得分: " + scoreAndAccuracy);
+                    if(scoreAndAccuracy.contains("分数：")&&scoreAndAccuracy.contains("正确率：")) {
+                        String scoreStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("分数：") + 3, scoreAndAccuracy.indexOf("正确率")-1).trim();
+                        String accuracyStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("正确率：") + 4, scoreAndAccuracy.indexOf("%")).trim();
+                        if(scoreStr.trim().contains("分")){
+                            scoreStr = scoreStr.substring(0,scoreStr.indexOf("分"));
+                        }
+                        Double score = Double.parseDouble(scoreStr);
+                        Double accuracy = Double.parseDouble(accuracyStr);
+                        finalStudentsHomework.setScore(score);
+                        finalStudentsHomework.setAccuracy(accuracy);
+                    }
+                    String wrongTitleStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("错题分析："));
+                    System.out.println("错题分析: " + wrongTitleStr);
+                    String[] wrongTitleList = wrongTitleStr.split("\n");
+                    for(int i=0;i<wrongTitleList.length;i++) {
+                        String wrongTitle = wrongTitleList[i];
+                        if (StringUtils.isNotEmpty(wrongTitle.trim())&&wrongTitle.contains("大题号：")) {
+                            String titleBigNo = wrongTitle.substring(wrongTitle.indexOf("大题号：") + 4, wrongTitle.indexOf("小题号："));
+                            String titleSmallNo = wrongTitle.substring(wrongTitle.indexOf("小题号：") + 4, wrongTitle.indexOf("题内容："));
+                            String titleContext = wrongTitle.substring(wrongTitle.indexOf("题内容：") + 4, wrongTitle.indexOf("学生答案：")).trim();
+                            String studentAnswer = wrongTitle.substring(wrongTitle.indexOf("学生答案：") + 5, wrongTitle.indexOf("解析：")).trim();
+                            String parse = wrongTitle.substring(wrongTitle.indexOf("解析：") + 3).trim();
+                            WrongTitleBook wrongTitleBook = new WrongTitleBook();
+                            wrongTitleBook.setTitleBigNo(titleBigNo);
+                            wrongTitleBook.setTitleSmallNo(titleSmallNo);
+                            wrongTitleBook.setTitleContext(titleContext);
+                            wrongTitleBook.setStudentAnswer(studentAnswer);
+                            wrongTitleBook.setParse(parse);
+                            wrongTitleBook.setHomeworkPublishId(finalStudentsHomework.getHomeworkPublishId());
+                            wrongTitleBook.setStudentsHomeworkId(finalStudentsHomework.getId());
+                            wrongTitleBook.setSource("学生作业：" + finalStudentsHomework.getHomeworkPublishName());
+                            wrongTitleBook.setStudentId(finalStudentsHomework.getStudentId());
+                            wrongTitleBook.setStudentName(finalStudentsHomework.getStudentName());
+                            wrongTitleBook.setClassId(finalStudentsHomework.getClassesId());
+                            wrongTitleBook.setClassName(finalStudentsHomework.getClassesName());
+                            wrongTitleBookService.addWrongBook(wrongTitleBook);
+                        }
+                    }
+
+                    finalStudentsHomework.setAiAudit(auditImages);
+                    studentsHomeworkNewRepository.save(finalStudentsHomework);
+                }
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+
+            return "异步-OK";
+
+
+        });
+        Thread thread = new Thread(futureTask);
+        thread.start();
+        return studentsHomework;
+    }
+
+    @Override
+    public StudentsHomeworkNew appEmendSubmit(StudentsHomeworkNew studentsHomework) {
+        studentsHomework =studentsHomeworkNewRepository.save(studentsHomework);
+        StudentsHomeworkNew finalStudentsHomework = studentsHomework;
+        FutureTask<String> futureTask = new FutureTask<>(() -> {
+            ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            try{
+                String auditImages ="";
+                if(StringUtils.isNotEmpty(finalStudentsHomework.getSubmitFileUrl2())) {
+                    List<String> imageNames = Arrays.asList(finalStudentsHomework.getSubmitFileUrl2().split(","));
+
+                    Map<String, String> resltMap = util.batchRecognizePiyueInImages(imageNames);
+                    for (String key : resltMap.keySet()) {
+                        String titleImage = resltMap.get(key);
+                        if(titleImage.contains("<|begin_of_box|>")){
+                            titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
+                        }
+                        if (titleImage.contains("<|end_of_box|>")) {
+                            titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+                        }
+                        auditImages = auditImages + titleImage;
+                        File imageFile = new File(key);
+                        imageFile.delete();
+                    }
+                    System.out.println("批阅结果: " + auditImages);
+
+                    finalStudentsHomework.setAiAudit2(auditImages);
+                    studentsHomeworkNewRepository.save(finalStudentsHomework);
+                }
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+
+            return "异步-OK";
+
+
+        });
+        Thread thread = new Thread(futureTask);
+        thread.start();
+        return studentsHomework;
     }
 }

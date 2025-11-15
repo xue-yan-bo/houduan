@@ -49,4 +49,14 @@ public class WrongTitleBookController {
         Page<WrongTitleBook> wrongTitleBookList=wrongTitleBookService.getPage(pageNum,pageSize,wrongTitleBook);
         return wrongTitleBookList;
     }
+
+    /**
+     * 根据
+     * @param wrongTitleId
+     * @return
+     */
+    @GetMapping("/aiChart")
+    public void aiChart(Long wrongTitleId){
+        wrongTitleBookService.aiChart(wrongTitleId);
+    }
 }

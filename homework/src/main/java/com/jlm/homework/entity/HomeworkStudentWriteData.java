@@ -62,4 +62,11 @@ public class HomeworkStudentWriteData {
      */
     @Column(name = "type_n")
     private String type;
+
+    /**
+     * 偏移量
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "offset", columnDefinition = "JSON")
+    private OffsetEntity offset;
 }

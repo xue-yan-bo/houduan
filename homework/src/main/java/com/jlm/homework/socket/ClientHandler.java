@@ -33,23 +33,28 @@ public class ClientHandler implements Runnable {
     public static boolean homeworkflag = false;
     public static boolean emendflag = false;
     public static boolean feedbackflag = false;
+    public static boolean errorTitleflag = false;
     public static List<HomeWork2Board> work2Boards = new ArrayList<>();
     public static List<HomeWork2Board> emendBoards = new ArrayList<>();
     public static MenuT mainMenu = null; //主菜单
     public static MenuT homeworkMenu = null; //作业模式
     public static MenuT emendMenu = null; //订正模式
     public static MenuT feedbackMenu = null; //反馈模式
+    public static MenuT errorTitleMenu = null; //错题上传
     public static int querenJishu = 0;
-
+    public static boolean isBluetooth = false;
+    public static Integer mac = null;
     private static Long buttonTimes=null;
 
     private InetSocketAddress realRemoteAddress;
     private boolean headerParsed = false;
 
+
     List<HandwritingParseResult> studentCalssRecords =new ArrayList<>();
     List<StudentsWriteRecord> studentsWriteRecords =new ArrayList<>();
     List<StudentsWriteRecord> studentsEmendRecords =new ArrayList<>();
     List<StudentsWriteRecord> studentsFeedbackRecords =new ArrayList<>();
+    List<StudentsWriteRecord> uploadErrorTitleRecords =new ArrayList<>();
     List<StudentsWriteRecord> lastList = new ArrayList<>();
 
     private final SimpMessagingTemplate messagingTemplate;
@@ -112,20 +117,46 @@ public class ClientHandler implements Runnable {
                 // 获取数据长度和类型
                 int dataLength = headerBuffer[2] & 0xFF;
                 byte dataType = headerBuffer[3];
-                
+                if (dataType == 0x81 || dataType == 0x82) {
+                    isBluetooth = true;
+                    // 提取Packet数据（序列号）
+                    byte[] packet = Arrays.copyOfRange(headerBuffer, 4, 10);
+                    mac = ParseTcpDataUtil.byteArrayToInt(packet);
+                    relation=smartDeviceUserRelationService.selectByDeviceCode(mac.toString());
+                    if(relation==null){
+                        System.out.println(mac+"设备还未绑定学生，请检查！");
+                        // 设备绑定学生
+                        SmartDeviceUserRelation deviceUserRelation = new SmartDeviceUserRelation();
+                        deviceUserRelation.setIpAddress(clientIP);
+                        deviceUserRelation.setDeviceCode(mac.toString());
+                        messagingTemplate.convertAndSend("/topic/bindStudent", deviceUserRelation);
+                    }
+                }else{
+                    isBluetooth = false;
+                }
                 // 计算完整数据包长度
                 int packetTotalLength = 2 + 1 + 1 + (dataLength - 1) + 1; // Header(2)+Length(1)+Type(1)+Packet(Length-1)+Checksum(1)
-                
+                if (dataType == 0x81 || dataType == 0x82){
+                    packetTotalLength = 2 + 1 + 1 +6+ (dataLength - 1) + 1; // Header(2)+Length(1)+Type(1)+MAC(6)+Packet(Length-1)+Checksum(1)
+
+                }
                 // 创建完整数据包缓冲区
                 byte[] fullPacketBuffer = new byte[packetTotalLength];
                 
                 // 复制已读取的头部数据
-                System.arraycopy(headerBuffer, 0, fullPacketBuffer, 0, 4);
+                if (dataType == 0x81 || dataType == 0x82){
+                    System.arraycopy(headerBuffer, 0, fullPacketBuffer, 0, 10);
+                }else {
+                    System.arraycopy(headerBuffer, 0, fullPacketBuffer, 0, 4);
+                }
                 
                 // 读取剩余数据
                 int remainingBytes = packetTotalLength - 4;
                 int bytesReadSoFar = 4;
-                
+                if (dataType == 0x81 || dataType == 0x82){
+                    remainingBytes = packetTotalLength - 10;
+                    bytesReadSoFar = 10;
+                }
                 while (remainingBytes > 0) {
                     int bytesReadNow = in.read(fullPacketBuffer, bytesReadSoFar, remainingBytes);
                     if (bytesReadNow == -1) {
@@ -140,8 +171,13 @@ public class ClientHandler implements Runnable {
                 try {
 
                     // 根据数据类型进行解析
-                    if (dataType == 0x01) { // 手写数据
-                        List<HandwritingParseResult> results = ParseTcpDataUtil.parseHandwritingTcpPackets(fullPacketBuffer);
+                    if (dataType == 0x01 || dataType == 0x81 ) { // 手写数据
+                        List<HandwritingParseResult> results = null;
+                        if(dataType == 0x01 ) {
+                            results = ParseTcpDataUtil.parseHandwritingTcpPackets(fullPacketBuffer);
+                        }else{
+                            results = ParseTcpDataUtil.parseHandwritingTcpPacketsBluetooth(fullPacketBuffer);
+                        }
                         System.out.println("手写数据解析结果数量：" + results.size());
 
                         for (HandwritingParseResult result : results) {
@@ -189,6 +225,14 @@ public class ClientHandler implements Runnable {
                                     writeRecord.setPressure(result.getPressure());
                                     writeRecord.setTimestamp(result.getTimestamp());
                                     studentsFeedbackRecords.add(writeRecord);
+                                }else if(errorTitleflag&&pCurrentMenu!=null){//错题
+                                    System.out.println("=============错题数据发送====");
+                                    StudentsWriteRecord writeRecord = new StudentsWriteRecord();
+                                    writeRecord.setX(result.getX());
+                                    writeRecord.setY(result.getY());
+                                    writeRecord.setPressure(result.getPressure());
+                                    writeRecord.setTimestamp(result.getTimestamp());
+                                    uploadErrorTitleRecords.add(writeRecord);
                                 }else {//课堂
                                     System.out.println("=============课堂数据发送====");
                                     result.setUserId(relation.getUserId());
@@ -226,8 +270,13 @@ public class ClientHandler implements Runnable {
 
                         }
 
-                    } else if (dataType == 0x02) { // 按键数据
-                        ButtonParseResult result = ParseTcpDataUtil.parseButtonTcpPackets(fullPacketBuffer);
+                    } else if (dataType == 0x02 || dataType == 0x82) { // 按键数据
+                        ButtonParseResult result = null;
+                        if(dataType == 0x02) {
+                            result = ParseTcpDataUtil.parseButtonTcpPackets(fullPacketBuffer);
+                        }else {
+                            result = ParseTcpDataUtil.parseButtonTcpPacketsBluetooth(fullPacketBuffer);
+                        }
                         System.out.println("按键数据解析结果数量：" + result.toString());
                         if(relation!=null){
                             ClassroomResult classroomResult=new ClassroomResult();
@@ -454,6 +503,25 @@ public class ClientHandler implements Runnable {
                                         homeworkflag = false;
                                         emendflag = false;
                                         feedbackflag = false;
+                                        errorTitleflag = false;
+                                        querenJishu = 0;
+                                        nMenuUpdate(out, writer);
+                                    }
+                                }else if(errorTitleflag) {//末级菜单反馈数据保存
+                                    System.out.println("=============保存错题数据====");
+                                    //保存错题数据
+                                    if (uploadErrorTitleRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
+                                        MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                        String name = itemT.getDesc();
+                                        System.out.println("=============保存反馈数据====科目："+name);
+                                        studentsHomeworkNewService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,uploadErrorTitleRecords);
+                                        System.out.println("=============保存反馈数据完成====");
+                                        pCurrentMenu = null;
+                                        uploadErrorTitleRecords = new ArrayList<>();
+                                        homeworkflag = false;
+                                        emendflag = false;
+                                        feedbackflag = false;
+                                        errorTitleflag = false;
                                         querenJishu = 0;
                                         nMenuUpdate(out, writer);
                                     }
@@ -609,6 +677,23 @@ public class ClientHandler implements Runnable {
                                         pCurrentMenu.setSelectItem(0);
                                         nMenuUpdate(out,writer);
                                     }
+                                    if("错题上传".equals(name)){
+                                        querenJishu = 1;
+                                        List<MenuItemT> feedbackItems = new ArrayList<>();
+
+                                        feedbackItems.add(new MenuItemT(1,null,"语文", null));
+                                        feedbackItems.add(new MenuItemT(2,null,"数学", null));
+                                        feedbackItems.add(new MenuItemT(3,null,"英语", null));
+                                        feedbackItems.add(new MenuItemT(4,null,"历史", null));
+                                        feedbackItems.add(new MenuItemT(5,null,"政治", null));
+                                        errorTitleMenu = new MenuT(null,feedbackItems,0,0,feedbackItems.size(),feedbackItems.size());
+                                        pCurrentMenu = errorTitleMenu;
+                                        errorTitleflag = true;
+                                        pCurrentMenu.setShowStartItem(0);
+                                        pCurrentMenu.setShowEndItem(feedbackItems.size());
+                                        pCurrentMenu.setSelectItem(0);
+                                        nMenuUpdate(out,writer);
+                                    }
                                 }
                                 mrnuflag = false;
                                 System.out.println("++++++++++++当前页数："+page_num+"++++++++");
@@ -621,6 +706,7 @@ public class ClientHandler implements Runnable {
                                 mainItems.add(new MenuItemT(1,null,"作业模式", null));
                                 mainItems.add(new MenuItemT(2,null,"订正模式", null));
                                 mainItems.add(new MenuItemT(3,null,"反馈模式", null));
+                                mainItems.add(new MenuItemT(4,null,"错题上传", null));
                                 mainMenu = new MenuT(null,mainItems,0,0,mainItems.size(),mainItems.size());
                                 pCurrentMenu = mainMenu;
                                 pCurrentMenu.setShowStartItem(0);
@@ -914,6 +1000,29 @@ public class ClientHandler implements Runnable {
                                             nMenuUpdate(out, writer);
                                         }
                                     }
+                                }else if(errorTitleflag){
+                                    //保存反馈数据
+                                    if (uploadErrorTitleRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
+                                        MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                        String name = itemT.getDesc();
+                                        System.out.println("=============保存错题上传数据====科目："+name);
+                                        studentsHomeworkNewService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,uploadErrorTitleRecords);
+                                        System.out.println("=============保存错题上传完成====");
+
+                                    }
+                                    if (pCurrentMenu.getSelectItem() > pCurrentMenu.getShowStartItem()) {
+                                        Integer selectItem = pCurrentMenu.getSelectItem();
+                                        selectItem = selectItem - 1;
+                                        pCurrentMenu.setSelectItem(selectItem);
+                                        nMenuUpdate(out, writer);
+                                    } else {
+                                        if (pCurrentMenu.getSelectItem() > 0) {
+                                            pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem() - 1);
+                                            pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() - 1);
+                                            pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem() - 1);
+                                            nMenuUpdate(out, writer);
+                                        }
+                                    }
                                 }else if(mrnuflag){
                                     if (pCurrentMenu.getSelectItem() > pCurrentMenu.getShowStartItem()) {
                                         Integer selectItem = pCurrentMenu.getSelectItem();
@@ -1043,6 +1152,34 @@ public class ClientHandler implements Runnable {
                                         System.out.println("=============保存反馈数据====科目："+name);
                                         studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,studentsFeedbackRecords);
                                         System.out.println("=============保存反馈数据完成====");
+
+                                    }
+                                    if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
+                                        Integer selectItem = pCurrentMenu.getSelectItem();
+                                        if(selectItem+1<pCurrentMenu.getPItems().size()) {
+                                            selectItem = selectItem + 1;
+                                            pCurrentMenu.setSelectItem(selectItem);
+                                            nMenuUpdate(out, writer);
+                                        }
+                                    } else {
+                                        if (pCurrentMenu.getSelectItem() < pCurrentMenu.getMaxItems() - 1) {
+                                            Integer selectItem = pCurrentMenu.getSelectItem();
+                                            if(selectItem+1<pCurrentMenu.getPItems().size()) {
+                                                pCurrentMenu.setShowStartItem(pCurrentMenu.getSelectItem() + 1);
+                                                pCurrentMenu.setShowEndItem(pCurrentMenu.getShowEndItem() + 1);
+                                                pCurrentMenu.setSelectItem(pCurrentMenu.getSelectItem() + 1);
+                                                nMenuUpdate(out, writer);
+                                            }
+                                        }
+                                    }
+                                }else if(errorTitleflag) {
+                                    //保存反馈数据
+                                    if (uploadErrorTitleRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
+                                        MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
+                                        String name = itemT.getDesc();
+                                        System.out.println("=============保存错题上传数据====科目："+name);
+                                        studentsHomeworkNewService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,uploadErrorTitleRecords);
+                                        System.out.println("=============保存错题上传数据完成====");
 
                                     }
                                     if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
@@ -1281,7 +1418,11 @@ public class ClientHandler implements Runnable {
             byte[] sendData = new byte[len];
             System.arraycopy(buff, 0, sendData, 0, len);
             System.out.println(new String(sendData, StandardCharsets.UTF_16LE));
-            ParseTcpDataUtil.sendLcdDisplayData(out,sendData,len);
+            if(isBluetooth){
+                ParseTcpDataUtil.sendLcdDisplayDataBluetooth(out, sendData, len,mac);
+            }else {
+                ParseTcpDataUtil.sendLcdDisplayData(out, sendData, len);
+            }
             out.flush();
         }
     }

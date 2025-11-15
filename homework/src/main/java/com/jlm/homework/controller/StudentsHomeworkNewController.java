@@ -61,6 +61,22 @@ public class StudentsHomeworkNewController {
     }
 
     /**
+     * 提交作业
+     */
+    @GetMapping("/appSubmit")
+    public StudentsHomeworkNew appSubmit(@RequestParam(value = "studentsHomeworkId",  required = true)Long studentsHomeworkId ,
+                                         @RequestParam(value = "submitFileUrl",  required = true)String submitFileUrl) throws Throwable {
+
+        StudentsHomeworkNew studentsHomework=studentsHomeworkNewService.getById(studentsHomeworkId);
+        studentsHomework.setSubmitFileUrl(submitFileUrl);
+        studentsHomework.setSubmitStatus(1);
+        studentsHomework.setSubmitTime(new Date());
+        studentsHomework.setAuditStatus("1");
+        studentsHomework=studentsHomeworkNewService.appSubmit(studentsHomework);
+        return studentsHomework;
+    }
+
+    /**
      * 审批作业
      */
     @PostMapping("/audit")
@@ -204,16 +220,31 @@ public class StudentsHomeworkNewController {
     }
 
     /**
-     * 订正分页
+     * AI分析学生作业
      * @param studentsHomeworkId
      * @return
      */
     @GetMapping("/aIaudit")
-    @Operation(summary = "订正分页")
+    @Operation(summary = "AI分析学生作业")
     public String aIaudit(Long studentsHomeworkId){
         String auditAiImage=studentsHomeworkNewService.aIaudit(studentsHomeworkId);
         return auditAiImage;
     }
 
+    /**
+     * 订正提交作业
+     */
+    @GetMapping("/appEmendSubmit")
+    @Operation(summary = "APP订正提交图片作业")
+    public StudentsHomeworkNew appEmendSubmit(@RequestParam(value = "studentsHomeworkId",  required = true)Long studentsHomeworkId ,
+                                         @RequestParam(value = "submitFileUrl2",  required = true)String submitFileUrl2) throws Throwable {
+
+        StudentsHomeworkNew studentsHomework=studentsHomeworkNewService.getById(studentsHomeworkId);
+        studentsHomework.setSubmitFileUrl2(submitFileUrl2);
+        studentsHomework.setEmendStatus(2);
+        studentsHomework.setAuditStatus("4");
+        studentsHomework=studentsHomeworkNewService.appEmendSubmit(studentsHomework);
+        return studentsHomework;
+    }
 
 }

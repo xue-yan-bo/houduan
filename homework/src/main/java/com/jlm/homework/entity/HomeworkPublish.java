@@ -196,4 +196,12 @@ public class HomeworkPublish implements Serializable {
      */
     @Column(name = "daily_practice_preview")
     private String dailyPracticePreview;
+
+    /**
+     * 学生总数
+     */
+    @Column(name = "student_sum")
+    private Integer studentSum;
+    @Transient
+    private Long submitNum;
 }

@@ -4,6 +4,7 @@ import com.jlm.homework.entity.CurrentUserInfo
 import com.jlm.homework.feign.SysFeignClient
 import com.jlm.homework.feign.SystemFeignClient
 import com.jlm.homework.feign.TeacherFeignClient
+import com.jlm.homework.util.UserContext
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -27,14 +28,22 @@ class UserService(
     override fun getCurrentUserId(): Long? {
         return try {
             val loginUserInfo = systemFeignClient.loginUserInfo()
+
             val userId = loginUserInfo?.userInfo?.userId
             if (userId != null && userId > 0) {
                 logger.info("获取当前用户ID: {}", userId)
                 userId
             } else {
-                logger.warn("获取到的用户ID无效: {}", userId)
-                // 返回默认用户ID，避免阻塞业务流程
-                getDefaultUserId()
+                val username = UserContext.getUsername();
+                val result=systemFeignClient.info(username);
+                if(result !=null&&result.data!=null){
+                    val userId =result?.data?.userid
+                    userId
+                }else {
+                    logger.warn("获取到的用户ID无效: {}", userId)
+                    // 返回默认用户ID，避免阻塞业务流程
+                    getDefaultUserId()
+                }
             }
         } catch (e: Exception) {
             logger.warn("获取当前用户ID失败: {}", e.message)
@@ -93,13 +102,38 @@ class UserService(
                     nickName = userInfo.nickName ?: "",
                     userUuid = userInfo.userUuid ?: "",
                     isAdmin = userInfo.admin ?: false,
-                    roles = loginUserInfo.roles ?: emptyList(),
-                    currentRole = loginUserInfo.currentRole ?: "",
+                    roles = loginUserInfo?.roles ?: emptyList(),
+                    currentRole = loginUserInfo?.currentRole ?: "",
                     teacherName = teacher?.name
                 )
             } else {
-                logger.warn("未获取到登录用户信息")
-                null
+                val result=systemFeignClient.info(UserContext.getUsername());
+                if(result !=null&&result.data!=null) {
+                    val userInfo = result?.data?.sysUser!!
+                    // 尝试获取教师信息
+                    val teacher = try {
+                        userInfo.userUuid?.let { uuid ->
+                            teacherFeignClient.getTeacherByUserUuid(uuid)
+                        }
+                    } catch (e: Exception) {
+                        logger.debug("获取教师信息失败，用户可能不是教师: {}", userInfo.userUuid)
+                        null
+                    }
+
+                    createCurrentUserInfo(
+                        userId = userInfo.userId ?: 0L,
+                        userName = userInfo.userName ?: "",
+                        nickName = userInfo.nickName ?: "",
+                        userUuid = userInfo.userUuid ?: "",
+                        isAdmin = userInfo.admin ?: false,
+                        roles = loginUserInfo?.roles ?: emptyList(),
+                        currentRole = loginUserInfo?.currentRole ?: "",
+                        teacherName = teacher?.name
+                    )
+                }else {
+                    logger.warn("未获取到登录用户信息")
+                    null
+                }
             }
         } catch (e: Exception) {
             logger.error("获取当前用户信息失败: {}", e.message)

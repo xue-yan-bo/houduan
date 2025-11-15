@@ -344,6 +344,11 @@ public class ParseTcpDataUtil {
 
 
     }
+    /**
+     * 将byte数组转换为int
+     * @param byteArray 字节数组
+     * @return 转换后的整数
+     */
     public static int byteArrayToInt(byte[] byteArray) {
         int number = 0;
         for (int i = 0; i < byteArray.length; i++) {
@@ -351,7 +356,23 @@ public class ParseTcpDataUtil {
         }
         return number;
     }
-    
+    /**
+     * 将int转换为6位byte数组
+     * @param value 要转换的整数
+     * @return 6位字节数组，低位在前
+     */
+    public static byte[] intToByteArray(int value) {
+        byte[] byteArray = new byte[6];
+        // 低字节在前
+        byteArray[0] = (byte)(value & 0xFF);
+        byteArray[1] = (byte)((value >> 8) & 0xFF);
+        byteArray[2] = (byte)((value >> 16) & 0xFF);
+        byteArray[3] = (byte)((value >> 24) & 0xFF);
+        // 填充剩余的两位为0
+        byteArray[4] = 0;
+        byteArray[5] = 0;
+        return byteArray;
+    }
     /**
      * 发送LCD显示数据到设备（C++函数void tep send(SOCKET s, char* p_data, uint8_t length)的Java翻译版本）
      * @param outputStream 输出流，用于发送数据
@@ -379,5 +400,167 @@ public class ParseTcpDataUtil {
         // 发送整个数据包
         outputStream.write(buff, 0, length + 5);
         outputStream.flush();
+    }
+
+    /**
+     * 发送LCD显示数据到设备（C++函数void tep send(SOCKET s, char* p_data, uint8_t length)的Java翻译版本）
+     * @param outputStream 输出流，用于发送数据
+     * @param data 要发送的数据
+     * @param length 数据长度
+     * @throws IOException 发送异常
+     */
+    public static void sendLcdDisplayDataBluetooth(OutputStream outputStream, byte[] data, int length,Integer mac) throws IOException {
+        // 创建缓冲区，最大259字节
+        byte[] buff = new byte[259];
+        // 设置包头
+        buff[0] = 0x55;
+        buff[1] = 0x56;
+        // 设置长度字段：length + 1（数据长度+1）
+        buff[2] = (byte)(length + 1);
+        // 设置数据类型为0x04（LCD显示字符串）
+        buff[3] = 0x04;
+        byte[] macByte=intToByteArray(mac);
+        // 复制数据到缓冲区
+        System.arraycopy(macByte, 0, buff, 4, 6);
+        System.arraycopy(data, 0, buff, 10, length);
+        System.out.println(buff.toString());
+        // 计算并设置校验和
+        int checksum = calculateChecksum(buff, 0, 4+ 6 + length - 1);
+        buff[10 + length] = (byte)(checksum & 0xFF);
+        System.out.println("发向板子数据："+java.util.Arrays.toString(buff));
+        // 发送整个数据包
+        outputStream.write(buff, 0, length + 5 + 6);
+        outputStream.flush();
+    }
+
+    public static List<HandwritingParseResult> parseHandwritingTcpPacketsBluetooth(byte[] data) {
+        // 基础合法性校验
+        if (data == null || data.length < 5) { // 最小长度：Header(2)+Length(1)+Type(1)+Checksum(1)
+            throw new IllegalArgumentException("数据长度异常，至少需为5字节");
+        }
+
+        // 解析Header
+        byte header0 = data[0];
+        byte header1 = data[1];
+        if (header0 != 0x55 || header1 != 0x56) {
+            throw new IllegalArgumentException("包头不匹配");
+        }
+
+        // 解析Length和Type
+        int length = data[2] & 0xFF;
+        byte type = data[3];
+        if (type != 0x81) {
+            throw new IllegalArgumentException("数据类型异常，需为0x81");
+        }
+
+        // 验证总长度
+        if (data.length != length + 4) { // Header(2) + Length(1) + Type(1) + Packet(length-1-6) + Checksum(1) = length + 2
+            throw new IllegalArgumentException("数据总长度与Length字段不匹配");
+        }
+
+        // 解析Checksum
+        byte checksum = data[data.length - 1];
+        int calculatedChecksum = calculateChecksum(data, 0, data.length - 1);
+        boolean checksumValid = (calculatedChecksum & 0xFF) == (checksum & 0xFF);
+
+        // 提取Packet数据
+        byte[] packet = Arrays.copyOfRange(data, 10, data.length - 1);
+
+        // 解析多条手写数据（每条10字节：X(2)+Y(2)+压力值(2)+时间戳(4)）
+        List<HandwritingParseResult> results = new ArrayList<>();
+        int singleDataLength = 10;
+        for (int i = 0; i + singleDataLength <= packet.length; i += singleDataLength) {
+            byte[] singlePacket = Arrays.copyOfRange(packet, i, i + singleDataLength);
+
+            // 解析X坐标
+            int x = ((singlePacket[1] & 0xFF) << 8) | (singlePacket[0] & 0xFF);
+            // 解析Y坐标
+            int y = ((singlePacket[3] & 0xFF) << 8) | (singlePacket[2] & 0xFF);
+            // 解析压力值
+            int pressure = ((singlePacket[5] & 0xFF) << 8) | (singlePacket[4] & 0xFF);
+            // 解析时间戳
+            long timestamp = ((long) (singlePacket[9] & 0xFF) << 24)
+                    | ((long) (singlePacket[8] & 0xFF) << 16)
+                    | ((long) (singlePacket[7] & 0xFF) << 8)
+                    | (singlePacket[6] & 0xFF);
+
+            // 封装结果
+            HandwritingParseResult result = new HandwritingParseResult();
+            result.setHeader(new byte[]{header0, header1});
+            result.setLength(length);
+            result.setType(type);
+            result.setX(x);
+            result.setY(y);
+            result.setPressure(pressure);
+            result.setTimestamp(timestamp);
+            result.setChecksum(checksum);
+            result.setChecksumValid(checksumValid);
+
+            results.add(result);
+        }
+
+        return results;
+    }
+
+    public static ButtonParseResult parseButtonTcpPacketsBluetooth(byte[] data) {
+        // 基础合法性校验
+        if (data == null || data.length < 10) {
+            throw new IllegalArgumentException("数据长度异常，至少需为10字节");
+        }
+
+        // 解析Header
+        byte header0 = data[0];
+        byte header1 = data[1];
+        if (header0 != 0x55 || header1 != 0x56) {
+            throw new IllegalArgumentException("包头不匹配");
+        }
+
+        // 解析Length和Type
+        int length = data[2] & 0xFF;
+        byte type = data[3];
+        if (type != 0x82) {
+            throw new IllegalArgumentException("数据类型异常，需为0x82");
+        }
+
+        // 验证总长度
+        if (data.length != length + 4) {
+            throw new IllegalArgumentException("数据总长度与Length字段不匹配");
+        }
+
+        // 解析Checksum
+        byte checksum = data[data.length - 1];
+        int calculatedChecksum = calculateChecksum(data, 0, data.length - 1);
+        boolean checksumValid = (calculatedChecksum & 0xFF) == (checksum & 0xFF);
+
+        // 提取Packet数据
+        byte[] packet = Arrays.copyOfRange(data, 10, data.length - 1);
+
+        // 解析多条按键数据（每条6字节：按键码(2)+时间戳(4)）
+        int singleDataLength = 6;
+        // 解析按键码（16位，每一位代表一个按键）
+        int buttonCode = ((packet[1] & 0xFF) << 8) | (packet[0] & 0xFF);
+
+        // 解析时间戳
+        /*long timestamp = ((long) (packet[5] & 0xFF) << 24)
+                | ((long) (packet[4] & 0xFF) << 16)
+                | ((long) (packet[3] & 0xFF) << 8)
+                | (packet[2] & 0xFF);*/
+
+        // 封装结果
+        ButtonParseResult result = new ButtonParseResult();
+        result.setHeader(new byte[]{header0, header1});
+        result.setLength(length);
+        result.setType(type);
+        result.setButton(buttonCode);
+        //result.setTimestamp(timestamp);
+        result.setChecksum(checksum);
+        result.setChecksumValid(checksumValid);
+
+
+        result.setButtonState(true);
+
+
+
+        return result;
     }
 }

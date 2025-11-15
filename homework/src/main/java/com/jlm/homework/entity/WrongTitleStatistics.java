@@ -1,7 +1,10 @@
 package com.jlm.homework.entity;
 
+import ai.z.openapi.service.image.ImageResult;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -93,4 +96,16 @@ public class WrongTitleStatistics implements Serializable {
      */
     @Column(name = "parse")
     private String parse;
+
+    /**
+     * 知识点
+     */
+    @Column(name = "knowledge_point")
+    private String knowledgePoint;
+    /**
+     * AI图
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "ai_chart", columnDefinition = "JSON")
+    private ImageResult aiChart;
 }

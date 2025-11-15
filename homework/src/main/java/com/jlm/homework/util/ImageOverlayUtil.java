@@ -6,6 +6,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -213,6 +214,86 @@ public class ImageOverlayUtil {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
+    /**
+     * 根据坐标点列表生成图片文件
+     * @param records 坐标点数据列表
+     * @param width 图片宽度
+     * @param height 图片高度
+     * @param outputPath 输出文件路径
+     * @param formatName 图片格式（如png, jpeg等）
+     * @param strokeColor 线条颜色
+     * @param strokeWidth 线条宽度
+     * @throws IOException 保存图片时发生的异常
+     */
+    public static void generateImageFromCoordinates(List<StudentsWriteRecord> records, int width, int height,
+                                                   String outputPath, String formatName, Color strokeColor,
+                                                   float strokeWidth) throws IOException {
+        // 创建空白图片
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = image.createGraphics();
+        
+        // 设置白色背景
+        g2d.setColor(Color.WHITE);
+        g2d.fillRect(0, 0, width, height);
+        
+        // 设置绘图属性
+        g2d.setColor(strokeColor != null ? strokeColor : Color.BLACK);
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setStroke(new BasicStroke(
+                strokeWidth > 0 ? strokeWidth : WritingDataRenderer.DEFAULT_MIN_LINE_WIDTH,
+                BasicStroke.CAP_ROUND,
+                BasicStroke.JOIN_ROUND
+        ));
+        
+        // 绘制坐标点
+        if (records != null && !records.isEmpty()) {
+            // 使用WritingDataRenderer的方法分割笔画
+            List<List<StudentsWriteRecord>> strokes = WritingDataRenderer.splitStrokesByPressure(records);
+            int threshold = WritingDataRenderer.getDistanceThreshold();
+            
+            // 如果没有分割出笔画，尝试直接绘制所有点
+            if (strokes.isEmpty()) {
+                drawPointsAsSingleStroke(g2d, records, threshold, width, height);
+            } else {
+                // 绘制每一笔
+                for (List<StudentsWriteRecord> stroke : strokes) {
+                    if (stroke.size() < 2) continue;
+                    drawSingleStroke(g2d, stroke, threshold, width, height);
+                }
+            }
+        }
+        
+        // 释放资源
+        g2d.dispose();
+        
+        // 保存图片
+        File outputFile = new File(outputPath);
+        ImageIO.write(image, formatName, outputFile);
+    }
+    
+    /**
+     * 简化版的根据坐标点生成图片方法，使用默认参数
+     * @param records 坐标点数据列表
+     * @param outputPath 输出文件路径
+     * @throws IOException 保存图片时发生的异常
+     */
+    public static void generateImageFromCoordinates(List<StudentsWriteRecord> records, String outputPath) throws IOException {
+        generateImageFromCoordinates(records, 794, 1123, outputPath, "png", Color.BLACK, WritingDataRenderer.DEFAULT_MIN_LINE_WIDTH);
+    }
+    
+    /**
+     * 简化版的根据坐标点生成图片方法，指定尺寸
+     * @param records 坐标点数据列表
+     * @param width 图片宽度
+     * @param height 图片高度
+     * @param outputPath 输出文件路径
+     * @throws IOException 保存图片时发生的异常
+     */
+    public static void generateImageFromCoordinates(List<StudentsWriteRecord> records, int width, int height, 
+                                                   String outputPath) throws IOException {
+        generateImageFromCoordinates(records, width, height, outputPath, "png", Color.BLACK, WritingDataRenderer.DEFAULT_MIN_LINE_WIDTH);
+    }
+    
     private static class PointData {
         int x;
         int y;

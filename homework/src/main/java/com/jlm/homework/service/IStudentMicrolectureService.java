@@ -16,7 +16,7 @@ public interface IStudentMicrolectureService {
 
     void updateById(StudentMicrolecture studentMicrolecture);
 
-    Page<StudentMicrolecture> page(Integer pageNum, Integer pageSize, Long microlectureId, String microlecturename, Long studentId, String studentName, Integer status,Integer searchType);
+    Page<StudentMicrolecture> page(Integer pageNum, Integer pageSize, Long microlectureId, String microlecturename, Long studentId, String studentName, Integer status,String chapter,String knowledgePoint,Integer searchType);
 
     Page<StudentMicrolecture> recordPage(Integer pageNum, Integer pageSize, Long microlectureId,Long studentId);
 }

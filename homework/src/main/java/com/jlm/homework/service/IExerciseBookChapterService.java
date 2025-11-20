@@ -8,4 +8,6 @@ public interface IExerciseBookChapterService {
     void saveList(List<ExerciseBookChapter> list);
 
     List<ExerciseBookChapter> getByExerciseBookId(Long exerciseBookId);
+
+    List<String> findKnowledgePointByChapter(String chapter);
 }

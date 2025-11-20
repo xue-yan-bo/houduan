@@ -320,7 +320,7 @@ public class ClientHandler implements Runnable {
                                         if(work2Boards==null||work2Boards.size()==0){
                                             Long studentId = Long.parseLong(relation.getUserId());
                                             String day = sdf.format(new Date());
-                                            work2Boards = studentsHomeworkNewService.getHomeWork2Board(null, day, studentId);
+                                            work2Boards = studentsHomeworkNewService.getHomeWork2Board(name, day, studentId);
                                         }
                                         if(work2Boards!=null&&work2Boards.size()>0){
                                             querenJishu=2;
@@ -328,25 +328,35 @@ public class ClientHandler implements Runnable {
                                             int nb = 1;
                                             for(HomeWork2Board  board :work2Boards){
 
-                                                if(board.getSubject().trim().equals(name)){
+                                                if(StringUtils.isNotEmpty(board.getSubject())&&board.getSubject().trim().equals(name)){
                                                     String homeworkName = board.getHomeworkName();
-                                                    studentsHomeworkNewService.saveStartTime(board.getHomeworkId());
+                                                    if(board.getHomeworkId()!=null) {
+                                                        studentsHomeworkNewService.saveStartTime(board.getHomeworkId());
+                                                    }
+                                                    System.out.println("++++++++开始时间设定——————————");
                                                     //homeId = board.getHomeworkId();
                                                     //page_num = 1;
                                                     if((board.getPageSize()!=null&&board.getPageSize()>0)){
+                                                        System.out.println("++++++++作业名称："+homeworkName+"页个数" +board.getPageSize());
                                                         for(int i=0;i<board.getPageSize();i++){
                                                             String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName+" " +(i+1);
+                                                            System.out.println("++++++++菜单详情 "+desc);
                                                             MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                             itemTList.add(menuItemT);
+                                                            nb++;
                                                         }
                                                     }else{
+                                                        System.out.println("++++++++作业名称："+homeworkName);
                                                         String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName+" 1";
+                                                        System.out.println("++++++++菜单详情 "+desc);
                                                         MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                         itemTList.add(menuItemT);
+                                                        nb++;
                                                     }
 
                                                 }
                                             }
+                                            System.out.println("++++++++菜单详情完成 ");
                                             MenuT menuT = new MenuT(homeworkMenu,itemTList,0,0,3<itemTList.size()?3:itemTList.size(),itemTList.size());
                                             pCurrentMenu = menuT;
                                             pCurrentMenu.setShowStartItem(0);
@@ -415,20 +425,22 @@ public class ClientHandler implements Runnable {
                                             int nb = 1;
                                             for(HomeWork2Board  board :emendBoards){
                                                 String name = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem()).getDesc();
-                                                if(board.getSubject().equals(name)){
+                                                if(StringUtils.isNotEmpty(board.getSubject())&&board.getSubject().equals(name)){
                                                     String homeworkName = board.getHomeworkName();
                                                     //homeId = board.getHomeworkId();
                                                     //page_num = 1;
                                                     if((board.getPageSize()!=null&&board.getPageSize()>0)){
                                                         for(int i=0;i<board.getPageSize();i++){
                                                             String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName +" " +(i+1);
-                                                            MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
+                                                            MenuItemT menuItemT = new MenuItemT(i+1,board.getHomeworkId(),desc,null);
                                                             itemTList.add(menuItemT);
+                                                            nb++;
                                                         }
                                                     }else{
                                                         String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName+" 1";
                                                         MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                         itemTList.add(menuItemT);
+                                                        nb++;
                                                     }
 
                                                 }
@@ -1327,12 +1339,24 @@ public class ClientHandler implements Runnable {
 
         // 设置数据类型
         packet[3] = HEARTBEAT_TYPE;
-
-        // 设置心跳数据
-        packet[4] = heartbeatData;
-
         // 计算校验和
-        int checksum = calculateChecksum(packet, 0, 4); // 计算前5个字节的校验和
+        int checksum = 0;
+        if(isBluetooth){
+            byte[] macByte=ParseTcpDataUtil.intToByteArray(mac);
+            // 复制数据到缓冲区
+            System.arraycopy(macByte, 0, packet, 4, 6);
+            // 设置心跳数据
+            packet[11] = heartbeatData;
+            // 计算校验和
+            checksum = calculateChecksum(packet, 0, 10); // 计算前11个字节的校验和
+        }else{
+            // 设置心跳数据
+            packet[4] = heartbeatData;
+
+            // 计算校验和
+            checksum = calculateChecksum(packet, 0, 4); // 计算前5个字节的校验和
+        }
+
         byte checksumByte = (byte)(checksum & 0xFF);
 
         // 创建完整的数据包

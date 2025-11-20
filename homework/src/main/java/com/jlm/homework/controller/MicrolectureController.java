@@ -44,6 +44,7 @@ public class MicrolectureController {
                                                @RequestParam(value = "classId", required = false) Long classId,
                                                @RequestParam(value = "className", required = false) String className,
                                                @RequestParam(value = "chapter", required = false) String chapter,
+                                               @RequestParam(value = "knowledgePoint", required = false) String knowledgePoint,
                                                @RequestParam(value = "subject", required = false) String subject,
                                                @RequestParam(value = "startTime", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
                                                @RequestParam(value = "endTime", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
@@ -52,7 +53,7 @@ public class MicrolectureController {
 
         // 查询分页结果
         Page<Microlecture> page = microlectureService.selectPage(pageNum,pageSize,schoolId,name,teacherId,teacherName,gradeId,gradeName,classId,className
-                ,subject,chapter, startTime, endTime);
+                ,subject,chapter,knowledgePoint, startTime, endTime);
         return page;
 
     }
@@ -80,11 +81,13 @@ public class MicrolectureController {
                                                  @RequestParam(value = "studentId", required = false) Long studentId,
                                                  @RequestParam(value = "studentName", required = false) String studentName,
                                                  @RequestParam(value = "status", required = false) Integer status,
+                                                 @RequestParam(value = "chapter", required = false) String chapter,
+                                                 @RequestParam(value = "knowledgePoint", required = false) String knowledgePoint,
                                                  @RequestParam(value = "searchType", defaultValue = "0") Integer searchType) {
 
 
         // 查询分页结果
-        Page<StudentMicrolecture> page = studentMicrolectureService.page(pageNum,pageSize, microlectureId,microlecturename,studentId,studentName,status,searchType);
+        Page<StudentMicrolecture> page = studentMicrolectureService.page(pageNum,pageSize, microlectureId,microlecturename,studentId,studentName,status,chapter,knowledgePoint,searchType);
         return page;
     }
 

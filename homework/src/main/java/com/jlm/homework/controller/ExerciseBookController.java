@@ -11,6 +11,7 @@ import com.jlm.homework.service.ExerciseBookServer;
 import com.jlm.homework.service.UserService;
 import com.jlm.homework.service.impl.ExerciseBookChapterServiceIpml;
 import com.jlm.homework.util.RequestDataParser;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -246,4 +247,10 @@ public class ExerciseBookController {
         exerciseBookService.deleteById(id);
         return "删除成功";
     }
+    @GetMapping("/getKnowledge")
+    @Operation(summary = "根据章节查询知识点")
+    public List<String> findKnowledgePointByChapter(String chapter) {
+        return exerciseBookChapterServer.findKnowledgePointByChapter(chapter);
+    }
+
 }

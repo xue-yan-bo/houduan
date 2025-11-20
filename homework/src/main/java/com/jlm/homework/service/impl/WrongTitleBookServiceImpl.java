@@ -1,6 +1,9 @@
 package com.jlm.homework.service.impl;
 
 import ai.z.openapi.service.image.ImageResult;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.nacos.shaded.com.google.gson.JsonObject;
 import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.dto.Result;
 import com.jlm.homework.dto.ResultDto;
@@ -20,10 +23,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 
@@ -283,23 +283,34 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         try {
             String  resultStr = null;
             if(StringUtils.isNotEmpty(wrongTitleBook.getTitleContext())){
-                String prompt = "根据题目内容："+wrongTitleBook.getTitleContext() +"     分析该题的知识考点以及生成知识考点的图谱（图片格式）。返回格式为 知识点：   知识图谱：  ";
-                resultStr =util.analyze(prompt);
+                String prompt = "根据题目内容："+wrongTitleBook.getTitleContext() +"     分析该题的知识考点以及生成知识考点的图谱(图谱呈现父子节点json格式)。返回格式如： 知识点：   知识图谱：{\"父节点\":{\"名称\":\" \",\"阐述\":\" \",\"子节点\":[{\"名称\":\" \",\"阐述\":\" \"},{\"名称\":\" \",\"阐述\":\" \", \"子节点\":[{\"名称\":\" \",\"阐述\":\" \"}] }]}} ";
+                resultStr =util.analyzeToJson(prompt);
 
             }else if(StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())){
-                String prompt = "根据题图片，分析该题的知识考点以及生成知识考点的图谱（图片格式）。返回格式为 知识点：   知识图谱：  ";
-                resultStr=util.analyzeImage2(wrongTitleBook.getSourceImageUrl(),prompt);
+                String prompt = "根据题图片，分析该题的知识考点以及生成知识考点的图谱(图谱呈现父子节点json格式)。返回格式如： 知识点：   知识图谱：{\"父节点\":{\"名称\":\" \",\"阐述\":\" \",\"子节点\":[{\"名称\":\" \",\"阐述\":\" \"},{\"名称\":\" \",\"阐述\":\" \", \"子节点\":[{\"名称\":\" \",\"阐述\":\" \"}] }]}} ";
+                resultStr=util.analyzeImageToJson(wrongTitleBook.getSourceImageUrl(),prompt);
             }else if(StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())){
-                String prompt = "根据题图片，分析该题的知识考点以及生成知识考点的图谱（图片格式）的描述。返回格式为 知识点：   知识图谱：  ";
-                resultStr=util.analyzeImage2(wrongTitleBook.getTitleImage(),prompt);
+                String prompt = "根据题图片，分析该题的知识考点以及生成知识考点的图谱(图谱呈现父子节点json格式)。返回格式如： 知识点：   知识图谱：{\"父节点\":{\"名称\":\" \",\"阐述\":\" \",\"子节点\":[{\"名称\":\" \",\"阐述\":\" \"},{\"名称\":\" \",\"阐述\":\" \", \"子节点\":[{\"名称\":\" \",\"阐述\":\" \"}] }]}} ";
+                resultStr=util.analyzeImageToJson(wrongTitleBook.getTitleImage(),prompt);
             }
+
             System.out.println("AI分析结果: " + resultStr);
-            if(StringUtils.isNotEmpty(resultStr)&&resultStr.contains("知识点")&&resultStr.contains("知识图谱")){
-                String knowledgePoint = resultStr.substring(resultStr.indexOf("知识点")+4,resultStr.indexOf("知识图谱"));
-                String aiChart = resultStr.substring(resultStr.indexOf("知识图谱")+5,resultStr.indexOf("<|end_of_box|>"));
-                ImageResult imageResult=util.analyze2(aiChart+",根据以上描述和知识点关系生成知识图谱（知识点清晰可见）。");
+            Map<String, Object> resultMap = JSONObject.parseObject(resultStr);
+            String content = resultMap.get("content").toString();
+            if(StringUtils.isNotEmpty(content)&&resultStr.contains("知识点")&&resultStr.contains("知识图谱")){
+                String knowledgePoint = content.substring(content.indexOf("知识点")+4,content.indexOf("知识图谱"));
+                String aiChart = content.substring(content.lastIndexOf("知识图谱")+5);
+                if(aiChart.contains("<|end_of_box|>")){
+                    aiChart = aiChart.substring(0,aiChart.indexOf("<|end_of_box|>"));
+                }
+                if(aiChart.contains("<|begin_of_box|>")&&!aiChart.startsWith("<|begin_of_box|>")){
+                    aiChart = aiChart.substring(0,aiChart.indexOf("<|begin_of_box|>"));
+                }
+                aiChart=aiChart.replaceAll("\\\\", "");
+                aiChart=aiChart.replace("\\n","");
+                JSONObject json = JSON.parseObject(aiChart);
                 wrongTitleBook.setKnowledgePoint(knowledgePoint);
-                wrongTitleBook.setAiChart(imageResult);
+                wrongTitleBook.setAiChart(json);
                 wrongTitleBookRepository.save(wrongTitleBook);
                 WrongTitleStatistics search = new WrongTitleStatistics();
                 search.setHomeworkPublishId(wrongTitleBook.getHomeworkPublishId());
@@ -309,7 +320,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 wrongTitleStatisticsRepository.findOne(Example.of(search)).ifPresent(
                         wrongTitleStatistics->{
                             wrongTitleStatistics.setKnowledgePoint(knowledgePoint);
-                            wrongTitleStatistics.setAiChart(imageResult);
+                            wrongTitleStatistics.setAiChart(json);
                             wrongTitleStatisticsRepository.save(wrongTitleStatistics);
                         });
             }

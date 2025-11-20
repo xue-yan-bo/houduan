@@ -11,6 +11,7 @@ import jakarta.annotation.Resource;
 import org.springframework.data.domain.Example;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -97,5 +98,24 @@ public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterServi
 
         }
         return chapterList;
+    }
+
+    @Override
+    public List<String> findKnowledgePointByChapter(String chapter) {
+        List<ExerciseBookChapter> chapterList =exerciseBookChapterRepository.findChapterByName(chapter);
+        List<String> stringList=new ArrayList<>();
+        if(chapterList!=null&&chapterList.size()>0){
+            for(ExerciseBookChapter exerciseBookChapter:chapterList){
+                BookKnowledgePoint search = new BookKnowledgePoint();
+                search.setExerciseBookChapterId(exerciseBookChapter.getId());
+                List<BookKnowledgePoint> pointList=bookKnowledgePointRepository.findAll(Example.of(search));
+                if(pointList!=null&&pointList.size()>0){
+                    pointList.stream().forEach(point->{
+                        stringList.add(point.getKnowledgePoint());
+                    });
+                }
+            }
+        }
+        return stringList;
     }
 }

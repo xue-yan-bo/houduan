@@ -51,6 +51,9 @@ public class Microlecture implements Serializable {
     @ApiModelProperty(value = "章节", example = "乘法运算")
     @Column(name = "chapter")
     private String chapter;
+    @ApiModelProperty(value = "知识点", example = "乘法运算")
+    @Column(name = "knowledge_point")
+    private String knowledgePoint;
     @ApiModelProperty(value = "文件路径", example = "http://")
     @Column(name = "file_url")
     private String fileUrl;

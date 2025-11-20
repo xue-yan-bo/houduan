@@ -54,6 +54,9 @@ public class StudentMicrolecture implements Serializable {
     @ApiModelProperty(value = "章节", example = "乘法运算")
     @Column(name = "chapter")
     private String chapter;
+    @ApiModelProperty(value = "知识点", example = "乘法运算")
+    @Column(name = "knowledge_point")
+    private String knowledgePoint;
     @ApiModelProperty(value = "听课开始时间", example = "")
     @Column(name = "start_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

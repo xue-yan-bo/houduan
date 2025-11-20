@@ -98,6 +98,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+            <exclusions>
+                <!-- 全局排除Retrofit依赖 -->
+                <exclusion>
+                    <groupId>com.squareup.retrofit2</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Kotlin 基础依赖 -->

@@ -52,6 +52,7 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                 studentMicrolecture.setStudentId(student.getStudentId());
                 studentMicrolecture.setStudentName(student.getStudentName());
                 studentMicrolecture.setChapter(microlecture.getChapter());
+                studentMicrolecture.setKnowledgePoint(microlecture.getKnowledgePoint());
                 studentMicrolecture.setSubject(microlecture.getSubject());
                 studentMicrolecture.setSchoolId(microlecture.getSchoolId());
                 studentMicrolecture.setGradeId(microlecture.getGradeId());
@@ -92,7 +93,7 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
     }
 
     @Override
-    public Page<StudentMicrolecture> page(Integer pageNum, Integer pageSize, Long microlectureId, String microlecturename, Long studentId, String studentName, Integer status,Integer searchType) {
+    public Page<StudentMicrolecture> page(Integer pageNum, Integer pageSize, Long microlectureId, String microlecturename, Long studentId, String studentName, Integer status,String chapter,String knowledgePoint,Integer searchType) {
         pageNum = pageNum == null ? 0 : pageNum-1;
         pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
@@ -128,7 +129,14 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                         Predicate condition = criteriaBuilder.equal(root.get("status"), status);
                         list.add(condition);
                     }
-
+                    if(StringUtils.isNotEmpty(chapter)) {
+                        Predicate condition = criteriaBuilder.equal(root.get("chapter"), chapter);
+                        list.add(condition);
+                    }
+                    if(StringUtils.isNotEmpty(knowledgePoint)) {
+                        Predicate condition = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
+                        list.add(condition);
+                    }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

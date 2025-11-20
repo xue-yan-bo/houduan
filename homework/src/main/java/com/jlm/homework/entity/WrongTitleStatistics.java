@@ -1,6 +1,8 @@
 package com.jlm.homework.entity;
 
 import ai.z.openapi.service.image.ImageResult;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -107,5 +109,5 @@ public class WrongTitleStatistics implements Serializable {
      */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "ai_chart", columnDefinition = "JSON")
-    private ImageResult aiChart;
+    private JSONObject aiChart;
 }

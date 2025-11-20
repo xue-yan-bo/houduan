@@ -28,7 +28,7 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
     @Resource
     private IMicrolectureRepository microlectureRepository;
     @Override
-    public Page<Microlecture> selectPage(Integer pageNum, Integer pageSize, Long schoolId, String name, Long teacherId, String teacherName, Long gradeId, String gradeName, Long classId, String className, String subject, String chapter, LocalDateTime startTime, LocalDateTime endTime) {
+    public Page<Microlecture> selectPage(Integer pageNum, Integer pageSize, Long schoolId, String name, Long teacherId, String teacherName, Long gradeId, String gradeName, Long classId, String className, String subject, String chapter,String knowledgePoint, LocalDateTime startTime, LocalDateTime endTime) {
         pageNum = pageNum == null ? 0 : pageNum-1;
         pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
@@ -78,6 +78,10 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
                     }
                     if(StringUtils.isNotEmpty(chapter)) {
                         Predicate condition = criteriaBuilder.equal(root.get("chapter"), chapter);
+                        list.add(condition);
+                    }
+                    if(StringUtils.isNotEmpty(knowledgePoint)) {
+                        Predicate condition = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
                         list.add(condition);
                     }
                     if(startTime != null) {

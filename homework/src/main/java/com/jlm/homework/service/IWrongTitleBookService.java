@@ -9,7 +9,7 @@ public interface IWrongTitleBookService {
 
     WrongTitleBook save(WrongTitleBook wrongTitleBook);
 
-    Page<WrongTitleBook> findByStudentId(Long studentId,Integer pageNum,Integer pageSize);
+    Page<WrongTitleBook> findByStudentId(Long studentId,Integer pageNum,Integer pageSize,String source,Integer commandFlag);
 
     void createWrongBook(Long studentsHomeworkId);
 
@@ -19,4 +19,6 @@ public interface IWrongTitleBookService {
 
 
     void aiChart(Long wrongTitleId);
+
+    void updateCommandFlag(Long wrongTitleId, Integer commandFlag);
 }

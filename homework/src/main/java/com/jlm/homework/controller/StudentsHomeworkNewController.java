@@ -247,4 +247,17 @@ public class StudentsHomeworkNewController {
         return studentsHomework;
     }
 
+    /**
+     * AI分析学生作业
+     * @param studentsHomeworkId
+     * @return
+     */
+    @GetMapping("/aIauditEmend")
+    @Operation(summary = "AI分析学生订正作业")
+    public String aIauditEmend(Long studentsHomeworkId){
+        String auditAiImage=studentsHomeworkNewService.aIauditEmend(studentsHomeworkId);
+        return auditAiImage;
+    }
+
+
 }

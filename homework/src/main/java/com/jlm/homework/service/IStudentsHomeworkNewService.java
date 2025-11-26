@@ -65,4 +65,6 @@ public interface IStudentsHomeworkNewService {
     StudentsHomeworkNew appSubmit(StudentsHomeworkNew studentsHomework);
 
     StudentsHomeworkNew appEmendSubmit(StudentsHomeworkNew studentsHomework);
+
+    String aIauditEmend(Long studentsHomeworkId);
 }

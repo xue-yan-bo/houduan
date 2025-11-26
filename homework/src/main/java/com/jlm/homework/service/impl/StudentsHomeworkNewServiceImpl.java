@@ -1,5 +1,8 @@
 package com.jlm.homework.service.impl;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
@@ -368,31 +371,31 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Override
     public Page<StudentsHomeworkNew> getStudentsHomeworkPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework) {
         StudentsHomeworkNew homeworkNew = new StudentsHomeworkNew();
-        Sort sort = Sort.by(Sort.Direction.DESC,"createTime");
-        Pageable pageable = PageRequest.of(pageNum-1, pageSize,sort);
-        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
+        Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
+        Pageable pageable = PageRequest.of(pageNum - 1, pageSize, sort);
+        Specification<StudentsHomeworkNew> specification = new Specification<StudentsHomeworkNew>() {
 
             @Override
             public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                if(studentsHomework!=null){
+                if (studentsHomework != null) {
 
                     Predicate condition0 = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
                     Predicate condition1 = null;
-                    if(StringUtils.isNotEmpty(studentsHomework.getAuditStatus())){
+                    if (StringUtils.isNotEmpty(studentsHomework.getAuditStatus())) {
                         condition1 = criteriaBuilder.equal(root.get("auditStatus"), studentsHomework.getAuditStatus());
-                    }else {
+                    } else {
                         condition1 = criteriaBuilder.conjunction();
                     }
                     Predicate condition2 = null;
-                    if(studentsHomework.getClassesId()!=null){
+                    if (studentsHomework.getClassesId() != null) {
                         condition2 = criteriaBuilder.equal(root.get("classesId"), studentsHomework.getClassesId());
-                    }else {
+                    } else {
                         condition2 = criteriaBuilder.conjunction();
                     }
                     Predicate condition4 = null;
-                    if(studentsHomework.getStudentId()!=null){
+                    if (studentsHomework.getStudentId() != null) {
                         condition4 = criteriaBuilder.equal(root.get("studentId"), studentsHomework.getStudentId());
-                    }else {
+                    } else {
                         condition4 = criteriaBuilder.conjunction();
                     }
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
@@ -400,23 +403,29 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
                     try {
                         Predicate condition3 = null;
-                        if(studentsHomework.getCreateTime()!=null){
+                        if (studentsHomework.getCreateTime() != null) {
                             Date createTime = studentsHomework.getCreateTime();
                             calendar.setTime(createTime);
-                            calendar.add(Calendar.DAY_OF_MONTH,1);
+                            calendar.add(Calendar.DAY_OF_MONTH, 1);
                             Date createTime1 = calendar.getTime();
-                            condition3 = criteriaBuilder.between(root.get("createTime").as(Date.class),createTime,createTime1);
+                            condition3 = criteriaBuilder.between(root.get("createTime").as(Date.class), createTime, createTime1);
 
-                        }else {
+                        } else {
                             condition3 = criteriaBuilder.conjunction();
                         }
                         Predicate condition5 = null;
-                        if(studentsHomework.getEmendStatus()!=null){
+                        if (studentsHomework.getEmendStatus() != null) {
                             condition5 = criteriaBuilder.isNotEmpty(root.get("emendStatus"));
-                        }else {
+                        } else {
                             condition5 = criteriaBuilder.conjunction();
                         }
-                        query.where(condition0,condition1,condition2,condition3,condition4,condition5);
+                        Predicate condition6 = null;
+                        if (StringUtils.isNotEmpty(studentsHomework.getKnowledgePoint())) {
+                            condition6 = criteriaBuilder.like(root.get("knowledgePoint"), "%" + studentsHomework.getKnowledgePoint() + "%");
+                        } else {
+                            condition6 = criteriaBuilder.conjunction();
+                        }
+                        query.where(condition0, condition1, condition2, condition3, condition4, condition5);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -427,21 +436,24 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
 
         };
-        Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(specification,pageable);
-        List<StudentsHomeworkNew> homeworkList=studentsHomeworkList.getContent();
-        for(StudentsHomeworkNew homework:homeworkList){
-            List<HomeworkStudentWriteData> writeDatas=homeworkStudentWriteDataService.findByStudentRecordId(homework.getId(),"1");
-            homework.setStudentWriteDataList(writeDatas);
-            List<HomeworkStudentWriteData> writeDatas2=homeworkStudentWriteDataService.findByStudentRecordId(homework.getId(),"2");
-            homework.setStudentWriteDataList2(writeDatas2);
-            StudentsHomeworkCorrect search = new  StudentsHomeworkCorrect();
-            search.setStudentsHomeworkId(homework.getId());
-            search.setType(1);
-            List<StudentsHomeworkCorrect> correctList = studentsHomeworkCorrectRepository.findAll(Example.of(search));
-            homework.setHomeworkCorrectList(correctList);
-            search.setType(2);
-            List<StudentsHomeworkCorrect> correctList2 = studentsHomeworkCorrectRepository.findAll(Example.of(search));
-            studentsHomework.setHomeworkCorrectList2(correctList2);
+        Page<StudentsHomeworkNew> studentsHomeworkList = studentsHomeworkNewRepository.findAll(specification, pageable);
+        if (StringUtils.isEmpty(studentsHomework.getAuditStatus()) ||
+                (!"4".equals(studentsHomework.getAuditStatus()) && !"5".equals(studentsHomework.getAuditStatus()))){
+            List<StudentsHomeworkNew> homeworkList = studentsHomeworkList.getContent();
+            for (StudentsHomeworkNew homework : homeworkList) {
+                List<HomeworkStudentWriteData> writeDatas = homeworkStudentWriteDataService.findByStudentRecordId(homework.getId(), "1");
+                homework.setStudentWriteDataList(writeDatas);
+                List<HomeworkStudentWriteData> writeDatas2 = homeworkStudentWriteDataService.findByStudentRecordId(homework.getId(), "2");
+                homework.setStudentWriteDataList2(writeDatas2);
+                StudentsHomeworkCorrect search = new StudentsHomeworkCorrect();
+                search.setStudentsHomeworkId(homework.getId());
+                search.setType(1);
+                List<StudentsHomeworkCorrect> correctList = studentsHomeworkCorrectRepository.findAll(Example.of(search));
+                homework.setHomeworkCorrectList(correctList);
+                search.setType(2);
+                List<StudentsHomeworkCorrect> correctList2 = studentsHomeworkCorrectRepository.findAll(Example.of(search));
+                studentsHomework.setHomeworkCorrectList2(correctList2);
+            }
         }
         return studentsHomeworkList;
     }
@@ -1477,6 +1489,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     aIaudit(studentsHomework.getId());
                 }else {
                     String auditImages = "";
+                    List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
                     //异步处理AI智能审批
                     ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
                     List<HomeworkStudentWriteData> homeworkStudentWriteDataList = homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(), type);
@@ -1503,6 +1516,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                 }
                             }
                             Map<String, String> resltMap = util.batchRecognizePiyueInImages(imageNames);
+                            //Map<String, String> resltMap = util.analyzeImageToJson(imageNames,"");
                             for (String key : resltMap.keySet()) {
                                 String titleImage = resltMap.get(key);
                                 if (titleImage.contains("<|begin_of_box|>")) {
@@ -1511,6 +1525,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                 if (titleImage.contains("<|end_of_box|>")) {
                                     titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
                                 }
+                                List<HomeworkAIBigDto> bigDtoList= JSONArray.parseArray(titleImage,HomeworkAIBigDto.class);
+                                bigDtoAll.addAll(bigDtoList);
                                 auditImages = auditImages + titleImage;
                                 File imageFile = new File(key);
                                 imageFile.delete();
@@ -1535,6 +1551,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                 titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
                             }
                             System.out.println("批阅结果: " + titleImage);
+                            List<HomeworkAIBigDto> bigDtoList= JSONArray.parseArray(titleImage,HomeworkAIBigDto.class);
+                            bigDtoAll.addAll(bigDtoList);
                             auditImages = auditImages + "\n" + titleImage;
                             File imageFile = new File(outputPath);
                             imageFile.delete();
@@ -1593,9 +1611,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         }
                     }*/
                     if ("1".equals(type)) {
-                        studentsHomework.setAiAudit(auditImages);
+                        studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoAll));
                     } else if ("2".equals(type)) {
-                        studentsHomework.setAiAudit2(auditImages);
+                        studentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoAll));
                     }
                     studentsHomeworkNewRepository.save(studentsHomework);
                 }
@@ -1926,7 +1944,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     if(studentsHomework.getStudentId()!=null){
                         condition4 = criteriaBuilder.equal(root.get("studentId"), studentsHomework.getStudentId());
                     }else {
-                        condition4 = criteriaBuilder.conjunction();
+                        Long studentId=userService.getCurrentUserId();
+                        if(studentId!=null&&1000L!=studentId){
+                            condition4 = criteriaBuilder.equal(root.get("studentId"), studentId);
+                        }else {
+                            condition4 = criteriaBuilder.conjunction();
+                        }
                     }
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                     Calendar calendar = Calendar.getInstance();
@@ -1949,7 +1972,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         }else {
                             condition5 = criteriaBuilder.conjunction();
                         }
-                        query.where(condition0,condition1,cond1,condition2,condition3,condition4,condition5);
+                        Predicate condition6 = criteriaBuilder.isNotNull(root.get("submitTime"));
+                        query.where(condition0,condition1,cond1,condition2,condition3,condition4,condition5,condition6);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -1960,18 +1984,11 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
 
         };
-        List<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewRepository.findAll(specification);
-        Integer unsubmitted=0;
-        Integer submitted=0;
-        Integer total=0;
-        for(StudentsHomeworkNew homework:studentsHomeworkList) {
-            if(homework.getSubmitTime()!=null){
-                submitted++;
-            }else{
-                unsubmitted++;
-            }
-            total++;
-        }
+        Long count=studentsHomeworkNewRepository.count(specification);
+
+        Integer submitted=Integer.parseInt(count+"");
+        Integer total=Integer.parseInt(homeworkPage.getTotalElements()+"");
+        Integer unsubmitted =total-submitted;
         studentHomeworkDto.setTotal(total);
         studentHomeworkDto.setSubmitted(submitted);
         studentHomeworkDto.setUnsubmitted(unsubmitted);
@@ -2132,6 +2149,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         } catch (Exception e) {
             System.out.println("+++++解析分数错误++++++++++ "+e.getMessage() );
         }*/
+        Map<String,List<HomeworkAISmallDto>> aiResultMap = new HashMap<>();
         List<QuestionAnalysis> errorList = new ArrayList<>();
         if(analyses!=null&&analyses.size()>0){
 
@@ -2151,19 +2169,46 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 questionAnalysis.setClassesId(studentsHomework.getClassesId());
                 questionAnalysis.setStudentId(studentsHomework.getStudentId());
                 questionAnalysis.setStudentName(studentsHomework.getStudentName());
+                HomeworkAISmallDto smallDto = new HomeworkAISmallDto();
+                smallDto.setSmallNumber(questionAnalysis.getSmallNumber());
                 if(questionAnalysis.getIsCorrect()==null){
                     stringBuilder = stringBuilder.append("未答题 ");
+                    smallDto.setCorrectFlag("未答题");
                 }else if(questionAnalysis.getIsCorrect()){
                     stringBuilder = stringBuilder.append("正确 ");
+                    smallDto.setCorrectFlag("正确");
                 }else{
                     stringBuilder = stringBuilder.append("错误 ");
+                    smallDto.setCorrectFlag("错误");
                     errorList.add(questionAnalysis);
+                }
+                String key = questionAnalysis.getBigNumber()+":"+questionAnalysis.getQuestionType();
+
+
+                if(aiResultMap.containsKey(key)){
+                    List<HomeworkAISmallDto> smallDtoList = aiResultMap.get(key);
+                    smallDtoList.add(smallDto);
+                    aiResultMap.put(key,smallDtoList);
+                }else{
+                    List<HomeworkAISmallDto> smallDtoList = new ArrayList<>();
+                    smallDtoList.add(smallDto);
+                    aiResultMap.put(key,smallDtoList);
                 }
                 questionAnalysisService.save(questionAnalysis);
             }
             auditImages = stringBuilder.toString();
         }
-        studentsHomework.setAiAudit(auditImages);
+        List<HomeworkAIBigDto> bigDtoList = new ArrayList<>();
+        for(String key:aiResultMap.keySet()){
+            String bigNumber = key.split(":")[0];
+            String questionType = key.split(":")[1];
+            HomeworkAIBigDto bigDto = new HomeworkAIBigDto();
+            bigDto.setBigNumber(bigNumber);
+            bigDto.setQuestionType(questionType);
+            bigDto.setSmallDtoList(aiResultMap.get(key));
+            bigDtoList.add(bigDto);
+        }
+        studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoList));
         studentsHomeworkNewRepository.save(studentsHomework);
         if(errorList!=null&&errorList.size()>0){
             for(QuestionAnalysis questionAnalysis:errorList){
@@ -2360,7 +2405,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 String auditImages ="";
                 if(StringUtils.isNotEmpty(finalStudentsHomework.getSubmitFileUrl2())) {
                     List<String> imageNames = Arrays.asList(finalStudentsHomework.getSubmitFileUrl2().split(","));
-
+                    List<HomeworkAIBigDto> bigDtoAll  = new ArrayList<>();
                     Map<String, String> resltMap = util.batchRecognizePiyueInImages(imageNames);
                     for (String key : resltMap.keySet()) {
                         String titleImage = resltMap.get(key);
@@ -2370,13 +2415,15 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         if (titleImage.contains("<|end_of_box|>")) {
                             titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
                         }
+                        List<HomeworkAIBigDto> bigDtoList= JSONArray.parseArray(titleImage,HomeworkAIBigDto.class);
+                        bigDtoAll.addAll(bigDtoList);
                         auditImages = auditImages + titleImage;
                         File imageFile = new File(key);
                         imageFile.delete();
                     }
                     System.out.println("批阅结果: " + auditImages);
 
-                    finalStudentsHomework.setAiAudit2(auditImages);
+                    finalStudentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoAll));
                     studentsHomeworkNewRepository.save(finalStudentsHomework);
                 }
 
@@ -2392,5 +2439,119 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         Thread thread = new Thread(futureTask);
         thread.start();
         return studentsHomework;
+    }
+
+    @Override
+    public String aIauditEmend(Long studentsHomeworkId) {
+        StudentsHomeworkNew studentsHomework = this.getById(studentsHomeworkId);
+        String auditImages = "";
+        //异步处理AI智能审批
+        ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+        List<HomeworkStudentWriteData> homeworkStudentWriteDataList=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"2");
+        try {
+            if(StringUtils.isNotEmpty(studentsHomework.getSubmitFileUrl2())) {
+                List<String> imageNames = Arrays.asList(studentsHomework.getSubmitFileUrl2().split(","));
+                List<HomeworkAIBigDto> bigDtoAll  = new ArrayList<>();
+                Map<String, String> resltMap = util.batchRecognizePiyueInImages(imageNames);
+                for (String key : resltMap.keySet()) {
+                    String titleImage = resltMap.get(key);
+                    if(titleImage.contains("<|begin_of_box|>")){
+                        titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
+                    }
+                    if (titleImage.contains("<|end_of_box|>")) {
+                        titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+                    }
+                    List<HomeworkAIBigDto> bigDtoList= JSONArray.parseArray(titleImage,HomeworkAIBigDto.class);
+                    bigDtoAll.addAll(bigDtoList);
+                    auditImages = auditImages + titleImage;
+                    File imageFile = new File(key);
+                    imageFile.delete();
+                }
+                System.out.println("批阅结果: " + auditImages);
+            }else if(!homeworkStudentWriteDataList.isEmpty()){
+                List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
+                if (studentsHomework.getTopicImages() != null && studentsHomework.getTopicImages().size() > 0
+                        && !studentsHomework.getTopicImagesStr().endsWith(".docx") && !studentsHomework.getTopicImagesStr().endsWith(".doc")) {
+                    try {
+                        List<String> imageNames = new ArrayList<>();
+                        for (int i = 0; i < studentsHomework.getTopicImages().size(); i++) {
+                            String imageUrl = studentsHomework.getTopicImages().get(i);
+
+
+                            for (HomeworkStudentWriteData writeData1 : homeworkStudentWriteDataList) {
+                                if (writeData1.getPageNum() == (i + 1)) {
+                                    List<StudentsWriteRecord> records = writeData1.getStudentsWriteRecords();
+                                    BufferedImage resultImage = null;
+
+                                    resultImage = ImageOverlayUtil.overlayWritingDataFromUrl(imageUrl, records);
+
+                                    // 保存结果图片
+                                    String imageName = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + "_" + writeData1.getPageNum() + "页作业.png";
+                                    CoordinateImageGenerator.saveImage(resultImage, imageName);
+                                    imageNames.add(imageName);
+                                }
+                            }
+                        }
+                        Map<String, String> resltMap = util.batchRecognizePiyueInImages(imageNames);
+                        //Map<String, String> resltMap = util.analyzeImageToJson(imageNames,"");
+                        for (String key : resltMap.keySet()) {
+                            String titleImage = resltMap.get(key);
+                            if (titleImage.contains("<|begin_of_box|>")) {
+                                titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>") + 16);
+                            }
+                            if (titleImage.contains("<|end_of_box|>")) {
+                                titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+                            }
+                            List<HomeworkAIBigDto> bigDtoList= JSONArray.parseArray(titleImage,HomeworkAIBigDto.class);
+                            bigDtoAll.addAll(bigDtoList);
+                            auditImages = auditImages + titleImage;
+                            File imageFile = new File(key);
+                            imageFile.delete();
+                        }
+
+                        System.out.println("批阅结果: " + auditImages);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                } else if (StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())) {
+                    try {
+                        String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
+                        DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
+                        //试题识别
+
+                        String titleImage = util.recognizePiyueInImage(outputPath);
+                        if (titleImage.contains("<|begin_of_box|>")) {
+                            titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>") + 16);
+                        }
+                        if (titleImage.contains("<|end_of_box|>")) {
+                            titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+                        }
+                        System.out.println("批阅结果: " + titleImage);
+                        if(titleImage.startsWith("[")) {
+                            List<HomeworkAIBigDto> bigDtoList = JSONArray.parseArray(titleImage, HomeworkAIBigDto.class);
+                            bigDtoAll.addAll(bigDtoList);
+                        }else if(titleImage.startsWith("{")){
+                            HomeworkAIBigDto bigDto= JSONObject.parseObject(titleImage,HomeworkAIBigDto.class);
+                            bigDtoAll.add(bigDto);
+                        }else{
+                            System.out.println("json格式不对："+titleImage);
+                        }
+                        auditImages = auditImages + "\n" + titleImage;
+                        File imageFile = new File(outputPath);
+                        imageFile.delete();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } catch (InvalidFormatException ife) {
+                        throw new RuntimeException(ife);
+                    }
+                }
+                studentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoAll));
+            }
+            studentsHomeworkNewRepository.save(studentsHomework);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return auditImages;
     }
 }

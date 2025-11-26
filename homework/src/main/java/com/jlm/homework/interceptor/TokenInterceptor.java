@@ -2,6 +2,7 @@ package com.jlm.homework.interceptor;
 
 import com.jlm.homework.service.TokenService;
 import com.jlm.homework.util.UserContext;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,8 +52,7 @@ public class TokenInterceptor implements HandlerInterceptor {
                     }
                 }
             }
-            String userId =  request.getHeader("user_id");
-            System.out.println("当前用户id："+userId);
+
             // 如果token存在，验证并获取用户信息
             if (token != null && !token.trim().isEmpty()) {
                 boolean isValid = tokenService.validateTokenAndGetUserInfo(token);
@@ -67,7 +67,11 @@ public class TokenInterceptor implements HandlerInterceptor {
                     // return false;
                 }
             }
-            
+            String userId =  request.getHeader("user_id");
+            System.out.println("当前用户id："+userId);
+            if(StringUtils.isEmpty(UserContext.getUserId())){
+                UserContext.setUserId(userId);
+            }
             // 允许请求继续，即使没有token或token无效
             // 具体的权限控制可以在Controller层通过UserContext.isLoggedIn()判断
             return true;

@@ -162,4 +162,10 @@ public class WrongTitleBook {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "ai_chart", columnDefinition = "JSON")
     private JSONObject aiChart;
+
+    /**
+     * 掌握标记，0未掌握、1已掌握
+     */
+    @Column(name = "command_flag")
+    private Integer commandFlag;
 }

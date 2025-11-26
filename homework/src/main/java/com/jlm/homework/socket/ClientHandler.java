@@ -495,6 +495,7 @@ public class ClientHandler implements Runnable {
                                             studentsEmendRecords =new ArrayList<>();
                                             homeworkflag = false;
                                             emendflag = false;
+                                            errorTitleflag = false;
                                             querenJishu = 0;
                                             homeId = null;
                                             page_num = null;
@@ -612,6 +613,7 @@ public class ClientHandler implements Runnable {
                                             pCurrentMenu.setSelectItem(0);
                                             homeworkflag = false;
                                             emendflag = false;
+                                            errorTitleflag = false;
                                             nMenuUpdate(out,writer);
                                         }
 
@@ -669,6 +671,7 @@ public class ClientHandler implements Runnable {
                                             pCurrentMenu.setSelectItem(0);
                                             homeworkflag = false;
                                             emendflag = false;
+                                            errorTitleflag = false;
                                             nMenuUpdate(out,writer);
                                         }
                                     }
@@ -783,6 +786,7 @@ public class ClientHandler implements Runnable {
                                         homeworkflag = false;
                                         emendflag = false;
                                         feedbackflag = false;
+                                        errorTitleflag = false;
                                         nMenuUpdate(out, writer);
                                     }
                                 }
@@ -803,6 +807,7 @@ public class ClientHandler implements Runnable {
                                         homeworkflag = false;
                                         emendflag = false;
                                         feedbackflag = false;
+                                        errorTitleflag = false;
                                         studentsWriteRecords = new ArrayList<>();
                                         studentsEmendRecords = new ArrayList<>();
                                         studentsFeedbackRecords = new ArrayList<>();
@@ -815,6 +820,7 @@ public class ClientHandler implements Runnable {
                                     pCurrentMenu = null;
                                     homeworkflag = false;
                                     emendflag = false;
+                                    errorTitleflag = false;
                                     work2Boards =new ArrayList<>();
                                     homeId = null;
                                     page_num =null;
@@ -849,9 +855,10 @@ public class ClientHandler implements Runnable {
                                     }
 
                                     pCurrentMenu = null;
-                                    emendflag = false;
+                                    mrnuflag = false;
                                     homeworkflag = false;
                                     emendflag = false;
+                                    errorTitleflag = false;
                                     studentsWriteRecords = new ArrayList<>();
                                     work2Boards =new ArrayList<>();
                                     homeworkMenu = null;
@@ -880,9 +887,10 @@ public class ClientHandler implements Runnable {
                                         studentsEmendRecords =new ArrayList<>();
                                     }
                                     pCurrentMenu = null;
-                                    emendflag = false;
+                                    mrnuflag = false;
                                     homeworkflag = false;
                                     emendflag = false;
+                                    errorTitleflag = false;
                                     studentsEmendRecords = new ArrayList<>();
                                     work2Boards =new ArrayList<>();
                                     homeworkMenu = null;
@@ -896,15 +904,17 @@ public class ClientHandler implements Runnable {
                                     homeworkflag = false;
                                     emendflag = false;
                                     feedbackflag = false;
+                                    errorTitleflag = false;
                                     homeId = null;
                                     page_num =null;
                                     nMenuUpdate(out, writer);
 
                                 }else if(mrnuflag){
                                     pCurrentMenu = null;
-                                    emendflag = false;
+                                    mrnuflag = false;
                                     homeworkflag = false;
                                     emendflag = false;
+                                    errorTitleflag = false;
                                     work2Boards =new ArrayList<>();
                                     homeworkMenu = null;
                                     emendMenu = null;

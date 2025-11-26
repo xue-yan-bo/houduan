@@ -452,7 +452,8 @@ public class ZhipuAIImageAnalysisUtil {
      * @throws IOException 文件读取或API调用异常
      */
     public Map<String, String> batchRecognizePiyueInImages(List<String> imagePaths) throws IOException {
-        String prompt = "请识别批阅图片中所有试题的内容，并以文本形式返回 包括大题号（包含题型）、小题号、批阅结果（批阅结果可以是 正确、错误、未答题），不要题内容。";
+        //String prompt = "请识别批阅图片中所有试题的内容，并以文本形式返回 包括大题号（包含题型）、小题号、批阅结果（批阅结果可以是 正确、错误、未答题），不要题内容。";
+        String prompt = "请识别批阅图片中所有试题的内容，并以JSON格式返回，格式如[{\"bigNumber\":\"一\",\"questionType\":\"选择题\",\"smallDtoList\":[{{\"smallNumber\":\"1\",\"correctFlag\":\"错误\"}]}] ";
         return batchAnalyzeImages(imagePaths, prompt);
     }
     
@@ -626,10 +627,17 @@ public class ZhipuAIImageAnalysisUtil {
                         smallNumber = startSub(smallNumber,"：");
 
                         currentQuestion.setSmallNumber(smallNumber);
-                    } else if (line.contains("题号：")) {
-                        String questionNumber = extractBetween(line, "题号：", "\s|\n|$");
+                    } else if (line.contains("题号")) {
+                        String questionNumber = extractBetween(line, "题号", "\s|\n|$");
+                        questionNumber = startSub(questionNumber,"：");
+                        if("无".equals(questionNumber.trim())){
+                            continue;
+                        }
+                        if(questionNumber.contains("**")){
+                            questionNumber = questionNumber.replace("**","");
+                        }
                         currentQuestion.setQuestionNumber(questionNumber);
-                        if(questionNumber.length()>3&&questionNumber.length()<5){
+                        if(questionNumber.length()>=3&&questionNumber.length()<=6){
                             currentQuestion.setBigNumber(questionNumber.substring(0,1));
                             currentQuestion.setSmallNumber(questionNumber.substring(2));
                         }

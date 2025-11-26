@@ -28,8 +28,9 @@ public class WrongTitleBookController {
     @Operation(summary = "学生错题本、我的错题本")
     public Page<WrongTitleBook> findByStudentId(@PathVariable("studentId") Long studentId,
                        @RequestParam(defaultValue = "1")Integer pageNum,
-                       @RequestParam(defaultValue = "10") Integer pageSize){
-        return wrongTitleBookService.findByStudentId(studentId,pageNum,pageSize);
+                       @RequestParam(defaultValue = "10") Integer pageSize,
+                       String source,Integer commandFlag){
+        return wrongTitleBookService.findByStudentId(studentId,pageNum,pageSize,source,commandFlag);
     }
 
     @GetMapping("/createWrongBook")
@@ -58,5 +59,17 @@ public class WrongTitleBookController {
     @GetMapping("/aiChart")
     public void aiChart(Long wrongTitleId){
         wrongTitleBookService.aiChart(wrongTitleId);
+    }
+
+    /**
+     * 掌握标记接口
+     * @param wrongTitleId
+     * @return
+     */
+    @GetMapping("/commandFlag")
+    @Operation(summary = "掌握标记接口")
+    public void commandFlag(Long wrongTitleId,
+                            Integer commandFlag){
+        wrongTitleBookService.updateCommandFlag(wrongTitleId,commandFlag);
     }
 }

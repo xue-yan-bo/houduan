@@ -15,9 +15,14 @@ import com.jlm.homework.service.IWrongTitleStatisticsService;
 import com.jlm.homework.util.PiontSignUtil;
 import com.jlm.homework.util.ZhipuAIImageAnalysisUtil;
 import jakarta.annotation.Resource;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 
@@ -49,14 +54,37 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     }
 
     @Override
-    public Page<WrongTitleBook> findByStudentId(Long studentId,Integer pageNum,Integer pageSize) {
+    public Page<WrongTitleBook> findByStudentId(Long studentId,Integer pageNum,Integer pageSize,String source,Integer commandFlag) {
         pageNum = pageNum == null ? 0 : pageNum-1;
         pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
-        WrongTitleBook search = new WrongTitleBook();
-        search.setStudentId(studentId);
-        return wrongTitleBookRepository.findAll(Example.of(search),pageable);
+        Specification<WrongTitleBook> specification= new Specification<WrongTitleBook>() {
+
+            @Override
+            public Predicate toPredicate(Root<WrongTitleBook> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                try {
+                    Predicate cond = criteriaBuilder.equal(root.get("studentId"),studentId);
+                    list.add(cond);
+                    if(StringUtils.isNotEmpty(source)){
+                        Predicate condition = criteriaBuilder.like(root.get("source"),"%"+source+"%");
+                        list.add(condition);
+                    }
+                    if(commandFlag!=null){
+                        Predicate condition1 = criteriaBuilder.equal(root.get("commandFlag"),commandFlag);
+                        list.add(condition1);
+                    }
+
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        return wrongTitleBookRepository.findAll(specification,pageable);
     }
 
     public void createWrongBook(Long studentsHomeworkId){
@@ -326,6 +354,16 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void updateCommandFlag(Long wrongTitleId, Integer commandFlag) {
+        Optional<WrongTitleBook> optional=wrongTitleBookRepository.findById(wrongTitleId);
+        if(optional.isPresent()){
+            WrongTitleBook wrongTitleBook=optional.get();
+            wrongTitleBook.setCommandFlag(commandFlag);
+            wrongTitleBookRepository.save(wrongTitleBook);
         }
     }
 }

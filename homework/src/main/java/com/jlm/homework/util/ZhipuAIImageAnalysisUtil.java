@@ -520,7 +520,7 @@ public class ZhipuAIImageAnalysisUtil {
      */
     public List<QuestionAnalysis> reviewExamQuestions(String imagePath) throws IOException {
         // 构建详细的批阅提示词，要求模型返回结构化信息
-        String prompt = "请详细分析并批阅图片中的所有试题，返回以下信息：\n"
+        String prompt = "请详细分析并批阅图片中的所有试题，按题号顺序返回以下信息：\n"
                      + "1. 题号： 包含试题大题号、小题号,格式如大题号：小题号：\n"
                      + "2. 题型： 试题题型类别\n"
                      + "3. 分值： 试题分值\n"
@@ -635,6 +635,9 @@ public class ZhipuAIImageAnalysisUtil {
                         }
                         if(questionNumber.contains("**")){
                             questionNumber = questionNumber.replace("**","");
+                        }
+                        if(questionNumber.contains("分")){
+                            questionNumber = questionNumber.substring(0,5);
                         }
                         currentQuestion.setQuestionNumber(questionNumber);
                         if(questionNumber.length()>=3&&questionNumber.length()<=6){

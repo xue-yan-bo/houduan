@@ -2,6 +2,7 @@ package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.StudentHomeworkDto;
 import com.jlm.homework.dto.StudentsHomeworkRequest;
+import com.jlm.homework.dto.StudentsHomeworkSimpleDTO;
 import com.jlm.homework.entity.AuditLogoCoordinate;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.exception.ParameterNewException;
@@ -55,7 +56,7 @@ public class StudentsHomeworkNewController {
         }
         studentsHomework.setSubmitStatus(1);
         studentsHomework.setSubmitTime(new Date());
-        studentsHomework.setAuditStatus("1");
+        studentsHomework.setAuditStatus(1);
         studentsHomework=studentsHomeworkNewService.update(studentsHomework);
         return studentsHomework;
     }
@@ -71,7 +72,7 @@ public class StudentsHomeworkNewController {
         studentsHomework.setSubmitFileUrl(submitFileUrl);
         studentsHomework.setSubmitStatus(1);
         studentsHomework.setSubmitTime(new Date());
-        studentsHomework.setAuditStatus("1");
+        studentsHomework.setAuditStatus(1);
         studentsHomework=studentsHomeworkNewService.appSubmit(studentsHomework);
         return studentsHomework;
     }
@@ -94,10 +95,10 @@ public class StudentsHomeworkNewController {
         if(studentsHomework.getEmendStatus()!=null
                 &&Integer.valueOf(2).compareTo(studentsHomework.getEmendStatus())==0){
             studentsHomework.setEmendStatus(3);
-            studentsHomework.setAuditStatus("5");
+            studentsHomework.setAuditStatus(5);
         }else if(studentsHomework.getAuditStatus()==null
                 ||Integer.valueOf(studentsHomework.getAuditStatus())<2){
-            studentsHomework.setAuditStatus("2");
+            studentsHomework.setAuditStatus(2);
         }
         studentsHomework=studentsHomeworkNewService.audit(studentsHomework);
         return studentsHomework;
@@ -153,14 +154,14 @@ public class StudentsHomeworkNewController {
             studentsHomework.setTeacherAuditSuggest(auditSuggestBuilder.toString());
             // 设置需要订正
             studentsHomework.setEmendStatus(1);
-            studentsHomework.setAuditStatus("3"); // 3表示需要订正
+            studentsHomework.setAuditStatus(3); // 3表示需要订正
         } else if(studentsHomework.getEmendStatus()==null
                 &&studentsHomework.getAuditStatus()!=null
                 &&Integer.valueOf(studentsHomework.getAuditStatus())<2){
             // 如果没有错误，设置为通过
             studentsHomework.setErrorReason("无错误");
             studentsHomework.setTeacherAuditSuggest("作业完成良好，继续保持！");
-            studentsHomework.setAuditStatus("2"); // 2表示审批通过
+            studentsHomework.setAuditStatus(2); // 2表示审批通过
         }
     }
 
@@ -178,7 +179,19 @@ public class StudentsHomeworkNewController {
         return studentsHomeworkList;
     }
 
-
+    /**
+     * 分页
+     * @param studentsHomework
+     * @return
+     */
+    @GetMapping("/emend/page")
+    @Operation(summary = "分页查询")
+    public Page<StudentsHomeworkSimpleDTO> getEmendPage(@RequestParam(defaultValue = "1")Integer pageNum,
+                                                                   @RequestParam(defaultValue = "10") Integer pageSize,
+                                                                   StudentsHomeworkNew studentsHomework) {
+        Page<StudentsHomeworkSimpleDTO> studentsHomeworkList=studentsHomeworkNewService.getEmendPage(pageNum,pageSize,studentsHomework);
+        return studentsHomeworkList;
+    }
     /**
      * 分页
      * @param studentsHomework
@@ -205,19 +218,7 @@ public class StudentsHomeworkNewController {
         return;
     }
 
-    /**
-     * 订正分页
-     * @param studentsHomework
-     * @return
-     */
-    @GetMapping("/emend/page")
-    @Operation(summary = "订正分页")
-    public Page<StudentsHomeworkNew> geemendPage( @RequestParam(defaultValue = "1")Integer pageNum,
-                                                              @RequestParam(defaultValue = "10") Integer pageSize,
-                                                              StudentsHomeworkNew studentsHomework) {
-        Page<StudentsHomeworkNew> studentsHomeworkList=studentsHomeworkNewService.geemendPage(pageNum,pageSize,studentsHomework);
-        return studentsHomeworkList;
-    }
+
 
     /**
      * AI分析学生作业
@@ -242,7 +243,7 @@ public class StudentsHomeworkNewController {
         StudentsHomeworkNew studentsHomework=studentsHomeworkNewService.getById(studentsHomeworkId);
         studentsHomework.setSubmitFileUrl2(submitFileUrl2);
         studentsHomework.setEmendStatus(2);
-        studentsHomework.setAuditStatus("4");
+        studentsHomework.setAuditStatus(4);
         studentsHomework=studentsHomeworkNewService.appEmendSubmit(studentsHomework);
         return studentsHomework;
     }

@@ -22,7 +22,7 @@ public class EducHomeworkData {
     //平均作业时长整体走势
     private Map<String,Double> dayAverageDuration;
     //作业速报
-    private List<StudentsHomeworkNew> studentsHomeworkNewList;
+    private List<StudentsHomeworkSimpleDTO> studentsHomeworkNewList;
 
 
 }

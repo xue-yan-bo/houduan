@@ -3,6 +3,7 @@ package com.jlm.homework.controller;
 import com.jlm.homework.dto.HomeworkPublishRequest;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.service.IHomeworkPublishService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -34,13 +35,23 @@ public class HomeworkPublishController {
      * 更新
      */
     @PostMapping("/update")
+    @Operation(summary = "编辑修改")
     public HomeworkPublish update(@RequestBody HomeworkPublish homeworkPublish) {
         homeworkPublish=homeworkPublishService.update(homeworkPublish);
         return homeworkPublish;
-
-
     }
 
+    @GetMapping("/withdraw")
+    @Operation(summary = "撤回发布")
+    public void withdraw(Long homeworkPublishId) {
+        homeworkPublishService.withdraw(homeworkPublishId);
+    }
+
+    @GetMapping("/rePublish")
+    @Operation(summary = "重新发布")
+    public void rePublish(Long homeworkPublishId) {
+        homeworkPublishService.rePublish(homeworkPublishId);
+    }
     /**
      * 分页查询
      * @param homeworkPublishRequest

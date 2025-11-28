@@ -160,7 +160,7 @@ public class HomeworkPublish implements Serializable {
         }
     }
     /**
-     * 批改状态，0待批改、1已批改
+     * 批改状态，1待批改、2已批改
      */
     @Column(name = "audit_status")
     private Integer auditStatus;

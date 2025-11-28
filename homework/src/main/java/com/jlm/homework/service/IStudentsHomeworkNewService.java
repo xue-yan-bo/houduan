@@ -5,6 +5,7 @@ import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.entity.StudentsWriteRecord;
 import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.List;
 public interface IStudentsHomeworkNewService {
     void createStudentsHomeworkByHomeworkPublish(HomeworkPublish homeworkPublish);
 
-    List<StudentsHomeworkNew> getByHomeworkPublishId(Long homeworkPublishId, StudentsHomeworkRequest studentsHomeworkRequest);
+    List<StudentsHomeworkSimpleDTO> getByHomeworkPublishId(Long homeworkPublishId, StudentsHomeworkRequest studentsHomeworkRequest);
 
     StudentsHomeworkNew update(StudentsHomeworkNew studentsHomework);
 
@@ -48,7 +49,6 @@ public interface IStudentsHomeworkNewService {
 
     List<HomeWork2Board> getEmendHomeWork2Board(String subject,Long studentId);
 
-    Page<StudentsHomeworkNew> geemendPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 
     StudentsHomeworkNew audit(StudentsHomeworkNew studentsHomework);
 
@@ -67,4 +67,8 @@ public interface IStudentsHomeworkNewService {
     StudentsHomeworkNew appEmendSubmit(StudentsHomeworkNew studentsHomework);
 
     String aIauditEmend(Long studentsHomeworkId);
+
+    Page<StudentsHomeworkSimpleDTO> getEmendPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
+
+    List<StudentsHomeworkSimpleDTO> findAllSimpleDTOBySpecification(Specification<StudentsHomeworkNew> specification);
 }

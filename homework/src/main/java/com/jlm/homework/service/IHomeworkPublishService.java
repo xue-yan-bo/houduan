@@ -14,4 +14,8 @@ public interface IHomeworkPublishService {
     Page<HomeworkPublish> selectList(Integer pageNum,Integer pageSize, HomeworkPublishRequest homeworkPublishRequest);
 
     void deleteById(Long id);
+
+    void withdraw(Long homeworkPublishId);
+
+    void rePublish(Long homeworkPublishId);
 }

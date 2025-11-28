@@ -122,7 +122,7 @@ public class StudentsHomeworkNew implements Serializable {
      * 审批状态(0待提交、1待审批、2已审批、3订正待提交、4订正待审批、5订正已审批)
      */
     @Column(name = "audit_status")
-    private String auditStatus;
+    private Integer auditStatus;
 
     /**
      * 审批时间

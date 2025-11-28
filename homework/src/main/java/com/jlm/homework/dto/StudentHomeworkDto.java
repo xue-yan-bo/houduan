@@ -9,5 +9,5 @@ public class StudentHomeworkDto {
     private Integer unsubmitted;
     private Integer submitted;
     private Integer total;
-    private Page<StudentsHomeworkNew> homeworkPage;
+    private Page<StudentsHomeworkSimpleDTO> homeworkPage;
 }

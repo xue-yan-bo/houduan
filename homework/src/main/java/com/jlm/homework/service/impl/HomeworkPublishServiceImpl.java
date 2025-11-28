@@ -1,6 +1,7 @@
 package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.HomeworkPublishRequest;
+import com.jlm.homework.dto.StudentsHomeworkSimpleDTO;
 import com.jlm.homework.entity.CurrentUserInfo;
 import com.jlm.homework.entity.ExerciseBookEntity;
 import com.jlm.homework.entity.HomeworkPublish;
@@ -109,12 +110,17 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
 
     @Override
     public HomeworkPublish getById(Long id) {
-        return homeworkPublishRepository.getById(id);
+        Optional<HomeworkPublish> optional=homeworkPublishRepository.findById(id);
+        if(optional.isPresent()){
+            return optional.get();
+        }
+        return null;
     }
 
     @Override
     public HomeworkPublish update(HomeworkPublish homeworkPublish) {
         homeworkPublish.setDeleteFlag(0);
+        homeworkPublish.setPublishStatus(0);
         if(homeworkPublish.getClassId()!=null&&homeworkPublish.getClassId().size()>0){
             String classIds = homeworkPublish.getClassId().stream().map(Object::toString).collect(Collectors.joining(","));
             homeworkPublish.setClassIds(classIds);
@@ -132,36 +138,6 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
         }else if(3==homeworkPublish.getTestSource()){//每日一练，练习册数据
             homeworkPublish.setExerciseBookId(null);
             homeworkPublish.setExerciseBookName(null);
-        }
-        List<StudentsHomeworkNew> homeworkNewList=studentsHomeworkNewService.getByHomeworkPublishId(homeworkPublish.getId(),null);
-        if(homeworkNewList.isEmpty()){
-            if(homeworkPublish.getScheduledReleaseFlag()==0){//如果不是定时发布，就是立刻发布，生成学生作业
-                studentsHomeworkNewService.createStudentsHomeworkByHomeworkPublish(homeworkPublish);
-            }else if(homeworkPublish.getScheduledReleaseFlag()==1
-                    &&homeworkPublish.getPublishTime()!=null){
-                Timer timer = new Timer();
-                TimerTask task = new TimerTask() {
-                    @Override
-                    public void run() {
-                        studentsHomeworkNewService.createStudentsHomeworkByHomeworkPublish(homeworkPublish);
-                        homeworkPublish.setPublishStatus(1);
-                        homeworkPublishRepository.save(homeworkPublish);
-                    }
-                };
-                timer.schedule(task,homeworkPublish.getPublishTime());
-            }
-        }
-        if(homeworkPublish.getDeadline()!=null){
-            Timer timer = new Timer();
-            TimerTask task1 = new TimerTask() {
-                @Override
-                public void run() {
-                    studentsHomeworkNewService.endStudentsHomework(homeworkPublish);
-                    homeworkPublish.setPublishStatus(2);
-                    homeworkPublishRepository.save(homeworkPublish);
-                }
-            };
-            timer.schedule(task1,homeworkPublish.getDeadline());
         }
         if(StringUtils.isEmpty(homeworkPublish.getSubject())){
             String subject = null;
@@ -273,5 +249,66 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
         HomeworkPublish homeworkPublish=homeworkPublishRepository.getReferenceById(id);
         homeworkPublish.setDeleteFlag(1);
         homeworkPublishRepository.save(homeworkPublish);
+    }
+
+    @Override
+    public void withdraw(Long homeworkPublishId) {
+        Optional<HomeworkPublish> optional=homeworkPublishRepository.findById(homeworkPublishId);
+        if(optional.isPresent()){
+            HomeworkPublish homeworkPublish=optional.get();
+            homeworkPublish.setPublishStatus(0);
+            homeworkPublishRepository.save(homeworkPublish);
+        }
+    }
+
+    @Override
+    public void rePublish(Long homeworkPublishId) {
+        Optional<HomeworkPublish> optional=homeworkPublishRepository.findById(homeworkPublishId);
+        if(optional.isPresent()){
+            HomeworkPublish homeworkPublish=optional.get();
+            if(homeworkPublish.getPublishStatus()>0){
+                return;
+            }
+            List<StudentsHomeworkSimpleDTO> homeworkNewList=studentsHomeworkNewService.getByHomeworkPublishId(homeworkPublish.getId(),null);
+            if(homeworkNewList.isEmpty()){
+                if(homeworkPublish.getScheduledReleaseFlag()==0){//如果不是定时发布，就是立刻发布，生成学生作业
+                    studentsHomeworkNewService.createStudentsHomeworkByHomeworkPublish(homeworkPublish);
+                }else if(homeworkPublish.getScheduledReleaseFlag()==1
+                        &&homeworkPublish.getPublishTime()!=null){
+                    Timer timer = new Timer();
+                    TimerTask task = new TimerTask() {
+                        @Override
+                        public void run() {
+                            studentsHomeworkNewService.createStudentsHomeworkByHomeworkPublish(homeworkPublish);
+                            homeworkPublish.setPublishStatus(1);
+                            homeworkPublishRepository.save(homeworkPublish);
+                        }
+                    };
+                    timer.schedule(task,homeworkPublish.getPublishTime());
+                }
+            }
+            if(homeworkPublish.getDeadline()!=null){
+                Timer timer = new Timer();
+                TimerTask task1 = new TimerTask() {
+                    @Override
+                    public void run() {
+                        studentsHomeworkNewService.endStudentsHomework(homeworkPublish);
+                        homeworkPublish.setPublishStatus(2);
+                        homeworkPublishRepository.save(homeworkPublish);
+                    }
+                };
+                timer.schedule(task1,homeworkPublish.getDeadline());
+            }
+            if(StringUtils.isEmpty(homeworkPublish.getSubject())){
+                String subject = null;
+                if(homeworkPublish.getExerciseBookId() != null){
+                    ExerciseBookEntity exerciseBook = exerciseBookServer.findById(homeworkPublish.getExerciseBookId());
+                    subject =  exerciseBook.getSubject();
+                }
+                homeworkPublish.setSubject(subject);
+            }
+            homeworkPublish.setPublishStatus(1);
+            homeworkPublishRepository.save(homeworkPublish);
+        }
     }
 }

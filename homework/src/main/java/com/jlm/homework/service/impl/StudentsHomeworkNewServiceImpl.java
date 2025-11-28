@@ -280,14 +280,22 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     public StudentsHomeworkNew  update(StudentsHomeworkNew studentsHomework) {
         studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
         HomeworkPublish homeworkPublish=homeworkPublishRepository.getById(studentsHomework.getHomeworkPublishId());
-        StudentsHomeworkNew newSerach=new StudentsHomeworkNew();
-        newSerach.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
-        newSerach.setAuditStatus(1);
+        StudentsHomeworkNew finalStudentsHomework = studentsHomework;
+        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
 
-        Example<StudentsHomeworkNew> example = Example.of(studentsHomework);
-        long count =studentsHomeworkNewRepository.count(example);
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                Predicate condition = criteriaBuilder.equal(root.get("homeworkPublishId"), finalStudentsHomework.getHomeworkPublishId());
+                list.add(condition);
+                Predicate condition1 = criteriaBuilder.le(root.get("auditStatus"),1);
+                list.add(condition1);
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        long count =studentsHomeworkNewRepository.count(specification);
         if(count==0){
-
             homeworkPublish.setAuditStatus(2);
             homeworkPublishRepository.save(homeworkPublish);
         }
@@ -298,7 +306,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Override
     public Page<StudentsHomeworkNew> getListByHomeworkPublishId(Long homeworkPublishId, Integer pageNum, Integer pageSize, StudentsHomeworkRequest studentsHomeworkRequest) {
         StudentsHomeworkNew homeworkNew = new StudentsHomeworkNew();
-        Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
+        Sort sort = Sort.by(Sort.Direction.DESC, "submitTime");
         Pageable pageable = PageRequest.of(pageNum-1, pageSize,sort);
         Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
 
@@ -1847,12 +1855,21 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
 
         HomeworkPublish homeworkPublish=homeworkPublishRepository.getById(studentsHomework.getHomeworkPublishId());
-        StudentsHomeworkNew newSerach=new StudentsHomeworkNew();
-        newSerach.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
-        newSerach.setAuditStatus(1);
+        StudentsHomeworkNew finalStudent = studentsHomework;
+        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
 
-        Example<StudentsHomeworkNew> example = Example.of(studentsHomework);
-        long count =studentsHomeworkNewRepository.count(example);
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                Predicate condition = criteriaBuilder.equal(root.get("homeworkPublishId"), finalStudent.getHomeworkPublishId());
+                list.add(condition);
+                Predicate condition1 = criteriaBuilder.le(root.get("auditStatus"),1);
+                list.add(condition1);
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        long count =studentsHomeworkNewRepository.count(specification);
         if(count==0){
 
             homeworkPublish.setAuditStatus(2);
@@ -2697,7 +2714,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         
         // 应用所有条件
         criteriaQuery.where(predicates.toArray(new Predicate[0]));
-        
+        criteriaQuery.orderBy(criteriaBuilder.desc(root.get("createTime")));
+
         // 执行查询并获取分页结果
         TypedQuery<StudentsHomeworkSimpleDTO> typedQuery = entityManager.createQuery(criteriaQuery);
         

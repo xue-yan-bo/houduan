@@ -189,6 +189,7 @@
     <modules>
         <module>homework</module>
        <!-- <module>remote-server</module>-->
+        <module>agent</module>
     </modules>
 
 </project>

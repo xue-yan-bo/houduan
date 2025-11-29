@@ -1,11 +1,11 @@
 spring:
   ai:
     zhipuai:
-      api-key: 7abc333508dd4d71b83dcb6f5a511eee.rjwsPZyUfDN5abhn
-      base-url: https://openai.zhipuai.cn/v1
+      api-key: "7abc333508dd4d71b83dcb6f5a511eee.rjwsPZyUfDN5abhn"
+      #base-url: "https://open.bigmodel.cn"
       image:
         options:
-          model: GLM-4.5V
+          model: GLM-4.5-Flash
       chat:
         options:
-          model: GLM-4.5-Flash
+          model: GLM-4.5V

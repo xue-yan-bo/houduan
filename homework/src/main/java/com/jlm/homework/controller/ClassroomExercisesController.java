@@ -5,7 +5,7 @@ import com.jlm.homework.entity.ClassroomExercises;
 import com.jlm.homework.service.IClassroomExercisesService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.commons.lang3.StringUtils;
+import com.alibaba.cloud.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;

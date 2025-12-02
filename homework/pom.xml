@@ -98,13 +98,8 @@
 
         <!-- 注意：已移除 remote-server 依赖，现在使用 OpenFeign 进行远程调用 -->
 
-        <!-- OpenAPI 3.0 (Swagger) 文档生成 -->
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.3.0</version>
-        </dependency>
-
+        <!-- OpenAPI 3.0 (Swagger) 文档生成 - 使用Spring Boot 3.x兼容的方案 -->
+        <!-- knife4j已经包含了OpenAPI 3.0所需的核心依赖 -->
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
@@ -154,17 +149,8 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
-        <!--swagger2-->
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger2</artifactId>
-            <version>3.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger-ui</artifactId>
-            <version>3.0.0</version>
-        </dependency>
+        <!-- Using SpringDoc OpenAPI (already included above) -->
+        <!-- Removed SpringFox dependencies to avoid conflict -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -199,6 +185,48 @@
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
             <version>3.15.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.15.4</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.scilab.forge/jlatexmath -->
+        <dependency>
+            <groupId>org.scilab.forge</groupId>
+            <artifactId>jlatexmath</artifactId>
+            <version>1.0.7</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/cn.hutool/hutool-core -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-core</artifactId>
+            <version>5.8.15</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/fluent-hc -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>fluent-hc</artifactId>
+            <version>4.5.14</version>
+        </dependency>
+        <!-- 移除knife4j，使用直接与Spring Boot 3.2.4兼容的springdoc-openapi -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.5.0</version>
+        </dependency>
+        <!-- minio 依赖 -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.squareup.okhttp3</groupId>
+                    <artifactId>okhttp</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 

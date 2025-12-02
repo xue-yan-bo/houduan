@@ -45,3 +45,17 @@ debug: true
 rongcloud:
   App_Key: p5tvi9dspctn4
   App_Secret: euPM0qGaA44
+
+plus:
+  # 下载文件地址（线上要用外网，否则无法下载！）
+  download-url: http://192.168.1.38:9930
+  # 在线预览基路径
+  view-url: https://view.sxhetu.com/onlinePreview?url=
+  # 定时删除无效题卷[每五秒执行一次：0/5 * * * * ?, 每晚23点执行一次：0 0 23 * * ?, 每晚12点半执行一次：0 30 0 * * ?]
+  cron-remove: 0 30 0 * * ?
+
+minio:
+  endpoint: http://124.165.206.34:20020
+  accessKey: admin
+  secretKey: sxjlm@1234
+  bucketName: exercise

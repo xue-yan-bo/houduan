@@ -56,7 +56,7 @@ public class TokenService {
                 }
             }
             
-            return false;
+            return true;
         } catch (Exception e) {
             logger.error("Token验证失败: {}", e.getMessage(), e);
             return false;

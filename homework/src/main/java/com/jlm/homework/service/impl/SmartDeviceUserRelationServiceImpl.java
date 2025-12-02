@@ -9,7 +9,7 @@ import com.jlm.homework.repository.SmartDeviceUserRelationRepository;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.service.IUserService;
 import jakarta.annotation.Resource;
-import org.apache.commons.lang3.StringUtils;
+import com.alibaba.cloud.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;

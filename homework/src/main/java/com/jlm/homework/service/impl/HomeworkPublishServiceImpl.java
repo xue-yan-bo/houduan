@@ -13,7 +13,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import org.apache.commons.lang3.StringUtils;
+import com.alibaba.cloud.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -256,6 +256,24 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
         Optional<HomeworkPublish> optional=homeworkPublishRepository.findById(homeworkPublishId);
         if(optional.isPresent()){
             HomeworkPublish homeworkPublish=optional.get();
+            Specification<StudentsHomeworkNew> stuSpecification = new Specification<StudentsHomeworkNew>() {
+
+                @Override
+                public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                    List<Predicate> list = new ArrayList<>();
+
+                    Predicate cond= criteriaBuilder.equal(root.get("homeworkPublishId"),homeworkPublishId);
+                    list.add(cond);
+                    Predicate cond1= criteriaBuilder.isNotNull(root.get("startTime"));
+                    list.add(cond1);
+                    Predicate[] p =  new Predicate[list.size()];
+                    return criteriaBuilder.and(list.toArray(p));
+                }
+            };
+            List<StudentsHomeworkSimpleDTO> studentList=studentsHomeworkNewService.findAllSimpleDTOBySpecification(stuSpecification);
+            if(studentList!=null&&studentList.size()>0){
+                throw new RuntimeException("已有学生提交该作业，不能撤回发布！");
+            }
             homeworkPublish.setPublishStatus(0);
             homeworkPublishRepository.save(homeworkPublish);
         }
@@ -286,6 +304,16 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                     };
                     timer.schedule(task,homeworkPublish.getPublishTime());
                 }
+            }else{
+                studentsHomeworkNewService.updateByPublishId(homeworkPublishId,
+                        homeworkPublish.getHomeworkName(),
+                        homeworkPublish.getTopicImagesStr(),
+                        homeworkPublish.getDeadline(),
+                        homeworkPublish.getDailyPracticeld(),
+                        homeworkPublish.getDailyPracticeName(),
+                        homeworkPublish.getDailyPracticePreview(),
+                        homeworkPublish.getChapter(),
+                        homeworkPublish.getKnowledgePoint());
             }
             if(homeworkPublish.getDeadline()!=null){
                 Timer timer = new Timer();

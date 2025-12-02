@@ -13,7 +13,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import org.apache.commons.lang3.StringUtils;
+import com.alibaba.cloud.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
@@ -130,7 +130,7 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                         list.add(condition);
                     }
                     if(StringUtils.isNotEmpty(chapter)) {
-                        Predicate condition = criteriaBuilder.equal(root.get("chapter"), chapter);
+                        Predicate condition = criteriaBuilder.like(root.get("chapter"), "%"+chapter+"%");
                         list.add(condition);
                     }
                     if(StringUtils.isNotEmpty(knowledgePoint)) {
@@ -191,5 +191,25 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
 
         };
         return studentMicrolectureRepository.findAll(specification,pageable);
+    }
+
+    @Override
+    public void deleteByMicrolectureId(Long microlectureId) {
+        StudentMicrolecture deleteM = new  StudentMicrolecture();
+        deleteM.setMicrolectureId(microlectureId);
+        studentMicrolectureRepository.delete(deleteM);
+    }
+
+    @Override
+    public List<StudentMicrolecture> findByMicrolectureId(Long microlectureId) {
+        StudentMicrolecture search = new  StudentMicrolecture();
+        search.setMicrolectureId(microlectureId);
+        return studentMicrolectureRepository.findAll(Example.of(search));
+
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        studentMicrolectureRepository.deleteById(id);
     }
 }

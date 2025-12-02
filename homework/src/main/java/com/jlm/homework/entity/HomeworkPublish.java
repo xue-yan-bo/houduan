@@ -3,9 +3,9 @@ package com.jlm.homework.entity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
+
 import lombok.Data;
-import org.apache.commons.lang3.StringUtils;
+import com.alibaba.cloud.commons.lang.StringUtils;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -28,7 +28,6 @@ public class HomeworkPublish implements Serializable {
      *作业名称
      */
     @Column(name = "homework_name")
-    @NotBlank(message = "作业名称不能为空")
     private String homeworkName;
     @Column(name = "school_id")
     private Long schoolId;

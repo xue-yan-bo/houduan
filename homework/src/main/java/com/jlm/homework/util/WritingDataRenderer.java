@@ -15,7 +15,7 @@ import java.util.List;
 public class WritingDataRenderer {
 
     // 默认配置
-    public static final Color DEFAULT_STROKE_COLOR = Color.BLACK;
+    public static final Color DEFAULT_STROKE_COLOR = Color.BLUE;
     public static final float DEFAULT_MIN_LINE_WIDTH = 1.2f;
     public static final float DEFAULT_MAX_LINE_WIDTH = 5.0f;
     public static final int DEFAULT_THRESHOLD = 10; // 距离阈值

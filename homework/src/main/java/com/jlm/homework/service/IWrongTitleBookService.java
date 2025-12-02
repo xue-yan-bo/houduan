@@ -21,4 +21,8 @@ public interface IWrongTitleBookService {
     void aiChart(Long wrongTitleId);
 
     void updateCommandFlag(Long wrongTitleId, Integer commandFlag);
+
+    void updateWrongBook(WrongTitleBook wrongTitleBook);
+
+    void deleteById(Long id);
 }

@@ -1,12 +1,13 @@
 package com.jlm.homework.entity;
 
+import com.alibaba.cloud.commons.lang.StringUtils;
 import com.alibaba.nacos.shaded.com.google.gson.Gson;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.Data;
-import org.apache.commons.lang3.StringUtils;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 

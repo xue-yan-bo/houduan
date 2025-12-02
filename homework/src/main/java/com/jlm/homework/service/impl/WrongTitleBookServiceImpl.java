@@ -19,7 +19,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import org.apache.commons.lang3.StringUtils;
+import com.alibaba.cloud.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
@@ -194,22 +194,26 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             }
         }
         wrongTitleBook.setCreateTime(new Date());
+        if(StringUtils.isEmpty(wrongTitleBook.getSource())){
+            wrongTitleBook.setSource("学生自加");
+        }
         wrongTitleBookRepository.save(wrongTitleBook);
         if(!isNew){
             return;
         }
-        Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findById(wrongTitleBook.getStudentsHomeworkId());
-        if(optional!=null&&optional.isPresent()){
-            StudentsHomeworkNew homeworkNew = optional.get();
-            if(homeworkNew.getAccuracy()==null){
-                homeworkNew.setAccuracy(98.0);
-            }else{
-                homeworkNew.setAccuracy(homeworkNew.getAccuracy()-2);
+        if(wrongTitleBook.getStudentsHomeworkId()!=null) {
+            Optional<StudentsHomeworkNew> optional = studentsHomeworkNewRepository.findById(wrongTitleBook.getStudentsHomeworkId());
+            if (optional != null && optional.isPresent()) {
+                StudentsHomeworkNew homeworkNew = optional.get();
+                if (homeworkNew.getAccuracy() == null) {
+                    homeworkNew.setAccuracy(98.0);
+                } else {
+                    homeworkNew.setAccuracy(homeworkNew.getAccuracy() - 2);
+                }
+                studentsHomeworkNewRepository.save(homeworkNew);
             }
-            studentsHomeworkNewRepository.save(homeworkNew);
+            this.addClassWrongTitle(wrongTitleBook);
         }
-
-        this.addClassWrongTitle(wrongTitleBook);
         FutureTask<String> futureTask = new FutureTask<>(() -> {
 
             aiChart(wrongTitleBook.getId());
@@ -365,5 +369,18 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             wrongTitleBook.setCommandFlag(commandFlag);
             wrongTitleBookRepository.save(wrongTitleBook);
         }
+    }
+
+    @Override
+    public void updateWrongBook(WrongTitleBook wrongTitleBook) {
+        /*if(wrongTitleBook.getSource().contains("作业")){
+            throw new RuntimeException("错题来源为作业的，不可以修改！");
+        }*/
+        wrongTitleBookRepository.save(wrongTitleBook);
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        wrongTitleBookRepository.deleteById(id);
     }
 }

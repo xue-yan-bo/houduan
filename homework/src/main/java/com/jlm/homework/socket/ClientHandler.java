@@ -9,7 +9,7 @@ import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.socket.boardmenu.MenuItemT;
 import com.jlm.homework.socket.boardmenu.MenuT;
 import com.jlm.homework.util.ParseTcpDataUtil;
-import org.apache.commons.lang3.StringUtils;
+import com.alibaba.cloud.commons.lang.StringUtils;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.io.*;

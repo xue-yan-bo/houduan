@@ -24,6 +24,11 @@ public class WrongTitleBookController {
         wrongTitleBookService.addWrongBook(wrongTitleBook);
     }
 
+    @PostMapping("/updateWrongBook")
+    @Operation(summary = "修改错题本")
+    public void updateWrongBook(@RequestBody WrongTitleBook  wrongTitleBook) {
+        wrongTitleBookService.updateWrongBook(wrongTitleBook);
+    }
     @GetMapping("/{studentId}")
     @Operation(summary = "学生错题本、我的错题本")
     public Page<WrongTitleBook> findByStudentId(@PathVariable("studentId") Long studentId,
@@ -71,5 +76,12 @@ public class WrongTitleBookController {
     public void commandFlag(Long wrongTitleId,
                             Integer commandFlag){
         wrongTitleBookService.updateCommandFlag(wrongTitleId,commandFlag);
+    }
+
+    @DeleteMapping("/delete/{id}")
+    @Operation(summary = "删除错题")
+    public void deleteById(@PathVariable Long id) {
+        wrongTitleBookService.deleteById(id);
+
     }
 }

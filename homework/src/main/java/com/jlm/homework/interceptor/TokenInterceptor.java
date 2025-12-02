@@ -1,8 +1,9 @@
 package com.jlm.homework.interceptor;
 
 import com.jlm.homework.service.TokenService;
+import com.jlm.homework.util.SecurityUtils;
 import com.jlm.homework.util.UserContext;
-import org.apache.commons.lang3.StringUtils;
+import com.alibaba.cloud.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,23 +55,23 @@ public class TokenInterceptor implements HandlerInterceptor {
             }
 
             // 如果token存在，验证并获取用户信息
-            if (token != null && !token.trim().isEmpty()) {
-                boolean isValid = tokenService.validateTokenAndGetUserInfo(token);
-                if (isValid) {
-                    logger.debug("用户 {} 已通过token验证", UserContext.getUsername());
+            //if (token != null && !token.trim().isEmpty()) {
+                //boolean isValid = tokenService.validateTokenAndGetUserInfo(token);
+                //if (isValid) {
+                  //  logger.debug("用户 {} 已通过token验证", UserContext.getUsername());
 
-                } else {
-                    logger.warn("无效的token: {}", token);
+               // } else {
+                    //logger.warn("无效的token: {}", token);
                     // 根据实际需求决定是否阻止请求继续
                     // 如果是需要认证的接口，可以返回401状态码
                     // response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     // return false;
-                }
-            }
-            String userId =  request.getHeader("user_id");
+               // }
+           // }
+            Long userId = SecurityUtils.getUserId();
             System.out.println("当前用户id："+userId);
             if(StringUtils.isEmpty(UserContext.getUserId())){
-                UserContext.setUserId(userId);
+                UserContext.setUserId(userId+"");
             }
             // 允许请求继续，即使没有token或token无效
             // 具体的权限控制可以在Controller层通过UserContext.isLoggedIn()判断

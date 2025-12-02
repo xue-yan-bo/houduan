@@ -2,7 +2,7 @@ package com.jlm.homework.util;
 
 import com.jlm.homework.entity.HomeworkStudentWriteData;
 import com.jlm.homework.entity.StudentsWriteRecord;
-import org.apache.commons.lang3.StringUtils;
+import com.alibaba.cloud.commons.lang.StringUtils;
 import org.apache.poi.xwpf.usermodel.*;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import javax.imageio.ImageIO;

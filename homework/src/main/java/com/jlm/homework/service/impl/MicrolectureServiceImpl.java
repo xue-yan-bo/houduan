@@ -11,7 +11,7 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
-import org.apache.commons.lang3.StringUtils;
+import com.alibaba.cloud.commons.lang.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -77,8 +77,8 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
                         list.add(condition);
                     }
                     if(StringUtils.isNotEmpty(chapter)) {
-                        Predicate condition = criteriaBuilder.equal(root.get("chapter"), chapter);
-                        list.add(condition);
+                        Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapter+"%");
+                        list.add(condition1);
                     }
                     if(StringUtils.isNotEmpty(knowledgePoint)) {
                         Predicate condition = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
@@ -107,5 +107,10 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
     @Override
     public void save(Microlecture microlecture) {
         microlectureRepository.save(microlecture);
+    }
+
+    @Override
+    public void delete(Long microlectureId) {
+        microlectureRepository.deleteById(microlectureId);
     }
 }

@@ -7,7 +7,6 @@ import com.jlm.homework.service.IMicrolectureService;
 import com.jlm.homework.service.IStudentMicrolectureService;
 
 
-import io.swagger.annotations.ApiOperation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,7 +69,26 @@ public class MicrolectureController {
             return microlecture;
 
     }
-
+    @Operation(summary = "老师删除微课")
+    @DeleteMapping("/delete/{id}")
+    public void delete(@PathVariable Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("微课ID不能为空");
+        }
+        try {
+            List<StudentMicrolecture> studentMicrolectureList = studentMicrolectureService.findByMicrolectureId(id);
+            if (!studentMicrolectureList.isEmpty()) {
+                studentMicrolectureList.forEach(
+                        studentMicrolecture -> {
+                            studentMicrolectureService.deleteById(studentMicrolecture.getId());
+                        }
+                );
+            }
+            microlectureService.delete(id);
+        } catch (Exception e) {
+            throw new RuntimeException("删除微课失败: " + e.getMessage(), e);
+        }
+    }
 
     @GetMapping("/studentPage")
     @Operation(summary = "学生微课分页")

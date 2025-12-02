@@ -19,7 +19,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+import com.alibaba.cloud.commons.lang.StringUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.hibernate.query.Order;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -142,7 +142,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         TypedQuery<StudentsHomeworkSimpleDTO> query = entityManager.createQuery(cq);
         return query.getResultList();
     }
-    
+
+    @Override
+    public void updateByPublishId(Long homeworkPublishId,String homeworkName, String topicImagesStr, Date deadline, Long dailyPracticeld, String dailyPracticeName, String dailyPracticePreview,  String chapter, String knowledgePoint) {
+        studentsHomeworkNewRepository.updateByPublishId(homeworkPublishId,homeworkName,topicImagesStr,deadline,dailyPracticeld,dailyPracticeName,dailyPracticePreview,chapter,knowledgePoint);
+    }
+
     @Override
     public void createStudentsHomeworkByHomeworkPublish(HomeworkPublish homeworkPublish) {
         if(!homeworkPublish.getClassId().isEmpty()){

@@ -1096,6 +1096,41 @@ public class ZhipuAIImageAnalysisUtil {
         return new ZhipuAIImageAnalysisUtil(apiKey);
     }
 
+
+    public Map<String,String> analyzeImagesAnswer(String imagePath)  throws IOException {
+        String prompt = "你是一个专业的识图助手，只做识图操作，禁止解答所有题目，只提取学生用蓝色笔手写的文字、数字、符号、选项序号（排除印刷体文字），所有题目提取内容直接转录原始内容，不要包含题目原文、选项文字，严格按以下固定格式输出，按顺序列出图中所有题目，若某题学生未填写则标注 “未作答”。\n"
+                + "请严格按以下固定格式输出：\n "
+                +"【一级标题（与试卷板块一致，如 “一、填空”）】题目 1：学生手写内容（原样记录字迹 / 符号）\n"
+                +"【一级标题（与试卷板块一致，如 “一、填空”）】题目 2：学生手写内容 \n "
+                +"…… \n"
+                +"【一级标题（如 “二、判断”）】题目 1：学生手写内容\n "
+                +"【一级标题（如 “二、判断”）】题目 2：学生手写内容\n "
+                +"……\n "
+                +"【一级标题（如 “二、判断”）】题目 1：学生手写内容\n "
+                +"【一级标题（如 “二、判断”）】题目 2：学生手写内容\n "
+                +"注：若学生某题未作答，标注 “学生未作答”；若书写模糊无法识别，标注 “学生书写模糊无法识别”；必须严格匹配试卷题目顺序，不调整、不增删任何内容。\n "
+                +"请基于上述要求，提取目标试卷的学生作答笔迹";
+        String aiResult = analyzeImage(imagePath,prompt);
+
+        Map<String,String> map = parseAIResultToMap(aiResult);
+        return map;
+    }
+
+    private Map<String, String> parseAIResultToMap(String aiResult) {
+        // 按行分割AI结果
+        String[] lines = aiResult.split("\n");
+        Map<String,String> map = new HashMap();
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+            String bigNum = line.substring(1,line.indexOf("、"));
+            String smallNum = extractBetween(line,"题目","：");
+            String studentAnswer=extractBetween(line, "小题号", "\n|$");
+            map.put(bigNum+":"+smallNum,studentAnswer);
+        }
+        return map;
+    }
+
     public static void main(String[] args) {
 
         ZhipuAIImageAnalysisUtil util = createInstance("7abc333508dd4d71b83dcb6f5a511eee.rjwsPZyUfDN5abhn");

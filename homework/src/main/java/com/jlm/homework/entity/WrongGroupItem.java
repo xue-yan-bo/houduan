@@ -36,15 +36,15 @@ public class WrongGroupItem implements Serializable {
 
 
     @Column(name = "content")
-    private byte[] content;
+    private String content;
 
 
     @Column(name = "solution")
-    private byte[] solution;
+    private String solution;
 
 
     @Column(name = "parse")
-    private byte[] parse;
+    private String parse;
 
 
     @Column(name = "sort")
@@ -57,13 +57,5 @@ public class WrongGroupItem implements Serializable {
     @JsonIgnore
     @Column(name = "create_time")
     private LocalDateTime createTime;
-
-    @JsonIgnore
-    @Transient
-    private String contentStr;
-
-    @JsonIgnore
-    @Transient
-    private String solutionStr;
 
 }

@@ -22,7 +22,7 @@ public class ClassroomExercisesStudentAnswerController {
 
     @PostMapping("/update")
     @Operation(summary = "学生提交答案")
-    public ClassroomExercisesStudentAnswer update(ClassroomExercisesStudentAnswer studentAnswer){
+    public ClassroomExercisesStudentAnswer update(@RequestBody ClassroomExercisesStudentAnswer studentAnswer){
         return classroomExercisesStudentAnswerService.save(studentAnswer);
     }
     /**

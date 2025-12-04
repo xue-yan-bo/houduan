@@ -6,5 +6,5 @@ import org.springframework.data.domain.Page;
 public interface IStudentSignRecordService {
     StudentSignRecord sign(StudentSignRecord studentSignRecord);
 
-    Page<StudentSignRecord> queryList(Integer pageNum, Integer pageSize, Long attendanceRecordId);
+    Page<StudentSignRecord> queryList(Integer pageNum, Integer pageSize, Long attendanceRecordId,String studentName,Integer signFlag);
 }

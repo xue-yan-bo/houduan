@@ -84,7 +84,7 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
     public Page<WrongGroup> selectList(Integer pageNum, Integer pageSize, WrongGroup wrongGroup) {
         pageNum = pageNum == null ? 0 : pageNum-1;
         pageSize = pageSize == null ? 10 : pageSize;
-        Sort sort = Sort.by(Sort.Direction.ASC, "sort");
+        Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
         Pageable pageable;
         pageable = PageRequest.of(pageNum, pageSize, sort);
         return wrongGroupRepository.findAll(Example.of(wrongGroup),pageable);

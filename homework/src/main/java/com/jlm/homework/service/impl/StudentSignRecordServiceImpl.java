@@ -67,7 +67,7 @@ public class StudentSignRecordServiceImpl  implements IStudentSignRecordService 
     }
 
     @Override
-    public Page<StudentSignRecord> queryList(Integer pageNum, Integer pageSize, Long attendanceRecordId) {
+    public Page<StudentSignRecord> queryList(Integer pageNum, Integer pageSize, Long attendanceRecordId,String studentName,Integer signFlag) {
         pageNum = pageNum == null ? 0 : pageNum-1;
         pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.ASC, "signTime");
@@ -75,6 +75,8 @@ public class StudentSignRecordServiceImpl  implements IStudentSignRecordService 
         pageable = PageRequest.of(pageNum, pageSize, sort);
         StudentSignRecord record = new StudentSignRecord();
         record.setAttendanceRecordId(attendanceRecordId);
+        record.setStudentName(studentName);
+        record.setSignFlag(signFlag);
         return studentSignRecordRepository.findAll(Example.of(record),pageable);
     }
 }

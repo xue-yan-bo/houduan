@@ -45,40 +45,51 @@ public class WrongGroupItemController {
     @Operation(summary = "生成试题题目编辑")
     @PostMapping("/addOredit")
     @Transactional(rollbackFor = Exception.class)
-    public void edit(ItemEditDto itemEditDto){
+    public void edit(@RequestBody ItemEditDto itemEditDto){
+        if(itemEditDto==null){
+            throw new RuntimeException("参数不能为空！");
+        }
         WrongGroup wrongGroup = new WrongGroup();
         if(itemEditDto.getGroupId()==null){
+            wrongGroup.setType(1);
             wrongGroup.setName(itemEditDto.getName());
+            wrongGroup.setStudentId(itemEditDto.getStudentId());
+            wrongGroup.setStudentName(itemEditDto.getStudentName());
             wrongGroup.setCreateTime(new Date());
             wrongGroup = wrongGroupService.addGroup(wrongGroup);
         }else{
             wrongGroup = wrongGroupService.getById(itemEditDto.getGroupId());
         }
         WrongGroup finalWrongGroup = wrongGroup;
-        List<WrongGroupItem> itemEntities = itemEditDto.getItemSaveDtoList().stream().map(i -> {
-            WrongGroupItem item = new WrongGroupItem();
-            item.setWrongGroupId(finalWrongGroup.getId());
-            item.setTitleType(i.getTitleType());
-            if(StringUtils.isNotEmpty(i.getContent())) {
-                item.setContent(Base64.getDecoder().decode(i.getContent()));
-            }
-            if(StringUtils.isNotEmpty(i.getSolution())) {
-                item.setSolution(Base64.getDecoder().decode(i.getSolution()));
-            }
-            if(StringUtils.isNotEmpty(i.getParse())) {
-                item.setParse(Base64.getDecoder().decode(i.getParse()));
-            }
-            item.setSort(i.getSort());
-            if (i.getId()!=null) {
-                item.setId(i.getId());
-            }
-            item.setUpdateTime(LocalDateTime.now());
-            return item;
-        }).collect(Collectors.toList());
+        if(itemEditDto.getItemSaveDtoList()!=null&&itemEditDto.getItemSaveDtoList().size()>0){
+            List<WrongGroupItem> itemEntities = itemEditDto.getItemSaveDtoList().stream().map(i -> {
+                WrongGroupItem item = new WrongGroupItem();
+                item.setWrongGroupId(finalWrongGroup.getId());
+                item.setTitleType(i.getTitleType());
+                if(StringUtils.isNotEmpty(i.getContent())) {
+                    item.setContent(i.getContent());
+                }
+                if(StringUtils.isNotEmpty(i.getSolution())) {
+                    item.setSolution(i.getSolution());
+                }
+                if(StringUtils.isNotEmpty(i.getParse())) {
+                    item.setParse(i.getParse());
+                }
+                item.setSort(i.getSort());
+                if (i.getId()!=null) {
+                    item.setId(i.getId());
+                }
+                item.setUpdateTime(LocalDateTime.now());
+                return item;
+            }).collect(Collectors.toList());
+            wrongGroupItemService.saveOrUpdateBatch(itemEntities) ;
+            wrongGroupService.toWord(wrongGroup,itemEntities);
+        }
 
-        wrongGroupItemService.saveOrUpdateBatch(itemEntities) ;
 
-        wrongGroupService.toWord(wrongGroup,itemEntities);
+
+
+
     }
 
 
@@ -91,7 +102,7 @@ public class WrongGroupItemController {
      * @return 删除结果
      */
     @Operation(summary = "题目删除")
-    @PostMapping("/remove")
+    @GetMapping("/remove")
     private void remove(@RequestParam("groupId") Long groupId, @RequestParam("itemId") Long itemId) {
         WrongGroupItem item=wrongGroupItemService.findById(itemId);
         if(item==null){

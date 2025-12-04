@@ -91,6 +91,7 @@ public class TeacherAttendanceRecordServiceImpl implements ITeacherAttendanceRec
         TeacherAttendanceRecord record = teacherAttendanceRecordRepository.findById(attendanceRecordId).get();
         Date now = new Date();
         record.setEndTime(now);
+        teacherAttendanceRecordRepository.save(record);
         return record;
     }
 

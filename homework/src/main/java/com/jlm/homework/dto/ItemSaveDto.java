@@ -1,5 +1,6 @@
 package com.jlm.homework.dto;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,11 +12,11 @@ import java.io.Serializable;
  * @description
  * @date 2023/3/8 0008
  */
-@Setter
-@Getter
+@Data
 public class ItemSaveDto implements Serializable {
 
     private static final long serialVersionUID = -3555919652163215660L;
+    private Long id;
 
     private String titleType;
 
@@ -28,8 +29,5 @@ public class ItemSaveDto implements Serializable {
 
     private Integer sort;
 
-    private Long id;
 
-    private String chapter;
-    private String knowledgePoint;
 }

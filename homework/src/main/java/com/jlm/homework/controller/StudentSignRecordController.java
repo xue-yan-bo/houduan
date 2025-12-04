@@ -31,9 +31,11 @@ public class StudentSignRecordController {
     @Operation(summary = "根据老师考勤ID查询学生签订列表查询")
     public Page<StudentSignRecord> queryList(@RequestParam(defaultValue = "1")Integer pageNum,
                            @RequestParam(defaultValue = "10") Integer pageSize,
-                           Long attendanceRecordId
+                           Long attendanceRecordId,
+                           String studentName,
+                           Integer signFlag
     ){
-        Page<StudentSignRecord> list = studentSignRecordService.queryList(pageNum,pageSize,attendanceRecordId);
+        Page<StudentSignRecord> list = studentSignRecordService.queryList(pageNum,pageSize,attendanceRecordId,studentName,signFlag);
         return list;
     }
 

@@ -21,6 +21,10 @@ public interface StudentsHomeworkNewRepository extends JpaRepository<StudentsHom
     void updateDeadline(Long homeworkPublishId,Date deadline,Integer submitStatus);
     @Modifying
     @Transactional
-    @Query(value = "UPDATE students_homework_new h SET h.homework_publish_name=?2,h.topic_images=?3,h.deadline=?4,h.daily_practice_id=?5, h.daily_practice_name = ?6,h.daily_practice_preview = ?7,h.chapter = ?8,h.knowledge_point = ?9 WHERE h.homework_publish_id = ?1", nativeQuery = true)
-    public void updateByPublishId(Long homeworkPublishId, String homeworkName, String topicImagesStr, Date deadline, Long dailyPracticeld, String dailyPracticeName, String dailyPracticePreview, String chapter, String knowledgePoint);
+    @Query(value = "UPDATE students_homework_new h SET h.homework_publish_name=?2,h.topic_images=?3,h.deadline=?4,h.daily_practice_id=?5, h.daily_practice_name = ?6,h.daily_practice_preview = ?7,h.chapter = ?8,h.knowledge_point = ?9,h.submit_status = ?10 WHERE h.homework_publish_id = ?1", nativeQuery = true)
+    public void updateByPublishId(Long homeworkPublishId, String homeworkName, String topicImagesStr, Date deadline, Long dailyPracticeld, String dailyPracticeName, String dailyPracticePreview, String chapter, String knowledgePoint,Integer submitStatus);
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE students_homework_new h SET h.submit_status = null WHERE h.homework_publish_id = ?1", nativeQuery = true)
+    void updateSubmietNull(Long homeworkPublishId);
 }

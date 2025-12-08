@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.entity.ExamPaperAnalysis;
+import com.jlm.homework.entity.HomeworkPublishQuestion;
 import com.jlm.homework.entity.QuestionAnalysis;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -327,6 +328,72 @@ public class ZhipuAIImageAnalysisUtil {
         // 5. 处理响应
         return parseAndFormatResponse(response.getBody());
     }
+
+    /**
+     * 分析图片内容
+     * @param imagePaths 图片文件路径
+     * @param prompt 提示词，指导模型如何分析图片
+     * @return 分析结果文本
+     * @throws IOException 文件读取或API调用异常
+     */
+    public String analyzeImages(List<String> imagePaths, String prompt) throws IOException {
+        // 1. 读取图片并进行Base64编码
+        List<String> base64Images = new ArrayList<>();
+        for(String imagePath: imagePaths) {
+            String base64Image = null;
+            try {
+                base64Image = encodeImageToBase64(imagePath);
+                base64Images.add(base64Image);
+            } catch (IOException e) {
+                continue;
+            }
+
+        }
+
+
+        // 2. 准备请求参数
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+
+        // 构建messages参数
+        Map<String, Object> message = new HashMap<>();
+        message.put("role", "user");
+
+        // 构建content数组，包含文本和图片
+        Map<String, String> textContent = new HashMap<>();
+        textContent.put("type", "text");
+        textContent.put("text", prompt);
+        Object[] objs = new Object[base64Images.size()+1];
+        objs[0] = textContent;
+        for(int i=0; i<base64Images.size(); i++) {
+            String base64Image = base64Images.get(i);
+            Map<String, Object> imageContent = new HashMap<>();
+            imageContent.put("type", "image_url");
+
+            // 根据智谱AI API要求，image_url应该是一个对象而不是字符串
+            Map<String, String> imageUrlObject = new HashMap<>();
+            imageUrlObject.put("url", "data:image/jpeg;base64," + base64Image);
+            imageContent.put("image_url", imageUrlObject);
+            objs[i+1] = imageContent;
+        }
+
+        message.put("content", objs);
+        requestBody.put("messages", new Object[]{message});
+
+        // 3. 设置请求头
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + apiKey);
+        headers.set("Accept", "application/json");
+
+        // 4. 发送请求
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                BASE_URL + "chat/completions", request, String.class);
+
+        // 5. 处理响应
+        return parseAndFormatResponse(response.getBody());
+    }
     /**
      * 分析图片内容（使用CogView-4模型）
      * @param imagePath 图片文件路径
@@ -521,7 +588,7 @@ public class ZhipuAIImageAnalysisUtil {
      */
     public List<QuestionAnalysis> reviewExamQuestions(String imagePath) throws IOException {
         // 构建详细的批阅提示词，要求模型返回结构化信息
-        String prompt = "请详细分析并批阅图片中的所有试题，按题号顺序返回以下信息：\n"
+        String prompt = "作为一个图片试题分析助手,请详细分析并批阅图片中的所有试题，按题号顺序返回以下信息：\n"
                      + "1. 题号： 包含试题大题号、小题号,格式如大题号：小题号：\n"
                      + "2. 题型： 试题题型类别\n"
                      + "3. 分值： 试题分值\n"
@@ -541,7 +608,173 @@ public class ZhipuAIImageAnalysisUtil {
         List<QuestionAnalysis> questionAnalysisList = parseAIResultToQuestionAnalysisList(aiResult);
         return questionAnalysisList;
     }
-    
+    /**
+     * AI批阅图片试题并返回HomeworkPublishQuestion列表的JSON格式结果
+     * @param imagePath 图片文件路径
+     * @return HomeworkPublishQuestion列表的JSON字符串
+     * @throws IOException 文件读取或API调用异常
+     */
+    public List<HomeworkPublishQuestion> reviewHomreWorkQuestions(String imagePath) throws IOException {
+        // 构建详细的批阅提示词，要求模型返回结构化信息
+        String prompt = "作为一个图片试题分析助手,请详细分析并批阅图片中的所有试题，按题号顺序返回以下信息：\n"
+                + "1. 题号： 包含试题大题号、小题号,格式如大题号：小题号：\n"
+                + "2. 题型： 试题题型类别\n"
+                + "3. 分值： 试题分值\n"
+                + "4. 问题内容：试题原内容\n"
+                + "5. 参考答案：正确的答案\n"
+                + "6. 考察知识点：该题考察的知识点\n\n"
+                + "请确保为每个试题提供完整的信息，不要用特殊字符（如 问题内容后不要有**等，直接 问题内容：），格式清晰，便于解析。";
+
+        // 获取AI分析结果
+        String aiResult = analyzeImage(imagePath, prompt);
+        System.out.println("AI分析结果:"+aiResult);
+        // 解析AI结果为QuestionAnalysis列表
+        List<HomeworkPublishQuestion> questionAnalysisList = parseAIResultToHomreWorkQuestionList(aiResult);
+        return questionAnalysisList;
+    }
+    /**
+     * AI批阅图片试题并返回HomeworkPublishQuestion列表的JSON格式结果
+     * @param imagePath 图片文件路径
+     * @return HomeworkPublishQuestion列表的JSON字符串
+     * @throws IOException 文件读取或API调用异常
+     */
+    public List<HomeworkPublishQuestion> reviewHomreWorkQuestions(List<String> imagePaths) throws IOException {
+        // 构建详细的批阅提示词，要求模型返回结构化信息
+        String prompt = "作为一个图片试题分析助手,请详细分析并批阅图片中的所有试题，按题号顺序返回以下信息：\n"
+                + "1. 题号： 包含试题大题号、小题号,格式如大题号：小题号：\n"
+                + "2. 题型： 试题题型类别\n"
+                + "3. 分值： 试题分值\n"
+                + "4. 问题内容：试题原内容\n"
+                + "5. 参考答案：正确的答案\n"
+                + "6. 考察知识点：该题考察的知识点\n\n"
+                + "请确保为每个试题提供完整的信息，不要用特殊字符（如 问题内容后不要有**等，直接 问题内容：），格式清晰，便于解析。";
+
+        // 获取AI分析结果
+        String aiResult = analyzeImages(imagePaths, prompt);
+        System.out.println("AI分析结果:"+aiResult);
+        // 解析AI结果为QuestionAnalysis列表
+        List<HomeworkPublishQuestion> questionAnalysisList = parseAIResultToHomreWorkQuestionList(aiResult);
+        return questionAnalysisList;
+    }
+    private List<HomeworkPublishQuestion> parseAIResultToHomreWorkQuestionList(String aiResultText) {
+        List<HomeworkPublishQuestion> questionAnalysisList = new ArrayList<>();
+
+        try {
+            // 按行分割AI结果
+            String[] lines = aiResultText.split("\n");
+
+            // 当前正在处理的题目
+            HomeworkPublishQuestion currentQuestion = null;
+
+            for (String line : lines) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                if(line.contains("<|end_of_box|>")){
+                    line = line.replace("<|end_of_box|>", "");
+                }
+                // 根据关键词识别题目开始
+                if (line.contains("大题号")||line.contains("题号")) {
+                    // 如果已有正在处理的题目，先添加到列表
+                    if (currentQuestion != null) {
+                        questionAnalysisList.add(currentQuestion);
+                    }
+
+                    // 创建新的题目分析对象
+                    currentQuestion = new HomeworkPublishQuestion();
+
+                    // 解析大题号
+                    if (line.contains("大题号")) {
+                        String bigNumber = extractBetween(line, "大题号", "小题号");
+                        bigNumber = startSub(bigNumber,"：");
+                        if(bigNumber.contains("，")||bigNumber.contains("；")||bigNumber.contains("、")){
+                            bigNumber = bigNumber.substring(0,bigNumber.length()-1);
+                        }
+                        currentQuestion.setBigNumber(bigNumber);
+                    }
+
+                    // 解析小题号
+                    if (line.contains("小题号")) {
+                        String smallNumber = extractBetween(line, "小题号", "\n|$");
+                        smallNumber = startSub(smallNumber,"：");
+
+                        currentQuestion.setSmallNumber(smallNumber);
+                    } else if (line.contains("题号")) {
+                        String questionNumber = extractBetween(line, "题号", "\s|\n|$");
+                        questionNumber = startSub(questionNumber,"：");
+                        if("无".equals(questionNumber.trim())){
+                            continue;
+                        }
+                        if(questionNumber.contains("**")){
+                            questionNumber = questionNumber.replace("**","");
+                        }
+                        if(questionNumber.contains("分")){
+                            questionNumber = questionNumber.substring(0,5);
+                        }
+                        currentQuestion.setQuestionNumber(questionNumber);
+                        if(questionNumber.length()>=3&&questionNumber.length()<=6){
+                            currentQuestion.setBigNumber(questionNumber.substring(0,1));
+                            currentQuestion.setSmallNumber(questionNumber.substring(2));
+                        }
+                    }
+                }
+
+                // 解析其他属性
+                if (currentQuestion != null) {
+                    // 解析小题号
+                    if (line.contains("小题号")) {
+                        String smallNumber = extractBetween(line, "小题号", "\n|$");
+                        smallNumber = startSub(smallNumber,"：");
+
+                        currentQuestion.setSmallNumber(smallNumber);
+                    }
+                    if (line.contains("题型")) {
+                        String questionType = extractBetween(line, "题型", "\n|$");
+                        questionType = startSub(questionType,"：");
+                        if(questionType.contains("分值：")){
+                            questionType = questionType.substring(0,questionType.indexOf("分值：")-1);
+                        }
+                        currentQuestion.setQuestionType(questionType);
+                    } else if (line.contains("分值")) {
+                        String scoreStr = extractBetween(line, "分值", "\n|$");
+                        scoreStr = startSub(scoreStr,"：");
+                        try {
+                            // 提取数字部分
+                            scoreStr = scoreStr.replaceAll("\\D+", "");
+                            if (!scoreStr.isEmpty()) {
+                                currentQuestion.setScore(Integer.parseInt(scoreStr));
+                            }
+                        } catch (NumberFormatException e) {
+                            // 忽略解析错误
+                        }
+                    } else if (line.contains("问题内容")) {
+                        String content = extractBetween(line, "问题内容", "\n|$");
+                        content = startSub(content,"：");
+                        currentQuestion.setContent(content);
+                    } else if (line.contains("参考答案")) {
+                        String referenceAnswer = extractBetween(line, "参考答案", "\n|$");
+                        referenceAnswer = startSub(referenceAnswer,"：");
+                        currentQuestion.setReferenceAnswer(referenceAnswer);
+                    } else if (line.contains("考察知识点")) {
+                        String knowledgePoints = extractBetween(line, "考察知识点", "\n|$");
+                        knowledgePoints = startSub(knowledgePoints,"：");
+                        currentQuestion.setKnowledgePoints(knowledgePoints);
+                    }
+                }
+            }
+
+            // 添加最后一个题目
+            if (currentQuestion != null) {
+                questionAnalysisList.add(currentQuestion);
+            }
+
+        } catch (Exception e) {
+            // 如果解析失败，记录错误并返回空列表
+            System.err.println("解析AI结果失败: " + e.getMessage());
+        }
+
+        return questionAnalysisList;
+    }
+
     /**
      * 批量AI批阅图片试题并返回QuestionAnalysis列表的JSON格式结果
      * @param imagePaths 图片文件路径列表
@@ -1116,17 +1349,38 @@ public class ZhipuAIImageAnalysisUtil {
         return map;
     }
 
-    private Map<String, String> parseAIResultToMap(String aiResult) {
+    public Map<String,String> analyzeImagesAnswer(List<String> imagePaths)  throws IOException {
+        String prompt = "你是一个专业的识图助手，只做识图操作，禁止解答所有题目，只提取学生用蓝色笔手写的文字、数字、符号、选项序号（排除印刷体文字），所有题目提取内容直接转录原始内容，不要包含题目原文、选项文字，严格按以下固定格式输出，按顺序列出图中所有题目，若某题学生未填写则标注 “未作答”。\n"
+                + "请严格按以下固定格式输出：\n "
+                +"【一级标题（与试卷板块一致，如 “一、填空”）】题目 1：学生手写内容（原样记录字迹 / 符号）\n"
+                +"【一级标题（与试卷板块一致，如 “一、填空”）】题目 2：学生手写内容 \n "
+                +"…… \n"
+                +"【一级标题（如 “二、判断”）】题目 1：学生手写内容\n "
+                +"【一级标题（如 “二、判断”）】题目 2：学生手写内容\n "
+                +"……\n "
+                +"【一级标题（如 “二、判断”）】题目 1：学生手写内容\n "
+                +"【一级标题（如 “二、判断”）】题目 2：学生手写内容\n "
+                +"注：若学生某题未作答，标注 “学生未作答”；若书写模糊无法识别，标注 “学生书写模糊无法识别”；必须严格匹配试卷题目顺序，不调整、不增删任何内容。\n "
+                +"请基于上述要求，提取目标试卷的学生作答笔迹";
+        String aiResult = analyzeImages(imagePaths,prompt);
+
+        Map<String,String> map = parseAIResultToMap(aiResult);
+        return map;
+    }
+
+    public Map<String, String> parseAIResultToMap(String aiResult) {
         // 按行分割AI结果
         String[] lines = aiResult.split("\n");
         Map<String,String> map = new HashMap();
         for (String line : lines) {
             line = line.trim();
             if (line.isEmpty()) continue;
-            String bigNum = line.substring(1,line.indexOf("、"));
-            String smallNum = extractBetween(line,"题目","：");
-            String studentAnswer=extractBetween(line, "小题号", "\n|$");
-            map.put(bigNum+":"+smallNum,studentAnswer);
+            if(line.contains("、")&&line.contains("题目")&&line.contains("小题号")) {
+                String bigNum = line.substring(1, line.indexOf("、"));
+                String smallNum = extractBetween(line, "题目", "：");
+                String studentAnswer = extractBetween(line, "小题号", "\n|$");
+                map.put(bigNum + ":" + smallNum, studentAnswer);
+            }
         }
         return map;
     }
@@ -1142,4 +1396,5 @@ public class ZhipuAIImageAnalysisUtil {
         }
         System.out.println(analyses.toString());
     }
+
 }

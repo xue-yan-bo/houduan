@@ -1,13 +1,19 @@
 package com.jlm.homework.service.impl;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.jlm.homework.config.ZhipuAIConfig;
+import com.jlm.homework.dto.HomeworkAIBigDto;
 import com.jlm.homework.dto.HomeworkPublishRequest;
 import com.jlm.homework.dto.StudentsHomeworkSimpleDTO;
-import com.jlm.homework.entity.CurrentUserInfo;
-import com.jlm.homework.entity.ExerciseBookEntity;
-import com.jlm.homework.entity.HomeworkPublish;
-import com.jlm.homework.entity.StudentsHomeworkNew;
+import com.jlm.homework.entity.*;
+import com.jlm.homework.repository.HomeworkPublishQuestionRepository;
 import com.jlm.homework.repository.HomeworkPublishRepository;
 import com.jlm.homework.service.*;
+import com.jlm.homework.util.CoordinateImageGenerator;
+import com.jlm.homework.util.DocumentAndCoordinatesRenderer;
+import com.jlm.homework.util.ImageOverlayUtil;
+import com.jlm.homework.util.ZhipuAIImageAnalysisUtil;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -22,9 +28,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.FutureTask;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +48,11 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
     private ExerciseBookServer exerciseBookServer;
     @Autowired
     private IUserService userService;
+    @Autowired
+    private ZhipuAIConfig zhipuAIConfig;
+    @Autowired
+    private HomeworkPublishQuestionRepository homeworkPublishQuestionRepository;
+
     @Override
     public String create(HomeworkPublish homeworkPublish) {
         if(homeworkPublish!=null
@@ -105,6 +121,18 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             };
             timer.schedule(task1,homeworkPublish.getDeadline());
         }
+
+        FutureTask<String> futureTask = new FutureTask<>(() -> {
+
+            this.homeworkQuestion(homeworkPublish);
+
+
+            return "异步-OK";
+
+
+        });
+        Thread thread = new Thread(futureTask);
+        thread.start();
         return homeworkPublish.getId().toString();
     }
 
@@ -274,6 +302,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             if(studentList!=null&&studentList.size()>0){
                 throw new RuntimeException("已有学生提交该作业，不能撤回发布！");
             }
+            studentsHomeworkNewService.updateSubmietNull(homeworkPublishId);
             homeworkPublish.setPublishStatus(0);
             homeworkPublishRepository.save(homeworkPublish);
         }
@@ -313,7 +342,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                         homeworkPublish.getDailyPracticeName(),
                         homeworkPublish.getDailyPracticePreview(),
                         homeworkPublish.getChapter(),
-                        homeworkPublish.getKnowledgePoint());
+                        homeworkPublish.getKnowledgePoint(),0);
             }
             if(homeworkPublish.getDeadline()!=null){
                 Timer timer = new Timer();
@@ -339,4 +368,54 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             homeworkPublishRepository.save(homeworkPublish);
         }
     }
+    public void aIHomeworkPublic(Long homeworkPublishId){
+        HomeworkPublish homeworkPublish=homeworkPublishRepository.findById(homeworkPublishId).orElse(null);
+        if(homeworkPublish!=null) {
+            homeworkQuestion(homeworkPublish);
+        }
+    }
+    private void homeworkQuestion(HomeworkPublish homeworkPublish){
+        String auditImages = "";
+        List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
+        //异步处理AI智能审批
+        ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+        //QianWenAIUtil util = new QianWenAIUtil();
+        List<HomeworkPublishQuestion> questionList = new ArrayList<>();
+        if (homeworkPublish.getTopicImages() != null && homeworkPublish.getTopicImages().size() > 0
+                && !homeworkPublish.getTopicImagesStr().endsWith(".docx") && !homeworkPublish.getTopicImagesStr().endsWith(".doc")) {
+            try {
+                List<String> imageNames = homeworkPublish.getTopicImages();
+
+                questionList = util.reviewHomreWorkQuestions(imageNames);
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+        } else if (StringUtils.isNotEmpty(homeworkPublish.getDailyPracticePreview())) {
+            try {
+
+
+                List<String> imageNames =DocumentAndCoordinatesRenderer.generateAllPagesDocumentWithCoordinates(homeworkPublish.getDailyPracticePreview(), null,homeworkPublish.getHomeworkName());
+
+                //试题识别
+
+                questionList = util.reviewHomreWorkQuestions(imageNames);
+                imageNames.stream().forEach(imageName->{
+                    File  file = new File(imageName);
+                    file.delete();
+                });
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        if(questionList!=null&&questionList.size()>0){
+            for(HomeworkPublishQuestion question:questionList){
+                question.setHomeworkPublishId(homeworkPublish.getId());
+                homeworkPublishQuestionRepository.save(question);
+            }
+        }
+    }
+
 }

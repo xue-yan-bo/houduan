@@ -18,4 +18,6 @@ public interface IHomeworkPublishService {
     void withdraw(Long homeworkPublishId);
 
     void rePublish(Long homeworkPublishId);
+
+    void aIHomeworkPublic(Long homeworkPublishId);
 }

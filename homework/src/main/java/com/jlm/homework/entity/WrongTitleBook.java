@@ -148,4 +148,10 @@ public class WrongTitleBook {
      */
     @Column(name = "command_flag")
     private Integer commandFlag;
+
+    /**
+     * 试题类型
+     */
+    @Column(name = "question_type")
+    private String questionType;
 }

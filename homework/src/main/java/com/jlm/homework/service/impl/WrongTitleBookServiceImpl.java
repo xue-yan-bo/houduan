@@ -267,8 +267,9 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             newWrongTitle.setTitleBigNo(wrongTitleBook.getTitleBigNo());
             newWrongTitle.setTitleSmallNo(wrongTitleBook.getTitleSmallNo());
             newWrongTitle.setSource("作业");
-            newWrongTitle.setTitleImage(wrongTitleBook.getTitleImage());
-            if(StringUtils.isEmpty(wrongTitleBook.getSourceImageUrl())){
+            if(StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())){
+                newWrongTitle.setTitleImage(wrongTitleBook.getTitleImage());
+            }else {
                 newWrongTitle.setTitleImage(wrongTitleBook.getSourceImageUrl());
             }
             newWrongTitle.setParse(wrongTitleBook.getParse());
@@ -319,10 +320,10 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 resultStr =util.analyzeToJson(prompt);
 
             }else if(StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())){
-                String prompt = "根据题图片，分析该题的知识考点以及生成知识考点的图谱(图谱呈现父子节点json格式)。返回格式如： 知识点：   知识图谱：{\"父节点\":{\"名称\":\" \",\"阐述\":\" \",\"子节点\":[{\"名称\":\" \",\"阐述\":\" \"},{\"名称\":\" \",\"阐述\":\" \", \"子节点\":[{\"名称\":\" \",\"阐述\":\" \"}] }]}} ";
+                String prompt = "根据题图片，分析该题的试题类型、知识考点以及生成知识考点的图谱(图谱呈现父子节点json格式)。返回格式如：试题类型：  知识点：   知识图谱：{\"父节点\":{\"名称\":\" \",\"阐述\":\" \",\"子节点\":[{\"名称\":\" \",\"阐述\":\" \"},{\"名称\":\" \",\"阐述\":\" \", \"子节点\":[{\"名称\":\" \",\"阐述\":\" \"}] }]}} ";
                 resultStr=util.analyzeImageToJson(wrongTitleBook.getSourceImageUrl(),prompt);
             }else if(StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())){
-                String prompt = "根据题图片，分析该题的知识考点以及生成知识考点的图谱(图谱呈现父子节点json格式)。返回格式如： 知识点：   知识图谱：{\"父节点\":{\"名称\":\" \",\"阐述\":\" \",\"子节点\":[{\"名称\":\" \",\"阐述\":\" \"},{\"名称\":\" \",\"阐述\":\" \", \"子节点\":[{\"名称\":\" \",\"阐述\":\" \"}] }]}} ";
+                String prompt = "根据题图片，分析该题的试题类型、知识考点以及生成知识考点的图谱(图谱呈现父子节点json格式)。返回格式如：试题类型： 知识点：   知识图谱：{\"父节点\":{\"名称\":\" \",\"阐述\":\" \",\"子节点\":[{\"名称\":\" \",\"阐述\":\" \"},{\"名称\":\" \",\"阐述\":\" \", \"子节点\":[{\"名称\":\" \",\"阐述\":\" \"}] }]}} ";
                 resultStr=util.analyzeImageToJson(wrongTitleBook.getTitleImage(),prompt);
             }
 
@@ -330,6 +331,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             Map<String, Object> resultMap = JSONObject.parseObject(resultStr);
             String content = resultMap.get("content").toString();
             if(StringUtils.isNotEmpty(content)&&resultStr.contains("知识点")&&resultStr.contains("知识图谱")){
+                String  questionType = content.substring(content.indexOf("试题类型")+5,content.indexOf("知识点"));
                 String knowledgePoint = content.substring(content.indexOf("知识点")+4,content.indexOf("知识图谱"));
                 String aiChart = content.substring(content.lastIndexOf("知识图谱")+5);
                 if(aiChart.contains("<|end_of_box|>")){
@@ -341,6 +343,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 aiChart=aiChart.replaceAll("\\\\", "");
                 aiChart=aiChart.replace("\\n","");
                 JSONObject json = JSON.parseObject(aiChart);
+                wrongTitleBook.setQuestionType(questionType);
                 wrongTitleBook.setKnowledgePoint(knowledgePoint);
                 wrongTitleBook.setAiChart(json);
                 wrongTitleBookRepository.save(wrongTitleBook);
@@ -351,6 +354,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 search.setTitleSmallNo(wrongTitleBook.getTitleSmallNo());
                 wrongTitleStatisticsRepository.findOne(Example.of(search)).ifPresent(
                         wrongTitleStatistics->{
+                            wrongTitleStatistics.setQuestionType(questionType);
                             wrongTitleStatistics.setKnowledgePoint(knowledgePoint);
                             wrongTitleStatistics.setAiChart(json);
                             wrongTitleStatisticsRepository.save(wrongTitleStatistics);

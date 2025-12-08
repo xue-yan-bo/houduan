@@ -6,6 +6,7 @@ import com.jlm.homework.repository.StudentSignRecordRepository;
 import com.jlm.homework.repository.TeacherAttendanceRecordRepository;
 import com.jlm.homework.service.IStudentSignRecordService;
 import com.jlm.homework.util.SseManagerUtil;
+import com.jlm.homework.util.StringUtils;
 import jakarta.annotation.Resource;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -42,12 +43,9 @@ public class StudentSignRecordServiceImpl  implements IStudentSignRecordService 
         if(studentSignRecord.getId()==null){
             StudentSignRecord search=new StudentSignRecord();
             search.setAttendanceRecordId(studentSignRecord.getAttendanceRecordId());
-            List<StudentSignRecord> studentSignRecordList=studentSignRecordRepository.findAll(Example.of(search));
-            for(StudentSignRecord signRecord:studentSignRecordList){
-                if(studentSignRecord.getStudentId()==signRecord.getStudentId()){
-                    studentSignRecord.setId(studentSignRecord.getId());
-                }
-            }
+            search.setStudentId(studentSignRecord.getStudentId());
+            StudentSignRecord old=studentSignRecordRepository.findOne(Example.of(search)).get();
+            studentSignRecord.setId(old.getId());
         }
 
         studentSignRecord.setSignTime(now);
@@ -75,8 +73,12 @@ public class StudentSignRecordServiceImpl  implements IStudentSignRecordService 
         pageable = PageRequest.of(pageNum, pageSize, sort);
         StudentSignRecord record = new StudentSignRecord();
         record.setAttendanceRecordId(attendanceRecordId);
-        record.setStudentName(studentName);
-        record.setSignFlag(signFlag);
+        if(StringUtils.isNotEmpty(studentName)) {
+            record.setStudentName(studentName);
+        }
+        if(signFlag!=null){
+            record.setSignFlag(signFlag);
+        }
         return studentSignRecordRepository.findAll(Example.of(record),pageable);
     }
 }

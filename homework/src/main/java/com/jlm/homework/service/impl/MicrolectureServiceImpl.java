@@ -80,8 +80,14 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
                         Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapter+"%");
                         list.add(condition1);
                     }
-                    if(StringUtils.isNotEmpty(knowledgePoint)) {
+                    if(StringUtils.isEmpty(chapter)&&StringUtils.isNotEmpty(knowledgePoint)) {
                         Predicate condition = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
+                        list.add(condition);
+                    }else if(StringUtils.isNotEmpty(chapter)&&StringUtils.isNotEmpty(knowledgePoint)) {
+                        List<Predicate> list1 = new ArrayList<>();
+                        Predicate cond1 = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
+                        list1.add(cond1);
+                        Predicate condition = criteriaBuilder.or(list1.toArray(new Predicate[0]));
                         list.add(condition);
                     }
                     if(startTime != null) {

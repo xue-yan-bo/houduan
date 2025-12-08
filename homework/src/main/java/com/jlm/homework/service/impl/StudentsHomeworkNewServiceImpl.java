@@ -1,8 +1,11 @@
 package com.jlm.homework.service.impl;
 
+import com.alibaba.dashscope.exception.InputRequiredException;
+import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
@@ -43,6 +46,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private StudentsHomeworkNewRepository studentsHomeworkNewRepository;
     @Resource
     private HomeworkPublishRepository homeworkPublishRepository;
+    @Resource
+    private HomeworkPublishQuestionRepository homeworkPublishQuestionRepository;
     @Autowired
     private StudentFeignClient studentFeignClient;
     @Autowired
@@ -75,6 +80,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private ZhipuAIConfig zhipuAIConfig;
     @Autowired
     private IQuestionAnalysisService questionAnalysisService;
+    @Autowired
+    private ObjectMapper objectMapper;
+
     
     /**
      * 使用Criteria API根据Specification查询StudentsHomeworkSimpleDTO列表
@@ -144,8 +152,13 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public void updateByPublishId(Long homeworkPublishId,String homeworkName, String topicImagesStr, Date deadline, Long dailyPracticeld, String dailyPracticeName, String dailyPracticePreview,  String chapter, String knowledgePoint) {
-        studentsHomeworkNewRepository.updateByPublishId(homeworkPublishId,homeworkName,topicImagesStr,deadline,dailyPracticeld,dailyPracticeName,dailyPracticePreview,chapter,knowledgePoint);
+    public void updateByPublishId(Long homeworkPublishId,String homeworkName, String topicImagesStr, Date deadline, Long dailyPracticeld, String dailyPracticeName, String dailyPracticePreview,  String chapter, String knowledgePoint,Integer submitStatus) {
+        studentsHomeworkNewRepository.updateByPublishId(homeworkPublishId,homeworkName,topicImagesStr,deadline,dailyPracticeld,dailyPracticeName,dailyPracticePreview,chapter,knowledgePoint,submitStatus);
+    }
+
+    @Override
+    public void updateSubmietNull(Long homeworkPublishId) {
+        studentsHomeworkNewRepository.updateSubmietNull(homeworkPublishId);
     }
 
     @Override
@@ -266,6 +279,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                 condition5 = criteriaBuilder.conjunction();
                             }
 
+
                             query.where(condition0, condition1, condition2, condition3, condition4, condition5);
                         } catch (ParseException e) {
                             throw new RuntimeException(e);
@@ -367,8 +381,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         }else {
                             condition5 = criteriaBuilder.conjunction();
                         }
+                        Predicate condition6 = criteriaBuilder.isNotNull(root.get("submitStatus"));
 
-                        query.where(condition0,condition1,condition2,condition3,condition4,condition5);
+                        query.where(condition0,condition1,condition2,condition3,condition4,condition5,condition6);
                     } catch (ParseException e) {
                         throw new RuntimeException(e);
                     }
@@ -434,7 +449,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }else {
                         condition2 = criteriaBuilder.conjunction();
                     }
-                    query.where(condition0,condition1,condition2);
+                    Predicate condition3 = criteriaBuilder.isNotNull(root.get("submitStatus"));
+
+                    query.where(condition0,condition1,condition2,condition3);
                 } catch (ParseException e) {
                     throw new RuntimeException(e);
                 }
@@ -516,6 +533,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             condition6 = criteriaBuilder.like(root.get("knowledgePoint"), "%" + studentsHomework.getKnowledgePoint() + "%");
                             list.add(condition6);
                         }
+                        Predicate statusNotNUll=criteriaBuilder.isNotNull(root.get("submitStatus"));
+                        list.add(statusNotNUll);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -579,7 +598,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         list.add(condition3);
                     }
 
-
+                    Predicate condition = criteriaBuilder.isNotNull(root.get("submitStatus"));
+                    list.add(condition);
 
                 } catch (Exception e) {
                     throw new RuntimeException(e);
@@ -717,7 +737,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     Predicate con = criteriaBuilder.equal(root.get("classId"),classId);
                     list.add(con);
                 }
-
+                Predicate condition = criteriaBuilder.isNotNull(root.get("submitStatus"));
+                list.add(condition);
                 Predicate[] p =  new Predicate[list.size()];
                 return criteriaBuilder.and(list.toArray(p));
             }
@@ -802,7 +823,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         list.add(condition3);
                     }
 
-
+                    Predicate condition = criteriaBuilder.isNotNull(root.get("submitStatus"));
+                    list.add(condition);
 
                 } catch (Exception e) {
                     throw new RuntimeException(e);
@@ -874,7 +896,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     Predicate condition1 = criteriaBuilder.equal(root.get("schoolId"), schoolId);
                     list.add(condition1);
                 }
-
+                Predicate condition = criteriaBuilder.isNotNull(root.get("submitStatus"));
+                list.add(condition);
                 Predicate[] p =  new Predicate[list.size()];
                 return criteriaBuilder.and(list.toArray(p));
             }
@@ -1308,7 +1331,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }else {
                         condition = criteriaBuilder.conjunction();
                     }
-                    query.where(condition);
+                    Predicate condition1 = criteriaBuilder.isNotNull(root.get("submitStatus"));
+                    query.where(condition,condition1);
                 } catch (ParseException e) {
                     throw new RuntimeException(e);
                 }
@@ -1531,7 +1555,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         Predicate  condition2 = criteriaBuilder.equal(root.get("studentId").as(Long.class),studentId);
                         list.add(condition2);
                     }
-
+                    Predicate cond1 = criteriaBuilder.isNotNull(root.get("submitStatus"));
+                    list.add(cond1);
                 } catch (ParseException e) {
                     throw new RuntimeException(e);
                 }
@@ -1604,6 +1629,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
                     //异步处理AI智能审批
                     ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+                    //QianWenAIUtil util = new QianWenAIUtil();
                     List<HomeworkStudentWriteData> homeworkStudentWriteDataList = homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(), type);
                     if (studentsHomework.getTopicImages() != null && studentsHomework.getTopicImages().size() > 0
                             && !studentsHomework.getTopicImagesStr().endsWith(".docx") && !studentsHomework.getTopicImagesStr().endsWith(".doc")) {
@@ -1655,7 +1681,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
                             //试题识别
 
-                            String titleImage = util.recognizePiyueInImage(outputPath);
+                            String prompt = "请识别批阅图片中所有试题的内容，并以JSON格式返回，格式如[{\"bigNumber\":\"一\",\"questionType\":\"选择题\",\"smallDtoList\":[{{\"smallNumber\":\"1\",\"correctFlag\":\"错误\"}]}] ";
+                            String titleImage = util.analyzeImage(outputPath,prompt);
                             if (titleImage.contains("<|begin_of_box|>")) {
                                 titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>") + 16);
                             }
@@ -1668,60 +1695,11 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             auditImages = auditImages + "\n" + titleImage;
                             File imageFile = new File(outputPath);
                             imageFile.delete();
-                        } catch (IOException e) {
+                        } catch (Exception e) {
                             throw new RuntimeException(e);
-                        } catch (InvalidFormatException ife) {
-                            throw new RuntimeException(ife);
                         }
                     }
-                    /*if ("1".equals(type)) {
-                        try {
-                            String prompt = "根据以上批阅，给出学生答题的整体分数和正确率，并对学生做错题分。 根据以上批阅，给出学生答题的整体分数和正确率，并对学生做错题分。 返回先总体格式为 分数： ，正确率：  \n" +
-                                    "后按每道错题分割返回，每道题返回内容格式为 错题分析：大题号： 小题号：  题内容： 学生答案：  解析：     \n";
-                            String scoreAndAccuracy = util.analyze(prompt);
-                            System.out.println("批阅得分: " + scoreAndAccuracy);
-                            if (scoreAndAccuracy.contains("分数：") && scoreAndAccuracy.contains("正确率：")) {
-                                String scoreStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("分数：") + 3, scoreAndAccuracy.indexOf("正确率") - 1).trim();
-                                String accuracyStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("正确率：") + 4, scoreAndAccuracy.indexOf("%")).trim();
-                                if (scoreStr.trim().contains("分")) {
-                                    scoreStr = scoreStr.substring(0, scoreStr.indexOf("分"));
-                                }
-                                Double score = Double.parseDouble(scoreStr);
-                                Double accuracy = Double.parseDouble(accuracyStr);
-                                studentsHomework.setScore(score);
-                                studentsHomework.setAccuracy(accuracy);
-                            }
-                            String wrongTitleStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("错题分析："));
-                            System.out.println("错题分析: " + wrongTitleStr);
-                            String[] wrongTitleList = wrongTitleStr.split("\n");
-                            for (int i = 0; i < wrongTitleList.length; i++) {
-                                String wrongTitle = wrongTitleList[i];
-                                if (StringUtils.isNotEmpty(wrongTitle.trim()) && wrongTitle.contains("大题号：") && wrongTitle.contains("解析：") && wrongTitle.contains("解析：")) {
-                                    String titleBigNo = wrongTitle.substring(wrongTitle.indexOf("大题号：") + 4, wrongTitle.indexOf("小题号："));
-                                    String titleSmallNo = wrongTitle.substring(wrongTitle.indexOf("小题号：") + 4, wrongTitle.indexOf("题内容："));
-                                    String titleContext = wrongTitle.substring(wrongTitle.indexOf("题内容：") + 4, wrongTitle.indexOf("学生答案：")).trim();
-                                    String studentAnswer = wrongTitle.substring(wrongTitle.indexOf("学生答案：") + 5, wrongTitle.indexOf("解析：")).trim();
-                                    String parse = wrongTitle.substring(wrongTitle.indexOf("解析：") + 3).trim();
-                                    WrongTitleBook wrongTitleBook = new WrongTitleBook();
-                                    wrongTitleBook.setTitleBigNo(titleBigNo);
-                                    wrongTitleBook.setTitleSmallNo(titleSmallNo);
-                                    wrongTitleBook.setTitleContext(titleContext);
-                                    wrongTitleBook.setStudentAnswer(studentAnswer);
-                                    wrongTitleBook.setParse(parse);
-                                    wrongTitleBook.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
-                                    wrongTitleBook.setStudentsHomeworkId(studentsHomework.getId());
-                                    wrongTitleBook.setSource("学生作业：" + studentsHomework.getHomeworkPublishName());
-                                    wrongTitleBook.setStudentId(studentsHomework.getStudentId());
-                                    wrongTitleBook.setStudentName(studentsHomework.getStudentName());
-                                    wrongTitleBook.setClassId(studentsHomework.getClassesId());
-                                    wrongTitleBook.setClassName(studentsHomework.getClassesName());
-                                    wrongTitleBookService.addWrongBook(wrongTitleBook);
-                                }
-                            }
-                        } catch (Exception e) {
-                            System.out.println("+++++解析分数错误++++++++++ " + e.getMessage());
-                        }
-                    }*/
+
                     if ("1".equals(type)) {
                         studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoAll));
                     } else if ("2".equals(type)) {
@@ -2020,7 +1998,6 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             calendar.add(Calendar.DAY_OF_MONTH,1);
                             Date createTime1 = calendar.getTime();
                             condition3 = criteriaBuilder.between(root.get("createTime").as(Date.class),createTime,createTime1);
-
                         }else {
                             condition3 = criteriaBuilder.conjunction();
                         }
@@ -2031,7 +2008,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             condition5 = criteriaBuilder.conjunction();
                         }
                         Predicate condition6 = criteriaBuilder.isNotNull(root.get("submitTime"));
-                        query.where(condition0,condition1,cond1,condition2,condition3,condition4,condition5,condition6);
+                        Predicate statusNotNUll=criteriaBuilder.isNotNull(root.get("submitStatus"));
+
+                        query.where(condition0,condition1,cond1,condition2,condition3,condition4,condition5,condition6,statusNotNUll);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -2081,6 +2060,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         String auditImages = "";
         //异步处理AI智能审批
         ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+        //QianWenAIUtil util  = new QianWenAIUtil();
         List<HomeworkStudentWriteData> homeworkStudentWriteDataList=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"1");
         List<QuestionAnalysis>  analyses = new ArrayList<>();
         List<String> imageNames = null;
@@ -2108,11 +2088,11 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }
                 }
 
-                analyses=util.batchReviewExamQuestions(imageNames);
-                imageNames.stream().forEach(imageFile->{
+                //analyses=util.batchReviewExamQuestions(imageNames);
+                /*imageNames.stream().forEach(imageFile->{
                     File file = new File(imageFile);
                     file.delete();
-                });
+                });*/
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -2123,43 +2103,48 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
 
                 //试题识别
-                analyses=util.reviewExamQuestions(outputPath);
+                //analyses=util.reviewExamQuestions(outputPath);
                 imageNames = Arrays.asList(outputPath);
-                File imageFile = new File(outputPath);
-                imageFile.delete();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } catch (InvalidFormatException ife){
-                throw new RuntimeException(ife);
-            }
-        }else if(StringUtils.isNotEmpty(studentsHomework.getSubmitFileUrl())) {
-            imageNames = Arrays.asList(studentsHomework.getSubmitFileUrl().split(","));
-            try {
-                analyses=util.batchReviewExamQuestions(imageNames);
+                /*File imageFile = new File(outputPath);
+                imageFile.delete();*/
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
+        }else if(StringUtils.isNotEmpty(studentsHomework.getSubmitFileUrl())) {
+            imageNames = Arrays.asList(studentsHomework.getSubmitFileUrl().split(","));
+           /* try {
+                analyses=util.batchReviewExamQuestions(imageNames);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }*/
         }
         Map<String,String> allmap = new HashMap<>();
         if(imageNames!=null&&imageNames.size()>0) {
+            try {
+                allmap=util.analyzeImagesAnswer(imageNames);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
 
             for (String image : imageNames) {
-                try {
-                    Map<String,String> map=util.analyzeImagesAnswer(image);
-                    allmap.putAll(map);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                File imageFile = new File(image);
+                imageFile.delete();
+
             }
         }
+        HomeworkPublishQuestion search = new HomeworkPublishQuestion();
+        search.setHomeworkPublishId(studentsHomeworkId);
+        List<HomeworkPublishQuestion>  questionList = homeworkPublishQuestionRepository.findAll(Example.of(search));
         Map<String,List<HomeworkAISmallDto>> aiResultMap = new HashMap<>();
         List<QuestionAnalysis> errorList = new ArrayList<>();
-        if(analyses!=null&&analyses.size()>0){
+        if(questionList!=null&&questionList.size()>0){
 
             System.out.println(analyses.toString());
             Map<String,String> map = new HashMap<>();
             StringBuilder stringBuilder = new StringBuilder();
-            for(QuestionAnalysis questionAnalysis:analyses){
+            for(HomeworkPublishQuestion question:questionList){
+                QuestionAnalysis questionAnalysis = new QuestionAnalysis();
+                questionAnalysis =objectMapper.convertValue(question,QuestionAnalysis.class);
                 if(StringUtils.isNotEmpty(questionAnalysis.getBigNumber())&&!map.containsKey(questionAnalysis.getBigNumber())){
                     stringBuilder = stringBuilder.append(questionAnalysis.getBigNumber()).append("、").append(questionAnalysis.getQuestionType());
                     map.put(questionAnalysis.getBigNumber(),questionAnalysis.getQuestionType());
@@ -2189,6 +2174,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         stringBuilder = stringBuilder.append("错误 ");
                         smallDto.setCorrectFlag("错误");
                         questionAnalysis.setIsCorrect(false);
+                        errorList.add(questionAnalysis);
                     }
 
                 }else{
@@ -2276,6 +2262,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             String auditImages = "";
             //异步处理AI智能审批
             ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            //QianWenAIUtil util = new QianWenAIUtil();
             ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
             BufferedImage image = WritingDataRenderer.drawWritingData(uploadErrorTitleRecords, 794, 1123);
             String imageUrl = "错题上传-"+studentId+".png";
@@ -2335,6 +2322,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         StudentsHomeworkNew finalStudentsHomework = studentsHomework;
         FutureTask<String> futureTask = new FutureTask<>(() -> {
             ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            //QianWenAIUtil util  = new QianWenAIUtil();
             try{
                 String auditImages ="";
                 if(StringUtils.isNotEmpty(finalStudentsHomework.getSubmitFileUrl())) {
@@ -2415,6 +2403,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         StudentsHomeworkNew finalStudentsHomework = studentsHomework;
         FutureTask<String> futureTask = new FutureTask<>(() -> {
             ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            //QianWenAIUtil util = new QianWenAIUtil();
             try{
                 String auditImages ="";
                 if(StringUtils.isNotEmpty(finalStudentsHomework.getSubmitFileUrl2())) {
@@ -2461,6 +2450,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         String auditImages = "";
         //异步处理AI智能审批
         ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+        //QianWenAIUtil util = new QianWenAIUtil();
         List<HomeworkStudentWriteData> homeworkStudentWriteDataList=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"2");
         try {
             if(StringUtils.isNotEmpty(studentsHomework.getSubmitFileUrl2())) {
@@ -2533,8 +2523,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
                         DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
                         //试题识别
-
-                        String titleImage = util.recognizePiyueInImage(outputPath);
+                        String prompt = "请识别批阅图片中所有试题的内容，并以JSON格式返回，格式如[{\"bigNumber\":\"一\",\"questionType\":\"选择题\",\"smallDtoList\":[{{\"smallNumber\":\"1\",\"correctFlag\":\"错误\"}]}] ";
+                        String titleImage = util.analyzeImage(outputPath,prompt);
                         if (titleImage.contains("<|begin_of_box|>")) {
                             titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>") + 16);
                         }
@@ -2554,10 +2544,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         auditImages = auditImages + "\n" + titleImage;
                         File imageFile = new File(outputPath);
                         imageFile.delete();
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         throw new RuntimeException(e);
-                    } catch (InvalidFormatException ife) {
-                        throw new RuntimeException(ife);
                     }
                 }
                 studentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoAll));
@@ -2671,7 +2659,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             Predicate knowledgePointCondition = criteriaBuilder.like(root.get("knowledgePoint"), "%" + studentsHomework.getKnowledgePoint() + "%");
             predicates.add(knowledgePointCondition);
         }
-        
+        Predicate statusNotNUll=criteriaBuilder.isNotNull(root.get("submitStatus"));
+        predicates.add(statusNotNUll);
         // 应用所有条件
         criteriaQuery.where(predicates.toArray(new Predicate[0]));
         criteriaQuery.orderBy(criteriaBuilder.desc(root.get("createTime")));
@@ -2738,7 +2727,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             Predicate knowledgePointCountCondition = criteriaBuilder.like(countRoot.get("knowledgePoint"), "%" + studentsHomework.getKnowledgePoint() + "%");
             countPredicates.add(knowledgePointCountCondition);
         }
-        
+        Predicate statusNotNUll2=criteriaBuilder.isNotNull(countRoot.get("submitStatus"));
+        countPredicates.add(statusNotNUll2);
         countQuery.select(criteriaBuilder.count(countRoot)).where(countPredicates.toArray(new Predicate[0]));
         Long totalCount = entityManager.createQuery(countQuery).getSingleResult();
         

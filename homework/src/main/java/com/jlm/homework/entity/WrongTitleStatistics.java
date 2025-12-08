@@ -110,4 +110,9 @@ public class WrongTitleStatistics implements Serializable {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "ai_chart", columnDefinition = "JSON")
     private JSONObject aiChart;
+    /**
+     * 试题类型
+     */
+    @Column(name = "question_type")
+    private String questionType;
 }

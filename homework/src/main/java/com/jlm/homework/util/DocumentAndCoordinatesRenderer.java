@@ -4,12 +4,15 @@ import com.jlm.homework.entity.HomeworkStudentWriteData;
 import com.jlm.homework.entity.StudentsWriteRecord;
 import com.alibaba.cloud.commons.lang.StringUtils;
 import org.apache.poi.xwpf.usermodel.*;
+import org.apache.poi.hwpf.HWPFDocument;
+import org.apache.poi.hwpf.extractor.WordExtractor;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -240,15 +243,17 @@ public class DocumentAndCoordinatesRenderer {
             }
             if (!pathSegments[i].isEmpty()) {
                 try {
-                    // 对每个路径段单独进行URL编码
-                    encodedPath.append(java.net.URLEncoder.encode(pathSegments[i], "UTF-8")
+                    // 对每个路径段单独进行URL编码，特别是中文文件名
+                    String encodedSegment = java.net.URLEncoder.encode(pathSegments[i], "UTF-8")
                             .replace("+", "%20")
                             .replace("%21", "!")
                             .replace("%27", "'")
                             .replace("%28", "(")
                             .replace("%29", ")")
                             .replace("%7E", "~")
-                    );
+                            .replace("%3A", ":") // 保留冒号
+                            .replace("%2F", "/"); // 保留斜杠
+                    encodedPath.append(encodedSegment);
                 } catch (UnsupportedEncodingException e) {
                     // UTF-8编码支持是标准的，不太可能抛出此异常
                     encodedPath.append(pathSegments[i]);
@@ -265,7 +270,7 @@ public class DocumentAndCoordinatesRenderer {
     }
     
     /**
-     * 将文档转换为图片，主要支持.docx格式
+     * 将文档转换为图片，主要支持.docx和.doc格式
      * 注意：这是一个简化实现，实际应用可能需要更复杂的渲染逻辑
      * 
      * @param docFile 文档文件
@@ -273,6 +278,147 @@ public class DocumentAndCoordinatesRenderer {
      * @return 生成的图片
      * @throws IOException IO异常
      */
+    /**
+     * 获取文档的总页数
+     * 
+     * @param docFile 文档文件
+     * @return 文档总页数，如果无法获取则返回1
+     * @throws IOException 如果发生IO错误
+     */
+    public static int getDocumentPageCount(File docFile) throws IOException {
+        // 获取文档内容
+        String documentContent = extractDocumentContent(docFile);
+        
+        // 计算页数：每页大约显示3000个字符（根据实际情况调整）
+        int pageSize = 3000;
+        int totalPages = (int) Math.ceil((double) documentContent.length() / pageSize);
+        
+        // 确保至少有1页
+        return Math.max(totalPages, 1);
+    }
+    
+    /**
+     * 提取文档的完整内容
+     * 
+     * @param docFile 文档文件
+     * @return 文档的完整内容
+     * @throws IOException 如果发生IO错误
+     */
+    private static String extractDocumentContent(File docFile) throws IOException {
+        // 检测文件的实际格式（不依赖扩展名）
+        boolean isZipFormat = false;
+        boolean isOle2Format = false;
+        
+        try (FileInputStream fis = new FileInputStream(docFile)) {
+            // 检查ZIP文件的魔术数字（前两个字节应该是PK）
+            byte[] header = new byte[8];
+            int bytesRead = fis.read(header);
+            if (bytesRead >= 2) {
+                isZipFormat = (header[0] == 'P' && header[1] == 'K');
+            }
+            
+            if (bytesRead >= 8) {
+                isOle2Format = (header[0] == (byte)0xD0 && 
+                              header[1] == (byte)0xCF && 
+                              header[2] == (byte)0x11 && 
+                              header[3] == (byte)0xE0 && 
+                              header[4] == (byte)0xA1 && 
+                              header[5] == (byte)0xB1 && 
+                              header[6] == (byte)0x1A && 
+                              header[7] == (byte)0xE1);
+            }
+        }
+        
+        // 根据实际文件格式提取内容
+        if (isZipFormat) {
+            // 处理OOXML格式（.docx）
+            try (FileInputStream fis = new FileInputStream(docFile);
+                 XWPFDocument document = new XWPFDocument(fis)) {
+                StringBuilder content = new StringBuilder();
+                
+                // 获取所有段落内容
+                for (XWPFParagraph paragraph : document.getParagraphs()) {
+                    String paragraphText = paragraph.getText();
+                    if (StringUtils.isNotEmpty(paragraphText)) {
+                        content.append(paragraphText).append("\n");
+                    }
+                }
+                
+                return content.toString().trim();
+            } catch (Exception e) {
+                System.err.println("提取.docx文档内容失败：" + e.getMessage());
+                return "无法提取.docx文档内容。";
+            }
+        } else if (isOle2Format) {
+            // 处理OLE2格式（.doc）
+            try (FileInputStream fis = new FileInputStream(docFile);
+                 HWPFDocument document = new HWPFDocument(fis);
+                 WordExtractor extractor = new WordExtractor(document)) {
+                
+                // 获取所有段落内容
+                String[] paragraphs;
+                try {
+                    paragraphs = extractor.getParagraphText();
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    // 处理WordExtractor可能导致的数组越界异常
+                    System.err.println("提取.doc文档段落时发生数组越界异常：" + e.getMessage());
+                    // 尝试使用其他方式提取文本
+                    return document.getText().toString();
+                }
+                
+                StringBuilder content = new StringBuilder();
+                
+                if (paragraphs != null && paragraphs.length > 0) {
+                    for (String paragraph : paragraphs) {
+                        // 添加空值检查和长度限制
+                        if (paragraph != null && paragraph.length() > 0) {
+                            try {
+                                // 安全处理段落文本
+                                String safeParagraph = paragraph.replaceAll("[\\r\\n]+", "\n").trim();
+                                if (safeParagraph.length() > 0) {
+                                    content.append(safeParagraph).append("\n");
+                                }
+                            } catch (Exception ex) {
+                                System.err.println("段落处理错误：" + ex.getMessage());
+                                continue;
+                            }
+                        }
+                    }
+                }
+                
+                return content.toString().trim();
+            } catch (ArrayIndexOutOfBoundsException e) {
+                // 处理HWPFDocument或其他操作可能导致的数组越界异常
+                System.err.println("处理.doc文档时发生数组越界异常：" + e.getMessage());
+                // 如果无法通过正常方式提取，尝试使用文件流直接读取（可能只适用于简单文档）
+                try (FileInputStream fis = new FileInputStream(docFile);
+                     InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8);
+                     BufferedReader br = new BufferedReader(isr)) {
+                    StringBuilder content = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        content.append(line).append("\n");
+                        // 限制读取长度，避免内存问题
+                        if (content.length() > 100000) {
+                            content.append("...（内容过长，已截断）");
+                            break;
+                        }
+                    }
+                    return content.toString().trim();
+                } catch (Exception innerEx) {
+                    System.err.println("尝试直接读取.doc文件时出错：" + innerEx.getMessage());
+                    return "无法提取.doc文档内容。";
+                }
+            } catch (Exception e) {
+                System.err.println("提取.doc文档内容失败：" + e.getMessage());
+                return "无法提取.doc文档内容。";
+            }
+        } else {
+            System.err.println("不支持的文档格式，无法提取内容：" + docFile.getName());
+            return "不支持的文档格式。";
+        }
+    }
+    
     public static BufferedImage convertDocxToImage(File docFile, int pageNum) throws IOException {
         // 创建一个简单的图片作为文档页面的表示
         // 实际应用中可以使用更专业的文档渲染库
@@ -289,62 +435,31 @@ public class DocumentAndCoordinatesRenderer {
         
         // 检测文件扩展名和基本验证
         String fileName = docFile.getName().toLowerCase();
-        String textContent = "";
+        String fullContent = "";
+        String pageContent = "";
         
         // 检查文件是否存在且非空
         if (!docFile.exists() || docFile.length() == 0) {
-            textContent = "文档文件不存在或为空文件。";
+            pageContent = "文档文件不存在或为空文件。";
         } else {
             try {
-                // 首先检查文件扩展名
-                if (fileName.endsWith(".doc") || fileName.endsWith(".dot")) {
-                    textContent = "检测到.doc格式文档，当前版本暂不支持直接解析。请使用.docx格式或考虑添加POI HWPF依赖。";
-                } else if (fileName.endsWith(".docx") || fileName.endsWith(".dotx")) {
-                    // 处理OOXML格式（.docx）
-                    try (FileInputStream fis = new FileInputStream(docFile)) {
-                        // 在尝试创建XWPFDocument之前，先进行简单的ZIP格式检查
-                        if (!isValidZipFile(fis)) {
-                            textContent = "文档格式错误：.docx文件应该是有效的ZIP格式，但检测到格式异常。文件可能已损坏或不是真正的.docx文件。";
-                        } else {
-                            // 重置流位置
-                            fis.getChannel().position(0);
-                            try (XWPFDocument document = new XWPFDocument(fis)) {
-                                if (document.getParagraphs() != null && !document.getParagraphs().isEmpty()) {
-                                    XWPFParagraph paragraph = document.getParagraphArray(Math.min(pageNum - 1, document.getParagraphs().size() - 1));
-                                    if (paragraph != null) {
-                                        textContent = paragraph.getText();
-                                    } else {
-                                        textContent = "页面内容为空或页码超出范围。";
-                                    }
-                                } else {
-                                    textContent = "文档中没有发现段落内容。";
-                                }
-                            }
-                        }
-                    } catch (org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException e) {
-                        // 特别处理OLE2格式异常
-                        textContent = "文档格式错误：文件虽然扩展名是.docx，但实际为旧版OLE2格式。请重新保存为正确的.docx格式。";
-                        System.err.println("OLE2格式错误 - 文件名: " + fileName + ", 错误: " + e.getMessage());
-                    } catch (Exception e) {
-                        // 针对ZipArchiveThresholdInputStream相关错误的专门处理
-                        String errorMsg = e.getMessage();
-                        if (errorMsg != null && (errorMsg.contains("No valid entries or contents found") || 
-                                                errorMsg.contains("not a valid OOXML") || 
-                                                errorMsg.contains("ZipArchiveThresholdInputStream"))) {
-                            textContent = "文档格式无效：检测到无效的OOXML文件。文件可能已损坏、不完整或格式错误。请确保上传的是标准的.docx文档。";
-                        } else {
-                            textContent = "处理文档时出错：" + (errorMsg != null ? errorMsg : "未知错误");
-                        }
-                        System.err.println("OOXML解析错误 - 文件名: " + fileName + ", 错误: " + e.getMessage());
-                    }
+                // 使用extractDocumentContent获取完整内容
+                fullContent = extractDocumentContent(docFile);
+                
+                // 计算当前页的内容
+                int pageSize = 3000; // 每页3000字符
+                int startIndex = (pageNum - 1) * pageSize;
+                int endIndex = Math.min(startIndex + pageSize, fullContent.length());
+                
+                if (startIndex >= fullContent.length()) {
+                    pageContent = "（页面内容为空）";
                 } else {
-                    // 对于其他非.docx格式，提供友好提示
-                    textContent = "不支持的文档格式: " + fileName + "，仅支持.docx格式。";
+                    pageContent = fullContent.substring(startIndex, endIndex);
                 }
             } catch (Exception e) {
                 // 捕获所有其他异常，确保方法不会因文档格式问题而完全失败
                 String errorMsg = e.getMessage();
-                textContent = "无法处理文档: " + (errorMsg != null ? errorMsg : "未知错误");
+                pageContent = "无法处理文档: " + (errorMsg != null ? errorMsg : "未知错误");
                 System.err.println("文档处理错误 - 文件名: " + fileName + ", 错误: " + e.getMessage());
                 e.printStackTrace();
             }
@@ -353,18 +468,46 @@ public class DocumentAndCoordinatesRenderer {
         // 绘制文本内容，添加格式信息
         g2d.drawString("页面 " + pageNum + " (" + fileName + "):", 50, 50);
         
-        // 绘制文档内容（限制文本长度，避免绘制问题）
-        if (textContent.length() > 100) {
-            textContent = textContent.substring(0, 100) + "...";
+        // 多行绘制文本内容
+        int lineHeight = 20;
+        int startY = 70;
+        int maxWidth = 700;
+        
+        // 将文本拆分为多行
+        List<String> lines = new ArrayList<>();
+        if (pageContent.length() > 0) {
+            StringBuilder currentLine = new StringBuilder();
+            for (char c : pageContent.toCharArray()) {
+                currentLine.append(c);
+                if (g2d.getFontMetrics().stringWidth(currentLine.toString()) > maxWidth || c == '\n') {
+                    lines.add(currentLine.toString().replace('\n', ' '));
+                    currentLine.setLength(0);
+                }
+            }
+            if (currentLine.length() > 0) {
+                lines.add(currentLine.toString());
+            }
+        } else {
+            lines.add("（页面内容为空）");
         }
-        g2d.drawString(textContent, 50, 70);
+        
+        // 绘制所有行
+        int y = startY;
+        for (String line : lines) {
+            g2d.drawString(line, 50, y);
+            y += lineHeight;
+            if (y > 1050) { // 防止绘制超出图片范围
+                g2d.drawString("...（内容过长，已截断）", 50, y);
+                break;
+            }
+        }
         
         // 如果内容是错误信息，添加额外的提示
-        if (textContent.contains("错误") || textContent.contains("不支持") || textContent.contains("无法") || 
-            textContent.contains("无效")) {
+        if (pageContent.contains("错误") || pageContent.contains("不支持") || pageContent.contains("无法") || 
+            pageContent.contains("无效")) {
             g2d.setColor(Color.RED);
-            g2d.drawString("提示：请确认文档格式正确并使用有效的.docx扩展名。", 50, 90);
-            g2d.drawString("如需支持其他格式，请联系技术支持。", 50, 110);
+            g2d.drawString("提示：请确认文档格式正确并使用有效的.docx扩展名。", 50, y + lineHeight);
+            g2d.drawString("如需支持其他格式，请联系技术支持。", 50, y + lineHeight * 2);
         }
         
         g2d.dispose();
@@ -379,13 +522,21 @@ public class DocumentAndCoordinatesRenderer {
      */
     private static boolean isValidZipFile(FileInputStream fis) {
         try {
-            // 检查ZIP文件的魔术数字（前两个字节应该是PK）
-            byte[] header = new byte[2];
-            int bytesRead = fis.read(header);
-            if (bytesRead == 2) {
-                return header[0] == 'P' && header[1] == 'K';
+            // 保存当前流的位置
+            long currentPosition = fis.getChannel().position();
+            
+            try {
+                // 检查ZIP文件的魔术数字（前两个字节应该是PK）
+                byte[] header = new byte[2];
+                int bytesRead = fis.read(header);
+                if (bytesRead == 2) {
+                    return header[0] == 'P' && header[1] == 'K';
+                }
+                return false;
+            } finally {
+                // 确保重置流的位置，以便后续操作能正确读取文件
+                fis.getChannel().position(currentPosition);
             }
-            return false;
         } catch (IOException e) {
             return false;
         }
@@ -464,23 +615,66 @@ public class DocumentAndCoordinatesRenderer {
     }
     
     /**
+     * 生成文档所有页码的图片，每张图片包含对应页的坐标点
+     * 
+     * @param documentUrl 文档URL
+     * @param coordinates 坐标点列表
+     * @param outputPathPrefix 输出路径前缀（不含扩展名）
+     * @return 生成的图片文件列表
+     * @throws IOException 如果发生IO错误
+     * @throws InvalidFormatException 如果文档格式无效
+     */
+    public static List<String> generateAllPagesDocumentWithCoordinates(String documentUrl, List<HomeworkStudentWriteData> coordinates,
+                                                                     String outputPathPrefix) 
+            throws IOException, InvalidFormatException {
+        List<String> generatedImages = new ArrayList<>();
+        
+        // 1. 下载文档
+        File docxFile = downloadDocument(documentUrl);
+        
+        try {
+            // 2. 获取文档总页数
+            int totalPages = getDocumentPageCount(docxFile);
+            System.out.println("文档总页数: " + totalPages);
+            
+            // 3. 为每一页生成图片
+            for (int pageNum = 1; pageNum <= totalPages; pageNum++) {
+                try {
+                    // 生成带页码的输出路径
+                    String pageOutputPath = outputPathPrefix + "_page" + pageNum + ".png";
+                    // 保存结果图片
+                    File outputFile = new File(pageOutputPath);
+                    // 转换文档为图片
+                    BufferedImage docImage = convertDocxToImage(docxFile, pageNum);
+                    if(coordinates!=null) {
+                        // 在图片上绘制坐标点
+                        BufferedImage resultImage = drawCoordinates(docImage, coordinates, pageNum,
+                                Color.RED, 3); // 红色点，大小为3
+                        ImageIO.write(resultImage, "PNG", outputFile);
+                    }else{
+                        ImageIO.write(docImage, "PNG", outputFile);
+                    }
+
+                    System.out.println("第" + pageNum + "页图片生成成功: " + pageOutputPath);
+                    generatedImages.add(pageOutputPath);
+                } catch (Exception e) {
+                    System.err.println("生成第" + pageNum + "页图片失败: " + e.getMessage());
+                    e.printStackTrace();
+                    // 继续处理其他页面
+                }
+            }
+        } finally {
+            // 清理临时文件
+            docxFile.delete();
+        }
+        
+        return generatedImages;
+    }
+    
+    /**
      * 测试方法
      */
     public static void main(String[] args) {
-        try {
-            // 示例文档URL
-            String documentUrl = "http://127.0.0.1:9930/bucket/download/d5fb8e5699ea4d7b938affd2368e1114/211/off/四年级数学9月26日作业（09月26日）.docx";
-            
-            // 创建示例坐标点数据（实际应用中应从StudentsWriteRecord获取）
-            List<HomeworkStudentWriteData> coordinates = new ArrayList<>();
-
-            
-            // 生成图片
-            String outputPath = "output_document_with_coordinates.png";
-            generateDocumentWithCoordinates(documentUrl, coordinates, 1, outputPath);
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+       
     }
 }

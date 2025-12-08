@@ -72,4 +72,9 @@ public class HomeworkPublishController {
     public void deleteById(@PathVariable Long id) {
         homeworkPublishService.deleteById(id);
     }
+
+    @GetMapping("/aIHomeworkPublic")
+    public void aIHomeworkPublic(Long homeworkPublishId) {
+        homeworkPublishService.aIHomeworkPublic(homeworkPublishId);
+    }
 }

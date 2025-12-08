@@ -10,10 +10,7 @@ import com.jlm.homework.repository.ClassroomExercisesStudentRecordRepository;
 import com.jlm.homework.service.IClassroomExercisesQuestionService;
 import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
 import com.jlm.homework.service.IClassroomStudentWriteDataService;
-import com.jlm.homework.util.CoordinateImageGenerator;
-import com.jlm.homework.util.ImageOverlayUtil;
-import com.jlm.homework.util.WritingDataRenderer;
-import com.jlm.homework.util.ZhipuAIImageAnalysisUtil;
+import com.jlm.homework.util.*;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -277,6 +274,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             String imageUrl = "随堂检测-"+studentRecord.getClassroomExercisesId()+"-"+studentRecord.getStudentName()+".png";
             CoordinateImageGenerator.saveImage(image,imageUrl);
             ZhipuAIImageAnalysisUtil aiImageAnalysisUtil=zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            //QianWenAIUtil aiImageAnalysisUtil = new QianWenAIUtil();
             String prompt = "请根据试题和学生书写笔记，批阅学生作答结果，试题如下：\n";
             for(ClassroomExercisesQuestion question:questionList){
                 String titleStr = question.getTitleNumber() +".  "+question.getQuestionContent() + " 标准答案："+question.getAnswer()+" \n";

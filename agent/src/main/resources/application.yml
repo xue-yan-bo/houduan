@@ -1,11 +1,32 @@
 spring:
+  # 智谱
   ai:
     zhipuai:
-      api-key: "7abc333508dd4d71b83dcb6f5a511eee.rjwsPZyUfDN5abhn"
-      #base-url: "https://open.bigmodel.cn"
+      api-key: ${ZHIPU_API_KEY}
+#      base-url: "https://open.bigmodel.cn"
       image:
         options:
-          model: GLM-4.5-Flash
+          model: ${ZHIPU_IMAGE_MODEL}
       chat:
         options:
-          model: GLM-4.5V
+          model: ${ZHIPU_CHAT_MODEL}
+
+  # openAI配置
+    openai:
+      api-key: ${}
+      base-url: ${}
+      chat:
+        options:
+          model: ${}
+
+# 1.通义千问
+TONGYI_API_KEY: "sk-234cb378f4484f3e9f6fc5b8304508e5"
+##1.1 多模态图文分析 qwen-vl-max
+TONGYI_MODEL: "qwen-vl-max"
+TONGYI_OPNEAI_BASE_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+TONGYI_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+# 2.智谱
+ZHIPU_API_KEY: "7abc333508dd4d71b83dcb6f5a511eee.rjwsPZyUfDN5abhn"
+ZHIPU_CHAT_MODEL: "GLM-4.5V"
+ZHIPU_IMAGE_MODEL: "GLM-4.5-Flash"

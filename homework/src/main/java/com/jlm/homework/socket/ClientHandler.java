@@ -414,6 +414,15 @@ public class ClientHandler implements Runnable {
                                             homeId = null;
                                             page_num = null;
                                             nMenuUpdate(out, writer);
+                                        }else{
+                                            pCurrentMenu = null;
+                                            work2Boards = new ArrayList<>();
+                                            studentsWriteRecords =new ArrayList<>();
+                                            homeworkflag = false;
+                                            querenJishu=0;
+                                            homeId = null;
+                                            page_num = null;
+                                            nMenuUpdate(out, writer);
                                         }
                                     }
                                 }else if(emendflag){//末级菜单作业订正
@@ -490,6 +499,17 @@ public class ClientHandler implements Runnable {
                                             homeId = homeworkId;
                                             page_num = pageN;
                                             studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId,"2", pageN, studentsEmendRecords,true);
+                                            pCurrentMenu = null;
+                                            work2Boards = new ArrayList<>();
+                                            studentsEmendRecords =new ArrayList<>();
+                                            homeworkflag = false;
+                                            emendflag = false;
+                                            errorTitleflag = false;
+                                            querenJishu = 0;
+                                            homeId = null;
+                                            page_num = null;
+                                            nMenuUpdate(out, writer);
+                                        }else{
                                             pCurrentMenu = null;
                                             work2Boards = new ArrayList<>();
                                             studentsEmendRecords =new ArrayList<>();

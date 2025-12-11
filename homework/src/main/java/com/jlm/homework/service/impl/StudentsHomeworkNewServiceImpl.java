@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.alibaba.cloud.commons.lang.StringUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.hibernate.query.Order;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
@@ -48,6 +49,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private HomeworkPublishRepository homeworkPublishRepository;
     @Resource
     private HomeworkPublishQuestionRepository homeworkPublishQuestionRepository;
+    @Resource
+    private AiConfigRepository aiConfigRepository;
     @Autowired
     private StudentFeignClient studentFeignClient;
     @Autowired
@@ -79,11 +82,15 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Autowired
     private ZhipuAIConfig zhipuAIConfig;
     @Autowired
+    private AIUtil aiUtil;
+    @Autowired
     private IQuestionAnalysisService questionAnalysisService;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private StudentsHomeworkStatisticsRepository studentsHomeworkStatisticsRepository;
 
-    
+
     /**
      * 使用Criteria API根据Specification查询StudentsHomeworkSimpleDTO列表
      * 与studentsHomeworkNewRepository.findAll(specification)功能相同，但返回DTO对象
@@ -913,12 +920,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         Integer submittedNum=0;
         Integer unsubmittedNum=0;
         Map<String,Integer> gradeSubmitMap=new HashMap<>();
+        Map<String,Double> gradeRightRate=new HashMap<>();
         Map<String,Integer> gradeUnSubmitMap=new HashMap<>();
         Map<String,Integer> gradeTotalMap=new HashMap<>();
         Map<Integer,Integer> homeworkNumMap = new HashMap<>();
         Map<Integer,Integer> auditNumMap = new HashMap<>();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         String today = sdf.format(new Date());
+        Map<Long,String> classMap = new HashMap<>();
         Map<String,Integer> classTotalMap = new HashMap<>();
         Map<String,Integer> classSubmitMap = new HashMap<>();
         List<Long> publishHomeworkIdList=new ArrayList<>();
@@ -945,8 +954,13 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     gradeUnSubmitMap.put(studentsHomework.getGrade(),1);
                 }
             }
-            if(studentsHomework.getStartTime()!=null&&studentsHomework.getSubmitTime()!=null){
-                Integer m = Math.toIntExact((studentsHomework.getSubmitTime().getTime() - studentsHomework.getStartTime().getTime()) / 1000 / 60);
+            if(studentsHomework.getSubmitTime()!=null){
+                Integer m;
+                if(studentsHomework.getStartTime()!=null) {
+                    m = Math.toIntExact((studentsHomework.getSubmitTime().getTime() - studentsHomework.getStartTime().getTime()) / 1000 / 60);
+                }else{
+                    m = Math.toIntExact((studentsHomework.getSubmitTime().getTime() - studentsHomework.getCreateTime().getTime()) / 1000 / 60);
+                }
                 if(m<=10){
                     if(homeworkNumMap.containsKey(10)){
                         homeworkNumMap.put(10,homeworkNumMap.get(10)+1);
@@ -1019,6 +1033,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             //今日
             String createDate = sdf.format(studentsHomework.getCreateTime());
             String className = studentsHomework.getClassesName();
+            if(!classMap.containsKey(studentsHomework.getClassesId())){
+                classMap.put(studentsHomework.getClassesId(),className);
+            }
             if(today.equals(createDate)){
                 if(classTotalMap.containsKey(className)){
                     classTotalMap.put(className,classTotalMap.get(className) + 1);
@@ -1054,9 +1071,65 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         homeworkSubmitSituation.put("未提交",totalUnsubmitRate);
         schoolHomeworkData.setHomeworkSubmitSituation(homeworkSubmitSituation);
         List<GradeHomeworkSubmit> gradeSubmitSituation = new ArrayList<>();
+        Map<String, Object> totalRightRateMap = studentsHomeworkStatisticsRepository.getRightRatetotal(schoolId);
+        HomeworkRightRate totalRightRate = new HomeworkRightRate();
+        if(totalRightRateMap!=null){
+            // 安全地将Number转换为Integer
+            totalRightRate.setTotalNum(((Number) totalRightRateMap.get("totalNum")).intValue());
+            totalRightRate.setRightNum(((Number) totalRightRateMap.get("rightNum")).intValue());
+            totalRightRate.setErrorNum(((Number) totalRightRateMap.get("errorNum")).intValue());
+            Double rightRate = 0.0;
+            if(totalRightRate.getTotalNum()!=null&&totalRightRate.getRightNum()!=null){
+                rightRate =  BigDecimal.valueOf(totalRightRate.getRightNum()).divide(BigDecimal.valueOf(totalRightRate.getTotalNum()),4,BigDecimal.ROUND_HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).doubleValue();
+                totalRightRate.setRightRate(rightRate);
+            }
+            Double erroRate =0.0;
+            if(totalRightRate.getTotalNum()!=null&&totalRightRate.getErrorNum()!=null){
+                erroRate =  BigDecimal.valueOf(totalRightRate.getErrorNum()).divide(BigDecimal.valueOf(totalRightRate.getTotalNum()),4,BigDecimal.ROUND_HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).doubleValue();
+                totalRightRate.setErrorRate(erroRate);
+            }
+            Double noAnswerRate = 100.0 - rightRate -erroRate;
+            totalRightRate.setNoAnswerRate(noAnswerRate);
+        }
+        schoolHomeworkData.setTotalRightRate(totalRightRate);
+        List<Map<String, Object>> gradesRightRateMapList = studentsHomeworkStatisticsRepository.getRightRate(schoolId);
+        List<HomeworkRightRate> gradesRightRateList = new ArrayList<>();
+        if(gradesRightRateMapList!=null&&gradesRightRateMapList.size()>0){
+            for(Map<String, Object> rightRateMap:gradesRightRateMapList){
+                HomeworkRightRate homeworkRightRate = new HomeworkRightRate();
+                Long classId =(Long) rightRateMap.get("classId");
+                homeworkRightRate.setClassId(classId);
+                homeworkRightRate.setClassName(classMap.get(classId));
+                homeworkRightRate.setGrade((String) rightRateMap.get("grade"));
+                // 安全地将Number转换为Integer
+                homeworkRightRate.setTotalNum(((Number) rightRateMap.get("totalNum")).intValue());
+                homeworkRightRate.setRightNum(((Number) rightRateMap.get("rightNum")).intValue());
+                homeworkRightRate.setErrorNum(((Number) rightRateMap.get("errorNum")).intValue());
+                Double rightRate = 0.0;
+                if(homeworkRightRate.getTotalNum()!=null&&homeworkRightRate.getRightNum()!=null){
+                    rightRate =  BigDecimal.valueOf(homeworkRightRate.getRightNum()).divide(BigDecimal.valueOf(homeworkRightRate.getTotalNum()),4,BigDecimal.ROUND_HALF_UP)
+                            .multiply(BigDecimal.valueOf(100)).doubleValue();
+                    homeworkRightRate.setRightRate(rightRate);
+                }
+                Double erroRate = 0.0;
+                if(homeworkRightRate.getTotalNum()!=null&&homeworkRightRate.getErrorNum()!=null){
+                    erroRate =  BigDecimal.valueOf(homeworkRightRate.getErrorNum()).divide(BigDecimal.valueOf(homeworkRightRate.getTotalNum()),4,BigDecimal.ROUND_HALF_UP)
+                            .multiply(BigDecimal.valueOf(100)).doubleValue();
+                    homeworkRightRate.setErrorRate(erroRate);
+                }
+                Double noAnswerRate = 100.0 - rightRate -erroRate;
+                totalRightRate.setNoAnswerRate(noAnswerRate);
+                gradesRightRateList.add(homeworkRightRate);
+            }
+        }
+        schoolHomeworkData.setGradesRightRateList(gradesRightRateList);
         for(String grade:gradeTotalMap.keySet()) {
+            HomeworkRightRate homeworkRightRate = new HomeworkRightRate();
             GradeHomeworkSubmit gradeHomeworkSubmit = new GradeHomeworkSubmit();
             gradeHomeworkSubmit.setGrade(grade);
+            homeworkRightRate.setClassName(grade);
             Double gradeSubmitRate = 0.0d;
             if (gradeTotalMap != null && gradeTotalMap.get(grade) != null
                 &&gradeSubmitMap !=null && gradeSubmitMap.get(grade) != null){
@@ -1093,6 +1166,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             todayHomeworkSubmit.add(homeworkSubmit);
         }
         schoolHomeworkData.setTodayHomeworkSubmit(todayHomeworkSubmit);
+
         //今日审批
         List<HomeworkPublish> publishList=new ArrayList<>();
         for(Long publishId:publishHomeworkIdList){
@@ -1111,10 +1185,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         List<HomeworkPublish> publishList1=homeworkPublishRepository.findAll(Example.of(schoolHomeworkPublish));
         Map<String,Integer> map = new HashMap<>();
         for(HomeworkPublish homeworkPublish1:publishList1){
-            if(map.containsKey(homeworkPublish1.getExerciseBookName())){
-                map.put(homeworkPublish1.getExerciseBookName(),map.get(homeworkPublish1.getExerciseBookName())+1);
-            }else {
-                map.put(homeworkPublish1.getExerciseBookName(),1);
+            if(StringUtils.isNotEmpty(homeworkPublish1.getExerciseBookName())) {
+                if (map.containsKey(homeworkPublish1.getExerciseBookName())) {
+                    map.put(homeworkPublish1.getExerciseBookName(), map.get(homeworkPublish1.getExerciseBookName()) + 1);
+                } else {
+                    map.put(homeworkPublish1.getExerciseBookName(), 1);
+                }
             }
         }
         exerciseBookUse.setExerciseBookUsedum(map.keySet().size());
@@ -1227,13 +1303,19 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         Map<String,Long> dayTimeMap=new HashMap<>();
         Map<String,Integer> dayNumMap=new HashMap<>();
         for(StudentsHomeworkSimpleDTO studentsHomework:studentsHomeworkList){
-            if(studentsHomework.getStartTime()!=null&&studentsHomework.getSubmitTime()!=null){
+            if(studentsHomework.getSubmitTime()!=null){
                 if(schoolHomeworkNumMap.containsKey(studentsHomework.getSchoolId())){
                     schoolHomeworkNumMap.put(studentsHomework.getSchoolId(),schoolHomeworkNumMap.get(studentsHomework.getSchoolId())+1);
                 }else {
                     schoolHomeworkNumMap.put(studentsHomework.getSchoolId(),1);
                 }
-                Long time=studentsHomework.getSubmitTime().getTime()-studentsHomework.getStartTime().getTime();
+                Long time = null;
+                if(studentsHomework.getStartTime()!=null) {
+                    time = studentsHomework.getSubmitTime().getTime() - studentsHomework.getStartTime().getTime();
+                }else{
+                    time = studentsHomework.getSubmitTime().getTime() - studentsHomework.getCreateTime().getTime();
+                }
+                //studentsHomework.setDuration(Double.valueOf(time/ 1000l / 60 ));
                 if(schoolHomeworkTimeMap.containsKey(studentsHomework.getSchoolId())){
                     schoolHomeworkTimeMap.put(studentsHomework.getSchoolId(),schoolHomeworkTimeMap.get(studentsHomework.getSchoolId())+time);
                 }else {
@@ -1299,7 +1381,24 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         }
         educHomeworkData.setDurationStatisticsList(durationStatisticsList);
         int maxNum = studentsHomeworkList.size()>10?10:studentsHomeworkList.size();
-        educHomeworkData.setStudentsHomeworkNewList(studentsHomeworkList.subList(0,maxNum));
+        List<StudentsHomeworkReport> reportList = new ArrayList<>();
+        int n = 0;
+        for(int i=0;i<studentsHomeworkList.size()&&n<maxNum;i++){
+            StudentsHomeworkSimpleDTO homeworkSimpleDTO = studentsHomeworkList.get(i);
+            StudentsHomeworkReport report =new StudentsHomeworkReport();
+            BeanUtils.copyProperties(homeworkSimpleDTO,report);
+
+            Double duration =0.0;
+            if(homeworkSimpleDTO.getSubmitTime()!=null){
+                duration  = BigDecimal.valueOf(homeworkSimpleDTO.getSubmitTime().getTime()-homeworkSimpleDTO.getCreateTime().getTime())
+                        .divide(BigDecimal.valueOf(1000*60),2,BigDecimal.ROUND_HALF_UP).doubleValue();
+                report.setDuration(duration);
+                reportList.add(report);
+                n++;
+            }
+
+        }
+        educHomeworkData.setStudentsHomeworkNewList(reportList);
         Map<String,Double> dayAverageDuration =  new HashMap<>();
         for (String day:dayTimeMap.keySet()) {
             if(dayTimeMap.get(day)!=0) {
@@ -1628,8 +1727,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     String auditImages = "";
                     List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
                     //异步处理AI智能审批
-                    ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+                    //ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
                     //QianWenAIUtil util = new QianWenAIUtil();
+                    AIUtil util  = aiUtil.getAIUtil();
+                    if("qianwen".equals(util.getAiName())){
+                        util = (QianWenAIUtil)  util;
+                    }else {
+                        util = (ZhipuAIImageAnalysisUtil) util;
+                    }
                     List<HomeworkStudentWriteData> homeworkStudentWriteDataList = homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(), type);
                     if (studentsHomework.getTopicImages() != null && studentsHomework.getTopicImages().size() > 0
                             && !studentsHomework.getTopicImagesStr().endsWith(".docx") && !studentsHomework.getTopicImagesStr().endsWith(".doc")) {
@@ -2058,9 +2163,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     public String aIaudit(Long studentsHomeworkId) {
         StudentsHomeworkNew studentsHomework = this.getById(studentsHomeworkId);
         String auditImages = "";
-        //异步处理AI智能审批
-        ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
-        //QianWenAIUtil util  = new QianWenAIUtil();
+
+        //ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+        AIUtil util  = aiUtil.getAIUtil();
+        if("qianwen".equals(util.getAiName())){
+            util = (QianWenAIUtil)  util;
+        }else {
+            util = (ZhipuAIImageAnalysisUtil) util;
+        }
         List<HomeworkStudentWriteData> homeworkStudentWriteDataList=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"1");
         List<QuestionAnalysis>  analyses = new ArrayList<>();
         List<String> imageNames = null;
@@ -2121,6 +2231,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         Map<String,String> allmap = new HashMap<>();
         if(imageNames!=null&&imageNames.size()>0) {
             try {
+
                 allmap=util.analyzeImagesAnswer(imageNames);
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -2157,6 +2268,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 questionAnalysis.setClassesId(studentsHomework.getClassesId());
                 questionAnalysis.setStudentId(studentsHomework.getStudentId());
                 questionAnalysis.setStudentName(studentsHomework.getStudentName());
+                questionAnalysis.setGrade(studentsHomework.getGrade());
+                questionAnalysis.setSchoolId(studentsHomework.getSchoolId());
                 String titleNum = questionAnalysis.getBigNumber()+":"+questionAnalysis.getSmallNumber();
                 if(allmap.containsKey(titleNum)) {
                     questionAnalysis.setStudentAnswer(allmap.get(titleNum));
@@ -2261,8 +2374,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         FutureTask<String> futureTask = new FutureTask<>(() -> {
             String auditImages = "";
             //异步处理AI智能审批
-            ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            //ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
             //QianWenAIUtil util = new QianWenAIUtil();
+            AIUtil util  = aiUtil.getAIUtil();
+            if("qianwen".equals(util.getAiName())){
+                util = (QianWenAIUtil)  util;
+            }else {
+                util = (ZhipuAIImageAnalysisUtil) util;
+            }
             ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
             BufferedImage image = WritingDataRenderer.drawWritingData(uploadErrorTitleRecords, 794, 1123);
             String imageUrl = "错题上传-"+studentId+".png";
@@ -2321,8 +2440,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         studentsHomework =studentsHomeworkNewRepository.save(studentsHomework);
         StudentsHomeworkNew finalStudentsHomework = studentsHomework;
         FutureTask<String> futureTask = new FutureTask<>(() -> {
-            ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            //ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
             //QianWenAIUtil util  = new QianWenAIUtil();
+            AIUtil util  = aiUtil.getAIUtil();
+            if("qianwen".equals(util.getAiName())){
+                util = (QianWenAIUtil)  util;
+            }else {
+                util = (ZhipuAIImageAnalysisUtil) util;
+            }
             try{
                 String auditImages ="";
                 if(StringUtils.isNotEmpty(finalStudentsHomework.getSubmitFileUrl())) {
@@ -2348,6 +2473,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             questionAnalysis.setClassesId(finalStudentsHomework.getClassesId());
                             questionAnalysis.setStudentId(finalStudentsHomework.getStudentId());
                             questionAnalysis.setStudentName(finalStudentsHomework.getStudentName());
+                            questionAnalysis.setGrade(finalStudentsHomework.getGrade());
+                            questionAnalysis.setSchoolId(finalStudentsHomework.getSchoolId());
                             if(questionAnalysis.getIsCorrect()==null){
                                 stringBuilder = stringBuilder.append("未答题 ");
                             }else if(questionAnalysis.getIsCorrect()){
@@ -2402,8 +2529,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         studentsHomework =studentsHomeworkNewRepository.save(studentsHomework);
         StudentsHomeworkNew finalStudentsHomework = studentsHomework;
         FutureTask<String> futureTask = new FutureTask<>(() -> {
-            ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            //ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
             //QianWenAIUtil util = new QianWenAIUtil();
+            AIUtil util  = aiUtil.getAIUtil();
+            if("qianwen".equals(util.getAiName())){
+                util = (QianWenAIUtil)  util;
+            }else {
+                util = (ZhipuAIImageAnalysisUtil) util;
+            }
             try{
                 String auditImages ="";
                 if(StringUtils.isNotEmpty(finalStudentsHomework.getSubmitFileUrl2())) {
@@ -2449,8 +2582,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         StudentsHomeworkNew studentsHomework = this.getById(studentsHomeworkId);
         String auditImages = "";
         //异步处理AI智能审批
-        ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+        //ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
         //QianWenAIUtil util = new QianWenAIUtil();
+        AIUtil util  = aiUtil.getAIUtil();
+        if("qianwen".equals(util.getAiName())){
+            util = (QianWenAIUtil)  util;
+        }else {
+            util = (ZhipuAIImageAnalysisUtil) util;
+        }
         List<HomeworkStudentWriteData> homeworkStudentWriteDataList=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"2");
         try {
             if(StringUtils.isNotEmpty(studentsHomework.getSubmitFileUrl2())) {
@@ -2551,7 +2690,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 studentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoAll));
             }
             studentsHomeworkNewRepository.save(studentsHomework);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         return auditImages;

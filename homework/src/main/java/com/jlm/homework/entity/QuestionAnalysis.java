@@ -52,7 +52,10 @@ public class QuestionAnalysis implements Serializable {
     private String smallNumber;        // 小题号
     @Column(name = "is_correct")
     private Boolean isCorrect;         // 是否正确
-
+    @Column(name = "grade")
+    private String grade;
+    @Column(name = "school_id")
+    private Long schoolId;
     @Override
     public String toString() {
         return questionNumber + " [" + questionType + "] " + score + "分 - 得分: " + obtainedScore;

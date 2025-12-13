@@ -63,12 +63,12 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
         pageSize= pageSize==null?10:pageSize;
         if(student==null){
             student=new Student();
-            //student.setSchoolId(userService.getCurrentSchoolIdSafely());
-            student.setSchoolId(224l);
+            student.setSchoolId(userService.getCurrentSchoolIdSafely());
+            //student.setSchoolId(224l);
         }
         if(student.getSchoolId()==null){
-            //student.setSchoolId(userService.getCurrentSchoolIdSafely());
-            student.setSchoolId(224l);
+            student.setSchoolId(userService.getCurrentSchoolIdSafely());
+            //student.setSchoolId(224l);
         }
         Result<Student> result= studentFeignClient.getStudentList(pageNum,pageSize,student.getSchoolId(),student.getGradeId(),student.getClassesId(),student.getStudentStatus());
         List<Student> studentList=result.getRows();

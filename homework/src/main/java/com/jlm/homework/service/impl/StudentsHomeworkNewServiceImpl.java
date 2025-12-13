@@ -2912,10 +2912,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         List<Predicate> countPredicates = new ArrayList<>();
         
         // 学校ID条件
-        // if (userService.getCurrentSchoolIdSafely() != null) {
-        //     Predicate schoolCountCondition = criteriaBuilder.equal(countRoot.get("schoolId"), userService.getCurrentSchoolIdSafely());
-        //     countPredicates.add(schoolCountCondition);
-        // }
+        if (userService.getCurrentSchoolIdSafely() != null) {
+            Predicate schoolCountCondition = criteriaBuilder.equal(countRoot.get("schoolId"), userService.getCurrentSchoolIdSafely());
+            countPredicates.add(schoolCountCondition);
+        }
         
         // 审批状态条件
         if (studentsHomework != null && studentsHomework.getAuditStatus() != null) {

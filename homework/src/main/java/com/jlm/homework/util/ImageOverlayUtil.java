@@ -19,14 +19,25 @@ import java.util.List;
 public class ImageOverlayUtil {
 
     /**
-     * 从URL加载图片
-     * @param imageUrl 图片URL
+     * 从URL或本地文件路径加载图片
+     * @param imageUrl 图片URL或本地文件路径
      * @return 加载的BufferedImage对象
      * @throws IOException 加载图片时发生的异常
      */
     public static BufferedImage loadImageFromUrl(String imageUrl) throws IOException {
-        URL url = new URL(imageUrl);
-        return ImageIO.read(url);
+        try {
+            // 首先尝试作为URL加载
+            URL url = new URL(imageUrl);
+            return ImageIO.read(url);
+        } catch (IOException e) {
+            // 如果作为URL加载失败，尝试作为本地文件加载
+            File file = new File(imageUrl);
+            if (file.exists()) {
+                return ImageIO.read(file);
+            }
+            // 如果本地文件也不存在，重新抛出异常
+            throw e;
+        }
     }
 
     /**

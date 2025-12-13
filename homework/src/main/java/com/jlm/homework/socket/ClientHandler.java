@@ -1318,7 +1318,7 @@ public class ClientHandler implements Runnable {
 
                     } else if (dataType == 0x03) { // 序列号数据
                         MacParseResult result = ParseTcpDataUtil.parseSerialNumberTcpPacket(fullPacketBuffer);
-                      //System.out.println("序列号数据解析结果：" + result.toString());
+                        System.out.println("序列号数据解析结果：" + result.toString());
                         
                         // 处理序列号关联
                         SmartDeviceUserRelation deviceUserRelation = smartDeviceUserRelationService.selectByDeviceCode(result.getMac().toString());
@@ -1326,7 +1326,7 @@ public class ClientHandler implements Runnable {
                             deviceUserRelation.setIpAddress(clientIP);
                             smartDeviceUserRelationService.update(deviceUserRelation);
                         }else {
-                          //System.out.println(result.getMac()+"设备还未绑定学生，请检查！");
+                            System.out.println(result.getMac()+"设备还未绑定学生，请检查！");
                             // 设备绑定学生
                             deviceUserRelation = new SmartDeviceUserRelation();
                             deviceUserRelation.setIpAddress(clientIP);

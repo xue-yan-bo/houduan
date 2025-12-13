@@ -176,4 +176,5 @@ public class StudentsHomeworkSimpleDTO implements Serializable {
      */
     private Double score;
 
+
 }

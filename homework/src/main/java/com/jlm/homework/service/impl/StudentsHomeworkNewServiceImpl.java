@@ -2233,6 +2233,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             try {
 
                 allmap=util.analyzeImagesAnswer(imageNames);
+                log.info("AI分析结果"+allmap.toString());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -2243,73 +2244,169 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
             }
         }
-        HomeworkPublishQuestion search = new HomeworkPublishQuestion();
-        search.setHomeworkPublishId(studentsHomeworkId);
-        List<HomeworkPublishQuestion>  questionList = homeworkPublishQuestionRepository.findAll(Example.of(search));
-        Map<String,List<HomeworkAISmallDto>> aiResultMap = new HashMap<>();
+        Map<String, List<HomeworkAISmallDto>> aiResultMap = new HashMap<>();
         List<QuestionAnalysis> errorList = new ArrayList<>();
-        if(questionList!=null&&questionList.size()>0){
+        Map<String, String> map = new HashMap<>();
+        StringBuilder stringBuilder = new StringBuilder();
+        List<QuestionAnalysis> zhuguanQuestions = new ArrayList<>();
+        try {
+            List<QuestionAnalysis> questionAnalysisList = questionAnalysisService.findListByStudHomeId(studentsHomeworkId);
+            if(questionAnalysisList==null||questionAnalysisList.isEmpty()) {
+                HomeworkPublishQuestion search = new HomeworkPublishQuestion();
+                search.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
+                Sort sort = Sort.by(Sort.Direction.ASC,"id");
+                List<HomeworkPublishQuestion> questionList = homeworkPublishQuestionRepository.findAll(Example.of(search));
 
-            System.out.println(analyses.toString());
-            Map<String,String> map = new HashMap<>();
-            StringBuilder stringBuilder = new StringBuilder();
-            for(HomeworkPublishQuestion question:questionList){
-                QuestionAnalysis questionAnalysis = new QuestionAnalysis();
-                questionAnalysis =objectMapper.convertValue(question,QuestionAnalysis.class);
-                if(StringUtils.isNotEmpty(questionAnalysis.getBigNumber())&&!map.containsKey(questionAnalysis.getBigNumber())){
-                    stringBuilder = stringBuilder.append(questionAnalysis.getBigNumber()).append("、").append(questionAnalysis.getQuestionType());
-                    map.put(questionAnalysis.getBigNumber(),questionAnalysis.getQuestionType());
+
+                if (questionList != null && questionList.size() > 0) {
+
+                    System.out.println(analyses.toString());
+
+                    for (HomeworkPublishQuestion question : questionList) {
+                        QuestionAnalysis questionAnalysis = new QuestionAnalysis();
+                        BeanUtils.copyProperties(question, questionAnalysis);
+                        questionAnalysis.setId(null);
+                        if (StringUtils.isNotEmpty(questionAnalysis.getBigNumber()) && !map.containsKey(questionAnalysis.getBigNumber())) {
+                            stringBuilder = stringBuilder.append(questionAnalysis.getBigNumber()).append("、").append(questionAnalysis.getQuestionType());
+                            map.put(questionAnalysis.getBigNumber(), questionAnalysis.getQuestionType());
+                        }
+                        if (StringUtils.isNotEmpty(questionAnalysis.getSmallNumber())) {
+                            stringBuilder = stringBuilder.append(questionAnalysis.getSmallNumber()).append(".");
+                        }
+                        questionAnalysis.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
+                        questionAnalysis.setStudentsHomeworkId(studentsHomework.getId());
+                        questionAnalysis.setClassesId(studentsHomework.getClassesId());
+                        questionAnalysis.setStudentId(studentsHomework.getStudentId());
+                        questionAnalysis.setStudentName(studentsHomework.getStudentName());
+                        questionAnalysis.setGrade(studentsHomework.getGrade());
+                        questionAnalysis.setSchoolId(studentsHomework.getSchoolId());
+                        String titleNum = questionAnalysis.getBigNumber() + ":" + questionAnalysis.getSmallNumber();
+                        if (allmap.containsKey(titleNum)) {
+                            questionAnalysis.setStudentAnswer(allmap.get(titleNum));
+                        }
+                        HomeworkAISmallDto smallDto = new HomeworkAISmallDto();
+                        smallDto.setSmallNumber(questionAnalysis.getSmallNumber());
+                        if(questionAnalysis.getStudentAnswer()==null||questionAnalysis.getStudentAnswer().contains("未作答")){
+                            questionAnalysis.setIsCorrect(null);
+                            stringBuilder = stringBuilder.append("未答题 ");
+                            smallDto.setCorrectFlag("未答题");
+                        }else {
+                            if ("选择题".equals(questionAnalysis.getQuestionType())
+                                    || "单选题".equals(questionAnalysis.getQuestionType())
+                                    || "判断题".equals(questionAnalysis.getQuestionType())) {
+                                if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())
+                                        && questionAnalysis.getStudentAnswer().equals(questionAnalysis.getReferenceAnswer())) {
+                                    stringBuilder = stringBuilder.append("正确 ");
+                                    smallDto.setCorrectFlag("正确");
+                                } else if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())) {
+                                    stringBuilder = stringBuilder.append("错误 ");
+                                    smallDto.setCorrectFlag("错误");
+                                    questionAnalysis.setIsCorrect(false);
+                                    errorList.add(questionAnalysis);
+                                } else {
+                                    stringBuilder = stringBuilder.append("未答题 ");
+                                    smallDto.setCorrectFlag("未答题");
+                                }
+                            } else {
+                                String pamt = "作为一个作业批阅助手，请批阅该题：" + questionAnalysis.getContent() + ",参考答案：" + questionAnalysis.getReferenceAnswer()
+                                        + ",学生作答：" + questionAnalysis.getStudentAnswer() + ", 返回批阅结果，严格就判断正确与否";
+                                String piyue = util.analyzeText(pamt);
+                                if (piyue.contains("正确")) {
+                                    questionAnalysis.setIsCorrect(true);
+                                    stringBuilder = stringBuilder.append("正确 ");
+                                    smallDto.setCorrectFlag("正确");
+                                } else {
+                                    questionAnalysis.setIsCorrect(false);
+                                    stringBuilder = stringBuilder.append("错误 ");
+                                    smallDto.setCorrectFlag("错误");
+                                }
+                            }
+
+                        }
+                        String key = questionAnalysis.getBigNumber() + ":" + questionAnalysis.getQuestionType();
+                        if (aiResultMap.containsKey(key)) {
+                            List<HomeworkAISmallDto> smallDtoList = aiResultMap.get(key);
+                            smallDtoList.add(smallDto);
+                            aiResultMap.put(key, smallDtoList);
+                        } else {
+                            List<HomeworkAISmallDto> smallDtoList = new ArrayList<>();
+                            smallDtoList.add(smallDto);
+                            aiResultMap.put(key, smallDtoList);
+                        }
+                        questionAnalysisService.save(questionAnalysis);
+                    }
+                    auditImages = stringBuilder.toString();
                 }
-                if(StringUtils.isNotEmpty(questionAnalysis.getSmallNumber())){
-                    stringBuilder = stringBuilder.append(questionAnalysis.getSmallNumber()).append(".");
-                }
-                questionAnalysis.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
-                questionAnalysis.setStudentsHomeworkId(studentsHomework.getId());
-                questionAnalysis.setClassesId(studentsHomework.getClassesId());
-                questionAnalysis.setStudentId(studentsHomework.getStudentId());
-                questionAnalysis.setStudentName(studentsHomework.getStudentName());
-                questionAnalysis.setGrade(studentsHomework.getGrade());
-                questionAnalysis.setSchoolId(studentsHomework.getSchoolId());
-                String titleNum = questionAnalysis.getBigNumber()+":"+questionAnalysis.getSmallNumber();
-                if(allmap.containsKey(titleNum)) {
-                    questionAnalysis.setStudentAnswer(allmap.get(titleNum));
-                }
-                HomeworkAISmallDto smallDto = new HomeworkAISmallDto();
-                smallDto.setSmallNumber(questionAnalysis.getSmallNumber());
-                if(questionAnalysis.getIsCorrect()==null){
-                    stringBuilder = stringBuilder.append("未答题 ");
-                    smallDto.setCorrectFlag("未答题");
-                }else if(questionAnalysis.getIsCorrect()){
-                    if(questionAnalysis.getStudentAnswer().equals(questionAnalysis.getReferenceAnswer())){
-                        stringBuilder = stringBuilder.append("正确 ");
-                        smallDto.setCorrectFlag("正确");
-                    }else{
-                        stringBuilder = stringBuilder.append("错误 ");
-                        smallDto.setCorrectFlag("错误");
-                        questionAnalysis.setIsCorrect(false);
-                        errorList.add(questionAnalysis);
+            }else{
+                for(QuestionAnalysis questionAnalysis:questionAnalysisList){
+                    String titleNum = questionAnalysis.getBigNumber() + ":" + questionAnalysis.getSmallNumber();
+                    if (allmap.containsKey(titleNum)) {
+                        questionAnalysis.setStudentAnswer(allmap.get(titleNum));
                     }
 
-                }else{
-                    stringBuilder = stringBuilder.append("错误 ");
-                    smallDto.setCorrectFlag("错误");
-                    errorList.add(questionAnalysis);
-                }
-                String key = questionAnalysis.getBigNumber()+":"+questionAnalysis.getQuestionType();
+                    HomeworkAISmallDto smallDto = new HomeworkAISmallDto();
+                    smallDto.setSmallNumber(questionAnalysis.getSmallNumber());
+                    if(questionAnalysis.getStudentAnswer()==null||
+                            questionAnalysis.getStudentAnswer().contains("未作答")||
+                            questionAnalysis.getStudentAnswer().contains("未答题")){
+                        questionAnalysis.setIsCorrect(null);
+                        stringBuilder = stringBuilder.append("未答题 ");
+                        smallDto.setCorrectFlag("未答题");
+                    }else {
+
+                        if ("选择题".equals(questionAnalysis.getQuestionType())
+                                || "单选题".equals(questionAnalysis.getQuestionType())
+                                || "判断题".equals(questionAnalysis.getQuestionType())) {
+                            if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())
+                                    && questionAnalysis.getStudentAnswer().equals(questionAnalysis.getReferenceAnswer())) {
+                                stringBuilder = stringBuilder.append("正确 ");
+                                smallDto.setCorrectFlag("正确");
+                                questionAnalysis.setIsCorrect(true);
+                            } else if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())) {
+                                stringBuilder = stringBuilder.append("错误 ");
+                                smallDto.setCorrectFlag("错误");
+                                questionAnalysis.setIsCorrect(false);
+                                errorList.add(questionAnalysis);
+                            } else {
+                                stringBuilder = stringBuilder.append("未答题 ");
+                                smallDto.setCorrectFlag("未答题");
+                            }
+                        } else if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())&&!"未作答".equals(questionAnalysis.getStudentAnswer())) {
+                            String pamt = "作为一个作业批阅助手，请批阅该题：" + questionAnalysis.getContent() + ",参考答案：" + questionAnalysis.getReferenceAnswer()
+                                    + ",学生作答：" + questionAnalysis.getStudentAnswer() + ", 返回批阅结果，严格就判断正确与否";
+                            String piyue = util.analyzeText(pamt);
+                            if (piyue.contains("正确")) {
+                                questionAnalysis.setIsCorrect(true);
+                                stringBuilder = stringBuilder.append("正确 ");
+                                smallDto.setCorrectFlag("正确");
+                            } else {
+                                questionAnalysis.setIsCorrect(false);
+                                stringBuilder = stringBuilder.append("错误 ");
+                                smallDto.setCorrectFlag("错误");
+                            }
+                        } else {
+                            stringBuilder = stringBuilder.append("未答题 ");
+                            smallDto.setCorrectFlag("未答题");
+                        }
+
+                    }
+                    String key = questionAnalysis.getBigNumber() + ":" + questionAnalysis.getQuestionType();
 
 
-                if(aiResultMap.containsKey(key)){
-                    List<HomeworkAISmallDto> smallDtoList = aiResultMap.get(key);
-                    smallDtoList.add(smallDto);
-                    aiResultMap.put(key,smallDtoList);
-                }else{
-                    List<HomeworkAISmallDto> smallDtoList = new ArrayList<>();
-                    smallDtoList.add(smallDto);
-                    aiResultMap.put(key,smallDtoList);
+                    if (aiResultMap.containsKey(key)) {
+                        List<HomeworkAISmallDto> smallDtoList = aiResultMap.get(key);
+                        smallDtoList.add(smallDto);
+                        aiResultMap.put(key, smallDtoList);
+                    } else {
+                        List<HomeworkAISmallDto> smallDtoList = new ArrayList<>();
+                        smallDtoList.add(smallDto);
+                        aiResultMap.put(key, smallDtoList);
+                    }
+                    questionAnalysisService.save(questionAnalysis);
                 }
-                questionAnalysisService.save(questionAnalysis);
             }
-            auditImages = stringBuilder.toString();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
         List<HomeworkAIBigDto> bigDtoList = new ArrayList<>();
         for(String key:aiResultMap.keySet()){

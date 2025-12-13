@@ -5,7 +5,9 @@ import com.jlm.homework.entity.Microlecture;
 import com.jlm.homework.entity.Student;
 import com.jlm.homework.entity.StudentMicrolecture;
 import com.jlm.homework.feign.StudentFeignClient;
+import com.jlm.homework.repository.IMicrolectureRepository;
 import com.jlm.homework.repository.IStudentMicrolectureRepository;
+import com.jlm.homework.service.IMicrolectureService;
 import com.jlm.homework.service.IStudentMicrolectureService;
 import com.jlm.homework.service.UserService;
 import jakarta.annotation.Resource;
@@ -14,6 +16,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import com.alibaba.cloud.commons.lang.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
@@ -27,6 +30,8 @@ import java.util.*;
 public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureService {
     @Resource
     private IStudentMicrolectureRepository studentMicrolectureRepository;
+    @Autowired
+    private IMicrolectureRepository microlectureRepository;
     @Autowired
     private StudentFeignClient studentFeignClient;
 
@@ -140,7 +145,7 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                         Predicate cond2= criteriaBuilder.like(root.get("chapter"), "%"+chapter+"%");
                         list1.add(cond2);
                         if(chapter.contains("/")){
-                            String chapterSub = chapter.substring(chapter.lastIndexOf("/"));
+                            String chapterSub = chapter.substring(chapter.lastIndexOf("/")+1);
                             Predicate cond3= criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
                             list1.add(cond3);
                             if(chapterSub.length()>4){
@@ -153,7 +158,8 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                         Predicate condition = criteriaBuilder.or(list1.toArray(new Predicate[0]));
                         list.add(condition);
                     }else if(StringUtils.isNotEmpty(chapter)) {
-                        Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapter+"%");
+                        String chapterSub = chapter.substring(chapter.lastIndexOf("/")+1).trim();
+                        Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
                         list.add(condition1);
                     }
                 } catch (Exception e) {
@@ -165,7 +171,66 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
             }
 
         };
-        return studentMicrolectureRepository.findAll(specification,pageable);
+        Page<StudentMicrolecture> page=studentMicrolectureRepository.findAll(specification,pageable);
+        if(page.getContent().isEmpty()){
+            Specification<Microlecture> specification1 = new Specification<Microlecture>() {
+
+                @Override
+                public Predicate toPredicate(Root<Microlecture> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                    List<Predicate> list = new ArrayList<>();
+                    try {
+                        if(StringUtils.isEmpty(chapter)&&StringUtils.isNotEmpty(knowledgePoint)) {
+                            Predicate condition = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
+                            list.add(condition);
+                        }else if(StringUtils.isNotEmpty(chapter)&&StringUtils.isNotEmpty(knowledgePoint)) {
+                            List<Predicate> list1 = new ArrayList<>();
+                            Predicate cond1 = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
+                            list1.add(cond1);
+                            Predicate cond2= criteriaBuilder.like(root.get("chapter"), "%"+chapter+"%");
+                            list1.add(cond2);
+                            if(chapter.contains("/")){
+                                String chapterSub = chapter.substring(chapter.lastIndexOf("/")+1);
+                                Predicate cond3= criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
+                                list1.add(cond3);
+                                if(chapterSub.length()>4){
+                                    String chapterSub1 = chapterSub.substring(4);
+                                    Predicate cond4= criteriaBuilder.like(root.get("chapter"), "%"+chapterSub1+"%");
+                                    list1.add(cond4);
+                                }
+
+                            }
+                            Predicate condition = criteriaBuilder.or(list1.toArray(new Predicate[0]));
+                            list.add(condition);
+                        }else if(StringUtils.isNotEmpty(chapter)) {
+                            String chapterSub = chapter.substring(chapter.lastIndexOf("/")+1).trim();
+                            Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
+                            list.add(condition1);
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+
+                    Predicate[] p =  new Predicate[list.size()];
+                    return criteriaBuilder.and(list.toArray(p));
+                }
+
+            };
+            List<Microlecture> microlectures = microlectureRepository.findAll(specification1);
+            List<StudentMicrolecture> studentMicrolectureList = new ArrayList<>();
+            for(int i=0;i<microlectures.size()&&i<pageSize;i++){
+                Microlecture microlecture = microlectures.get(i);
+                StudentMicrolecture studentMicrolecture = new StudentMicrolecture();
+                BeanUtils.copyProperties(microlecture,studentMicrolecture);
+                studentMicrolecture.setId(null);
+                studentMicrolecture.setMicrolectureId(microlecture.getId());
+                studentMicrolecture.setStudentId(studentId);
+                studentMicrolecture.setMicrolectureName(microlecture.getName());
+                studentMicrolectureList.add(studentMicrolecture);
+            }
+            Page<StudentMicrolecture> page2 = new PageImpl<>(studentMicrolectureList,pageable,microlectures.size());
+            return page2;
+        }
+        return page;
     }
 
     @Override

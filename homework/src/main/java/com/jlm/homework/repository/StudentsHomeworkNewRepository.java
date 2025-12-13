@@ -17,7 +17,7 @@ public interface StudentsHomeworkNewRepository extends JpaRepository<StudentsHom
     void saveStartTime(Long homeworkId, Date date);
     @Modifying
     @Transactional
-    @Query(value = "UPDATE students_homework_new h SET h.deadline = ?2,h.submit_status = ?3 WHERE h.homework_publish_id = ?1", nativeQuery = true)
+    @Query(value = "UPDATE students_homework_new h SET h.deadline = ?2,h.submit_status = ?3 WHERE h.homework_publish_id = ?1 and h.submit_status != 1", nativeQuery = true)
     void updateDeadline(Long homeworkPublishId,Date deadline,Integer submitStatus);
     @Modifying
     @Transactional

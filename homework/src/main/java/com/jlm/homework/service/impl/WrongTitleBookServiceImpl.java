@@ -12,7 +12,9 @@ import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.*;
 import com.jlm.homework.service.IWrongTitleBookService;
 import com.jlm.homework.service.IWrongTitleStatisticsService;
+import com.jlm.homework.util.AIUtil;
 import com.jlm.homework.util.PiontSignUtil;
+import com.jlm.homework.util.QianWenAIUtil;
 import com.jlm.homework.util.ZhipuAIImageAnalysisUtil;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -48,6 +50,8 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     private StudentFeignClient studentFeignClient;
     @Autowired
     private ZhipuAIConfig zhipuAIConfig;
+    @Autowired
+    private AIUtil aiUtil;
     @Override
     public WrongTitleBook save(WrongTitleBook wrongTitleBook) {
         return wrongTitleBookRepository.save(wrongTitleBook);
@@ -312,6 +316,12 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         WrongTitleBook wrongTitleBook = optional.get();
 
         ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+        /*AIUtil util  = aiUtil.getAIUtil();
+        if("qianwen".equals(util.getAiName())){
+            util = (QianWenAIUtil)  util;
+        }else {
+            util = (ZhipuAIImageAnalysisUtil) util;
+        }*/
 
         try {
             String  resultStr = null;

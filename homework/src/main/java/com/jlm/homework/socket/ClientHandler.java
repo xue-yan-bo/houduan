@@ -378,7 +378,14 @@ public class ClientHandler implements Runnable {
                                             }
                                         }else {
                                             System.out.println("没有相关作业！");
-
+                                            pCurrentMenu = null;
+                                            work2Boards = new ArrayList<>();
+                                            studentsWriteRecords =new ArrayList<>();
+                                            homeworkflag = false;
+                                            querenJishu=0;
+                                            homeId = null;
+                                            page_num = null;
+                                            nMenuUpdate(out, writer);
                                         }
 
                                     }else {
@@ -473,6 +480,18 @@ public class ClientHandler implements Runnable {
                                                     }
                                                 }
                                             }
+                                        }else{
+                                            System.out.println("没有相关订正作业！");
+                                            pCurrentMenu = null;
+                                            work2Boards = new ArrayList<>();
+                                            studentsEmendRecords =new ArrayList<>();
+                                            homeworkflag = false;
+                                            emendflag = false;
+                                            errorTitleflag = false;
+                                            querenJishu = 0;
+                                            homeId = null;
+                                            page_num = null;
+                                            nMenuUpdate(out, writer);
                                         }
                                     }else {
                                         if(lastList!=null&&lastList.size()>0&&page_num>1){
@@ -576,7 +595,7 @@ public class ClientHandler implements Runnable {
                                             work2Boards = studentsHomeworkNewService.getHomeWork2Board(null, day, studentId);
                                         }
 
-                                        if(work2Boards!=null||work2Boards.size()>0){
+                                        if(work2Boards!=null&&work2Boards.size()>0){
                                             System.out.println("===========作业数"+work2Boards.size());
                                             List<MenuItemT> homeworkItems = new ArrayList<>();
                                             Map<String,List<MenuItemT>> subjectMap = new HashMap<>();
@@ -627,14 +646,14 @@ public class ClientHandler implements Runnable {
                                             nMenuUpdate(out,writer);
                                         }else{
                                             System.out.println("没有作业数");
-                                            pCurrentMenu = mainMenu;
-                                            pCurrentMenu.setShowStartItem(0);
-                                            pCurrentMenu.setShowEndItem(2);
-                                            pCurrentMenu.setSelectItem(0);
+                                            pCurrentMenu = null;
+                                            work2Boards = new ArrayList<>();
+                                            studentsWriteRecords =new ArrayList<>();
                                             homeworkflag = false;
-                                            emendflag = false;
-                                            errorTitleflag = false;
-                                            nMenuUpdate(out,writer);
+                                            querenJishu=0;
+                                            homeId = null;
+                                            page_num = null;
+                                            nMenuUpdate(out, writer);
                                         }
 
 
@@ -647,7 +666,7 @@ public class ClientHandler implements Runnable {
                                             String day = sdf.format(new Date());
                                             emendBoards = studentsHomeworkNewService.getEmendHomeWork2Board(null, studentId);
                                         }
-                                        if(emendBoards!=null||emendBoards.size()>0){
+                                        if(emendBoards!=null&&emendBoards.size()>0){
                                             List<MenuItemT> emendItems = new ArrayList<>();
                                             Map<String,List<MenuItemT>> subjectMap = new HashMap<>();
                                             Map<String,MenuItemT> menuItemTMap = new HashMap<>();

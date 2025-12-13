@@ -10,4 +10,6 @@ public interface IQuestionAnalysisService {
 
     List<AIQuestionAnalysisDto> findAIQuestionStatistics(Long homeworkPublishId, Long classesId);
     List<QuestionAnalysis> findQuestionAnalysis(Long homeworkPublishId, Long classesId,String bigNumber,String smallNumber,Boolean isCorrect);
+
+    List<QuestionAnalysis> findListByStudHomeId(Long studentsHomeworkId);
 }

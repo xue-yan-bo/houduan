@@ -12,7 +12,9 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.protocol.Protocol;
 import com.alibaba.fastjson.JSON;
 import com.jlm.homework.config.ZhipuAIConfig;
+import com.jlm.homework.entity.HomeworkPublishQuestion;
 import com.jlm.homework.entity.QuestionAnalysis;
+import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -27,9 +29,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 
-public class QianWenAIUtil {
+public class QianWenAIUtil extends AIUtil{
     private static String DASHSCOPE_API_KEY = "sk-234cb378f4484f3e9f6fc5b8304508e5";
-
     private ZhipuAIConfig zhipuAIConfig = new ZhipuAIConfig();
     /**
      * 分析问题内容
@@ -138,7 +139,7 @@ public class QianWenAIUtil {
      */
     public List<QuestionAnalysis> reviewExamQuestions(String imagePath) throws IOException, NoApiKeyException, InputRequiredException {
         // 构建详细的批阅提示词，要求模型返回结构化信息
-        String prompt = "请详细分析并批阅图片中的所有试题，按题号顺序返回以下信息：\n"
+        String prompt = "请依次详细分析并批阅所有图片中的所有试题，按题号顺序返回以下信息：\n"
                 + "1. 题号： 包含试题大题号、小题号,格式如大题号：小题号：\n"
                 + "2. 题型： 试题题型类别\n"
                 + "3. 分值： 试题分值\n"
@@ -152,8 +153,9 @@ public class QianWenAIUtil {
                 + "请确保为每个试题提供完整的信息，不要用特殊字符（如 学生答案后不要有**等，直接 学生答案：），格式清晰，便于解析。";
 
         // 获取AI分析结果
-        GenerationResult result = callWithMessage(imagePath, prompt);
-        String aiResult=result.getOutput().getChoices().get(0).getMessage().getContent();
+       /* GenerationResult result = callWithMessage(imagePath, prompt);
+        String aiResult=result.getOutput().getChoices().get(0).getMessage().getContent();*/
+        String aiResult=getTongYiServ().multiModalCall(prompt,Arrays.asList(imagePath));
         System.out.println("AI分析结果:"+aiResult);
         // 解析AI结果为QuestionAnalysis列表
         ZhipuAIImageAnalysisUtil analysisUtil=zhipuAIConfig.zhipuAIImageAnalysisUtil();
@@ -202,8 +204,34 @@ public class QianWenAIUtil {
         }
     }
 
+    @Override
+    public List<HomeworkPublishQuestion> reviewHomreWorkQuestions(List<String> imageNames) throws IOException {
+        // 构建详细的批阅提示词，要求模型返回结构化信息
+        String prompt = "作为一个图片试题分析助手,请依次详细分析并批阅所有图片中的所有试题，按题号顺序返回以下信息：\n"
+                + "1. 题号： 包含试题大题号、小题号,格式如大题号：小题号：\n"
+                + "2. 题型： 试题题型类别\n"
+                + "3. 分值： 试题分值\n"
+                + "4. 问题内容：试题原内容\n"
+                + "5. 参考答案：正确的答案\n"
+                + "6. 考察知识点：该题考察的知识点\n\n"
+                + "请严格按照格式分析，确保为每个试题提供完整的信息，大题号必须有，不要用特殊字符（如 问题内容后不要有**等，直接 问题内容：），格式清晰，便于解析。";
+
+        // 获取AI分析结果
+        String aiResult = getTongYiServ().multiModalCall(prompt,imageNames);
+        System.out.println("AI分析结果:"+aiResult);
+        // 解析AI结果为QuestionAnalysis列表
+        ZhipuAIImageAnalysisUtil analysisUtil=zhipuAIConfig.zhipuAIImageAnalysisUtil();
+        List<HomeworkPublishQuestion> questionAnalysisList = analysisUtil.parseAIResultToHomreWorkQuestionList(aiResult);
+        return questionAnalysisList;
+    }
+
+    @Override
+    public String analyzeText(String pamt) throws IOException, NoApiKeyException, InputRequiredException {
+        return this.analyzeImage(null,pamt);
+    }
+
     public Map<String,String> analyzeImagesAnswer(String imagePath) throws IOException, NoApiKeyException, InputRequiredException {
-        String prompt = "你是一个专业的识图助手，只做识图操作，禁止解答所有题目，只提取学生用蓝色笔手写的文字、数字、符号、选项序号（排除印刷体文字），所有题目提取内容直接转录原始内容，不要包含题目原文、选项文字，严格按以下固定格式输出，按顺序列出图中所有题目，若某题学生未填写则标注 “未作答”。\n"
+        String prompt = "你是一个专业的识图助手，请依次详细分析并批阅所有图片，只做识图操作，禁止解答所有题目，只提取学生用蓝色笔手写的文字、数字、符号、选项序号（排除印刷体文字），所有题目提取内容直接转录原始内容，不要包含题目原文、选项文字，严格按以下固定格式输出，按顺序列出图中所有题目，若某题学生未填写则标注 “未作答”。\n"
                 + "请严格按以下固定格式输出：\n "
                 +"【一级标题（与试卷板块一致，如 “一、填空”）】题目 1：学生手写内容（原样记录字迹 / 符号）\n"
                 +"【一级标题（与试卷板块一致，如 “一、填空”）】题目 2：学生手写内容 \n "
@@ -215,13 +243,35 @@ public class QianWenAIUtil {
                 +"【一级标题（如 “二、判断”）】题目 2：学生手写内容\n "
                 +"注：若学生某题未作答，标注 “学生未作答”；若书写模糊无法识别，标注 “学生书写模糊无法识别”；必须严格匹配试卷题目顺序，不调整、不增删任何内容。\n "
                 +"请基于上述要求，提取目标试卷的学生作答笔迹";
-        GenerationResult result = callWithMessage(imagePath,prompt);
-        String aiResult = result.getOutput().getChoices().get(0).getMessage().getContent();
+       /* GenerationResult result = callWithMessage(imagePath,prompt);
+        String aiResult = result.getOutput().getChoices().get(0).getMessage().getContent();*/
+        String aiResult=getTongYiServ().multiModalCall(prompt,Arrays.asList(imagePath));
         ZhipuAIImageAnalysisUtil analysisUtil=zhipuAIConfig.zhipuAIImageAnalysisUtil();
         Map<String,String> map = analysisUtil.parseAIResultToMap(aiResult);
         return map;
     }
-
+    public Map<String,String> analyzeImagesAnswer(List<String> imagePaths) throws IOException, NoApiKeyException, InputRequiredException {
+        String prompt = "你是一个专业的识图助手，请依次详细分析并批阅所有图片，只做识图操作，禁止解答所有题目，只提取学生用蓝色笔手写的文字、数字、符号、选项序号（排除印刷体文字），所有题目提取内容直接转录原始内容，不要包含题目原文、选项文字，严格按以下固定格式输出，按顺序列出图中所有题目，若某题学生未填写则标注 “未作答”。\n"
+                + "请严格按以下固定格式输出：\n "
+                +"【一级标题（与试卷板块一致，如 “一、填空”）】题目 1：学生手写内容（原样记录字迹 / 符号）\n"
+                +"【一级标题（与试卷板块一致，如 “一、填空”）】题目 2：学生手写内容 \n "
+                +"…… \n"
+                +"【一级标题（如 “二、判断”）】题目 1：学生手写内容\n "
+                +"【一级标题（如 “二、判断”）】题目 2：学生手写内容\n "
+                +"……\n "
+                +"【一级标题（如 “二、判断”）】题目 1：学生手写内容\n "
+                +"【一级标题（如 “二、判断”）】题目 2：学生手写内容\n "
+                +"注：若学生某题未作答，标注 “学生未作答”；若书写模糊无法识别，标注 “学生书写模糊无法识别”；必须严格匹配试卷题目顺序，不调整、不增删任何内容。\n "
+                +"请基于上述要求，提取目标试卷的学生作答笔迹";
+       /* GenerationResult result = callWithMessage(imagePath,prompt);
+        String aiResult = result.getOutput().getChoices().get(0).getMessage().getContent();*/
+        String aiResult=getTongYiServ().multiModalCall(prompt,imagePaths);
+        System.out.println(aiResult);
+        ZhipuAIImageAnalysisUtil analysisUtil=zhipuAIConfig.zhipuAIImageAnalysisUtil();
+        Map<String,String> map = analysisUtil.parseAIResultToMap(aiResult);
+        System.out.println(map.toString());
+        return map;
+    }
     /**
      * 批量试题批阅
      * @param imagePaths 图片文件路径列表
@@ -280,7 +330,15 @@ public class QianWenAIUtil {
     }
 
     public String analyzeImage(String imageUrl, String prompt) throws NoApiKeyException, InputRequiredException, IOException {
-        GenerationResult result=callWithMessage(imageUrl,prompt);
-        return result.getOutput().getChoices().get(0).getMessage().getContent();
+
+        /*GenerationResult result=callWithMessage(imageUrl,prompt);
+        return result.getOutput().getChoices().get(0).getMessage().getContent();*/
+        String aiResult = null;
+        if(StringUtils.isNotEmpty(imageUrl)) {
+            aiResult = getTongYiServ().multiModalCall(prompt, Arrays.asList(imageUrl));
+        }else{
+            aiResult = getTongYiServ().multiModalCall(prompt, null);
+        }
+        return aiResult;
     }
 }

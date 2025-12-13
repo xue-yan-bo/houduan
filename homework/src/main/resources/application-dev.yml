@@ -55,7 +55,7 @@ plus:
   cron-remove: 0 30 0 * * ?
 
 minio:
-  endpoint: http://124.165.206.34:20020
+  endpoint: http://124.165.206.34:20029
   accessKey: admin
   secretKey: sxjlm@1234
   bucketName: exercise

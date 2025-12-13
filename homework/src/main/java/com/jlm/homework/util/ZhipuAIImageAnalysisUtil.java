@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
  * 智谱AI图片分析工具类
  * 用于接入智谱AI的图片分析相关API
  */
-public class ZhipuAIImageAnalysisUtil {
+public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
     // 智谱AI API基础URL
     private static final String BASE_URL = "https://open.bigmodel.cn/api/paas/v4/";
@@ -634,7 +634,7 @@ public class ZhipuAIImageAnalysisUtil {
     }
     /**
      * AI批阅图片试题并返回HomeworkPublishQuestion列表的JSON格式结果
-     * @param imagePath 图片文件路径
+     * @param imagePaths 图片文件路径
      * @return HomeworkPublishQuestion列表的JSON字符串
      * @throws IOException 文件读取或API调用异常
      */
@@ -647,7 +647,7 @@ public class ZhipuAIImageAnalysisUtil {
                 + "4. 问题内容：试题原内容\n"
                 + "5. 参考答案：正确的答案\n"
                 + "6. 考察知识点：该题考察的知识点\n\n"
-                + "请确保为每个试题提供完整的信息，不要用特殊字符（如 问题内容后不要有**等，直接 问题内容：），格式清晰，便于解析。";
+                + "请确保为每个试题提供完整的信息，大题号必须有，不要用特殊字符（如 问题内容后不要有**等，直接 问题内容：），格式清晰，便于解析。";
 
         // 获取AI分析结果
         String aiResult = analyzeImages(imagePaths, prompt);
@@ -656,7 +656,13 @@ public class ZhipuAIImageAnalysisUtil {
         List<HomeworkPublishQuestion> questionAnalysisList = parseAIResultToHomreWorkQuestionList(aiResult);
         return questionAnalysisList;
     }
-    private List<HomeworkPublishQuestion> parseAIResultToHomreWorkQuestionList(String aiResultText) {
+
+    @Override
+    public String analyzeText(String prompt) throws IOException {
+        return this.analyze(prompt);
+    }
+
+    public List<HomeworkPublishQuestion> parseAIResultToHomreWorkQuestionList(String aiResultText) {
         List<HomeworkPublishQuestion> questionAnalysisList = new ArrayList<>();
 
         try {
@@ -714,6 +720,8 @@ public class ZhipuAIImageAnalysisUtil {
                         if(questionNumber.length()>=3&&questionNumber.length()<=6){
                             currentQuestion.setBigNumber(questionNumber.substring(0,1));
                             currentQuestion.setSmallNumber(questionNumber.substring(2));
+                        }else if(questionNumber.length()<=2){
+                            currentQuestion.setSmallNumber(questionNumber);
                         }
                     }
                 }
@@ -978,7 +986,7 @@ public class ZhipuAIImageAnalysisUtil {
      * 从文本中提取指定标记之间的内容，支持正则表达式作为结束标记
      * @param text 原始文本
      * @param startTag 开始标记
-     * @param endTag 结束标记（正则表达式）
+     * @param endTags 结束标记（正则表达式）
      * @return 提取的内容
      */
     private String extractBetween(String text, String startTag, String... endTags) {
@@ -1375,10 +1383,10 @@ public class ZhipuAIImageAnalysisUtil {
         for (String line : lines) {
             line = line.trim();
             if (line.isEmpty()) continue;
-            if(line.contains("、")&&line.contains("题目")&&line.contains("小题号")) {
-                String bigNum = line.substring(1, line.indexOf("、"));
+            if(line.contains("【")&&line.contains("、")&&line.contains("题目")) {
+                String bigNum = extractBetween(line, "【","、");
                 String smallNum = extractBetween(line, "题目", "：");
-                String studentAnswer = extractBetween(line, "小题号", "\n|$");
+                String studentAnswer = extractBetween(line, "：", "\n|$");
                 map.put(bigNum + ":" + smallNum, studentAnswer);
             }
         }

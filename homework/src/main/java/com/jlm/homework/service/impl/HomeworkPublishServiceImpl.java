@@ -10,10 +10,7 @@ import com.jlm.homework.entity.*;
 import com.jlm.homework.repository.HomeworkPublishQuestionRepository;
 import com.jlm.homework.repository.HomeworkPublishRepository;
 import com.jlm.homework.service.*;
-import com.jlm.homework.util.CoordinateImageGenerator;
-import com.jlm.homework.util.DocumentAndCoordinatesRenderer;
-import com.jlm.homework.util.ImageOverlayUtil;
-import com.jlm.homework.util.ZhipuAIImageAnalysisUtil;
+import com.jlm.homework.util.*;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -50,6 +47,8 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
     private IUserService userService;
     @Autowired
     private ZhipuAIConfig zhipuAIConfig;
+    @Autowired
+    private AIUtil aiUtil;
     @Autowired
     private HomeworkPublishQuestionRepository homeworkPublishQuestionRepository;
 
@@ -378,8 +377,14 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
         String auditImages = "";
         List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
         //异步处理AI智能审批
-        ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+        //ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
         //QianWenAIUtil util = new QianWenAIUtil();
+        AIUtil util  = aiUtil.getAIUtil();
+        if("qianwen".equals(util.getAiName())){
+            util = (QianWenAIUtil)  util;
+        }else {
+            util = (ZhipuAIImageAnalysisUtil) util;
+        }
         List<HomeworkPublishQuestion> questionList = new ArrayList<>();
         if (homeworkPublish.getTopicImages() != null && homeworkPublish.getTopicImages().size() > 0
                 && !homeworkPublish.getTopicImagesStr().endsWith(".docx") && !homeworkPublish.getTopicImagesStr().endsWith(".doc")) {

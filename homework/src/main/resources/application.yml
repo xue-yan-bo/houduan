@@ -177,7 +177,14 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
-
+#智普
 zhipu:
   ai:
     api-key: "7abc333508dd4d71b83dcb6f5a511eee.rjwsPZyUfDN5abhn"
+
+# 1.通义千问
+TONGYI_API_KEY: "sk-234cb378f4484f3e9f6fc5b8304508e5"
+##1.1 多模态图文分析 qwen-vl-max
+TONGYI_MODEL: "qwen-vl-max"
+TONGYI_OPNEAI_BASE_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+TONGYI_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"

@@ -287,7 +287,9 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
             for(ClassroomExercisesStudentAnswer studentAnswer1:studentAnswerList){
                 if(StringUtils.isNotEmpty(studentAnswer1.getStudentAnswer())){
                     answerNum++;
-                    if(studentAnswer1.getStudentAnswer().equals(studentAnswer1.getAnswer())){
+                    String answer = new String(Base64.getDecoder().decode(studentAnswer1.getAnswer()));
+                    if(studentAnswer1.getStudentAnswer().equals(studentAnswer1.getAnswer())||
+                            answer.equals(studentAnswer1.getStudentAnswer())){
                         rightNum++;
                     }else{
                         errorNum++;

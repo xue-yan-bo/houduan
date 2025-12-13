@@ -46,6 +46,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
 
     @Autowired
     private ZhipuAIConfig zhipuAIConfig;
+    @Autowired
+    private AIUtil aiUtil;
 
     @Resource
     private ClassroomExercisesStudentAnswerRepository classroomExercisesStudentAnswerRepository;
@@ -273,18 +275,33 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             BufferedImage image = WritingDataRenderer.drawWritingData(writeDataList.get(0).getStudentsWriteRecords(), 794, 1123);
             String imageUrl = "随堂检测-"+studentRecord.getClassroomExercisesId()+"-"+studentRecord.getStudentName()+".png";
             CoordinateImageGenerator.saveImage(image,imageUrl);
-            ZhipuAIImageAnalysisUtil aiImageAnalysisUtil=zhipuAIConfig.zhipuAIImageAnalysisUtil();
-            //QianWenAIUtil aiImageAnalysisUtil = new QianWenAIUtil();
+            //ZhipuAIImageAnalysisUtil util=zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            //QianWenAIUtil util = new QianWenAIUtil();
+            AIUtil util  = aiUtil.getAIUtil();
+            if("qianwen".equals(util.getAiName())){
+                util = (QianWenAIUtil)  util;
+            }else {
+                util = (ZhipuAIImageAnalysisUtil) util;
+            }
             String prompt = "请根据试题和学生书写笔记，批阅学生作答结果，试题如下：\n";
             for(ClassroomExercisesQuestion question:questionList){
-                String titleStr = question.getTitleNumber() +".  "+question.getQuestionContent() + " 标准答案："+question.getAnswer()+" \n";
+                String questionContent = new String(Base64.getDecoder().decode(question.getQuestionContent()));
+                String answer = new String(Base64.getDecoder().decode(question.getQuestionContent()));
+                String titleStr = question.getTitleNumber() +".  "+questionContent + " 标准答案："+answer+" \n";
                 prompt = prompt + titleStr;
             }
             prompt = prompt + " 请输出题号、学生作答文字内容、批阅结果，格式如 1.  作答:A ，批阅:正确。";
-            String aiText=aiImageAnalysisUtil.analyzeImage(imageUrl,prompt);
+            String aiText=util.analyzeImage(imageUrl,prompt);
             System.out.println("学生书写答案："+aiText);
             if(aiText!=null) {
-                String text = aiText.substring(aiText.indexOf("<|begin_of_box|>") + 16, aiText.indexOf("<|end_of_box|>"));
+                String text = aiText;
+                if(text.contains("<|begin_of_box|>")){
+                    text = text.substring(text.indexOf("<|begin_of_box|>") + 16);
+                }
+                if(text.contains("<|end_of_box|>")){
+                    text = text.substring(0, text.indexOf("<|end_of_box|>"));
+                }
+
                 List<ClassroomExercisesStudentAnswer> studentAnswerList = new ArrayList<>();
                 if ((questionList.size()<=2 &&(text.contains("1. ")||text.contains("1、 ")||text.contains(":1")))
                         || ((text.contains("1. ")||text.contains("1、 ")||text.contains(":1"))
@@ -294,23 +311,28 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                         try {
                             ClassroomExercisesQuestion question = questionList.get(i);
                             if (question.getTitleNumber() != null && (text.contains(question.getTitleNumber() + ". ") || text.contains(question.getTitleNumber() + "、 "))) {
-                                Integer nextTitleNumber = question.getTitleNumber() + 1;
+                                Integer nextTitleNumber = question.getTitleNumber()+1;
                                 String answerStr = null;
-                                if (text.contains(nextTitleNumber + ". ")) {
-                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + ". ") + 3, text.indexOf(nextTitleNumber + ". "));
-                                } else if (text.contains(nextTitleNumber + "、 ")) {
-                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + "、 ") + 3, text.indexOf(nextTitleNumber + "、 "));
+                                if (text.contains(question.getTitleNumber() + ". ")&&text.contains(nextTitleNumber + ". ")) {
+                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + ". ") + 2, text.indexOf(nextTitleNumber + ". "));
+                                } else if (text.contains(question.getTitleNumber() + "、 ")&&text.contains(nextTitleNumber + "、 ")) {
+                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + "、 ") + 2, text.indexOf(nextTitleNumber + "、 "));
                                 } else if (text.contains(question.getTitleNumber() + ". ")) {
-                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + ". ") + 3);
+                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + ". ") + 2);
                                 } else if (text.contains(question.getTitleNumber() + "、 ")) {
-                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + "、 ") + 3);
+                                    answerStr = text.substring(text.indexOf(question.getTitleNumber() + "、 ") + 2);
+                                }else {
+                                    continue;
                                 }
+                                System.out.println("题答案："+answerStr);
                                 String studAnswer = "";
                                 String piyue="";
                                 if(answerStr.contains("作答")&&answerStr.contains("批阅")){
                                     studAnswer = answerStr.substring(answerStr.indexOf("作答")+3,answerStr.indexOf("批阅"));
                                     piyue = answerStr.substring(answerStr.indexOf("批阅"));
 
+                                }else {
+                                    continue;
                                 }
                                 ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
                                 answer.setTitleNumber(question.getTitleNumber());
@@ -353,7 +375,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             }
             File file = new File(imageUrl);
             file.delete();
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }

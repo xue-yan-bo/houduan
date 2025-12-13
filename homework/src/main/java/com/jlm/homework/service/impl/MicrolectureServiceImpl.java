@@ -76,10 +76,6 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
                         Predicate condition = criteriaBuilder.equal(root.get("subject"), subject);
                         list.add(condition);
                     }
-                    if(StringUtils.isNotEmpty(chapter)) {
-                        Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapter+"%");
-                        list.add(condition1);
-                    }
                     if(StringUtils.isEmpty(chapter)&&StringUtils.isNotEmpty(knowledgePoint)) {
                         Predicate condition = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
                         list.add(condition);
@@ -87,16 +83,25 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
                         List<Predicate> list1 = new ArrayList<>();
                         Predicate cond1 = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
                         list1.add(cond1);
+                        Predicate cond2= criteriaBuilder.like(root.get("chapter"), "%"+chapter+"%");
+                        list1.add(cond2);
+                        if(chapter.contains("/")){
+                            String chapterSub = chapter.substring(chapter.lastIndexOf("/")+1);
+                            Predicate cond3= criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
+                            list1.add(cond3);
+                            if(chapterSub.length()>4){
+                                String chapterSub1 = chapterSub.substring(4);
+                                Predicate cond4= criteriaBuilder.like(root.get("chapter"), "%"+chapterSub1+"%");
+                                list1.add(cond4);
+                            }
+
+                        }
                         Predicate condition = criteriaBuilder.or(list1.toArray(new Predicate[0]));
                         list.add(condition);
-                    }
-                    if(startTime != null) {
-                        Predicate condition = criteriaBuilder.greaterThan(root.get("createTime"), startTime);
-                        list.add(condition);
-                    }
-                    if(endTime != null) {
-                        Predicate condition = criteriaBuilder.lessThan(root.get("createTime"), endTime);
-                        list.add(condition);
+                    }else if(StringUtils.isNotEmpty(chapter)) {
+                        String chapterSub = chapter.substring(chapter.lastIndexOf("/")+1).trim();
+                        Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
+                        list.add(condition1);
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);

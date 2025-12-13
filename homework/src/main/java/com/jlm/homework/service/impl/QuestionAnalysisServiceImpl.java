@@ -10,10 +10,7 @@ import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class QuestionAnalysisServiceImpl implements IQuestionAnalysisService {
@@ -31,7 +28,7 @@ public class QuestionAnalysisServiceImpl implements IQuestionAnalysisService {
         QuestionAnalysis search = new QuestionAnalysis();
         search.setHomeworkPublishId(homeworkPublishId);
         search.setClassesId(classesId);
-        Sort sort = Sort.by(Sort.Direction.ASC, "bigNumber","smallNumber");
+        Sort sort = Sort.by(Sort.Direction.ASC, "id","smallNumber");
         List<QuestionAnalysis> questionAnalysisList= questionAnalysisRepository.findAll(Example.of(search),sort);
         Map<String,Integer> map = new HashMap<>();
         for(QuestionAnalysis questionAnalysis:questionAnalysisList){
@@ -63,6 +60,10 @@ public class QuestionAnalysisServiceImpl implements IQuestionAnalysisService {
                 analysisDtoList.add(aiQuestionAnalysisDto);
             }
         }
+        analysisDtoList.sort(
+                Comparator.comparing(AIQuestionAnalysisDto::getBigNumber)       // 先按年龄升序
+                        .thenComparing(AIQuestionAnalysisDto::getSmallNumber)  // 再按姓名升序
+        );
         return analysisDtoList;
     }
 
@@ -78,6 +79,14 @@ public class QuestionAnalysisServiceImpl implements IQuestionAnalysisService {
             search.setSmallNumber(smallNumber);
         }
         search.setIsCorrect(isCorrect);
+        return questionAnalysisRepository.findAll(Example.of(search));
+    }
+
+    @Override
+    public List<QuestionAnalysis> findListByStudHomeId(Long studentsHomeworkId) {
+        QuestionAnalysis search = new QuestionAnalysis();
+        search.setStudentsHomeworkId(studentsHomeworkId);
+
         return questionAnalysisRepository.findAll(Example.of(search));
     }
 }

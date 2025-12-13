@@ -91,7 +91,7 @@ public class ClientHandler implements Runnable {
             InetSocketAddress realAddress = this.getRealRemoteAddress();
             String clientIP = realAddress.getHostString();
             int clientPort = realAddress.getPort();
-            System.out.println("客户端真实IP:"+clientIP +" 端口号："+clientPort);
+            //System.out.println("客户端真实IP:"+clientIP +" 端口号："+clientPort);
 
             SmartDeviceUserRelation relation=smartDeviceUserRelationService.selectByIpAddress(clientIP);
 
@@ -99,7 +99,7 @@ public class ClientHandler implements Runnable {
             byte[] headerBuffer = new byte[4]; // 包头(2) + 长度(1) + 类型(1)
             int bytesRead;
             // 初始化心跳包定时发送器
-            initHeartbeatScheduler(out);
+            //initHeartbeatScheduler(out);
             while (true) {
                 // 首先读取包头和基本信息
                 bytesRead = in.read(headerBuffer);
@@ -166,7 +166,7 @@ public class ClientHandler implements Runnable {
                     remainingBytes -= bytesReadNow;
                 }
                 
-                System.out.println("收到 [" + clientIP + "] TCP数据包: " + java.util.Arrays.toString(fullPacketBuffer));
+                //System.out.println("收到 [" + clientIP + "] TCP数据包: " + java.util.Arrays.toString(fullPacketBuffer));
                 
                 try {
 
@@ -181,10 +181,10 @@ public class ClientHandler implements Runnable {
                         System.out.println("手写数据解析结果数量：" + results.size());
 
                         for (HandwritingParseResult result : results) {
-                            System.out.println("数据包解析结果：" + result.toString());
+                            //System.out.println("数据包解析结果：" + result.toString());
                             if (relation != null) {
                                 if(homeworkflag&&pCurrentMenu!=null){//作业
-                                    System.out.println("=============作业数据发送====");
+                                    //System.out.println("=============作业数据发送====");
 
                                     StudentsWriteRecord writeRecord = new StudentsWriteRecord();
                                     writeRecord.setX(result.getX());
@@ -201,7 +201,7 @@ public class ClientHandler implements Runnable {
                                         studentsWriteRecords = new ArrayList<>();
                                     }
                                 }else if(emendflag&&pCurrentMenu!=null){//订正
-                                    System.out.println("=============订正数据发送====");
+                                    //System.out.println("=============订正数据发送====");
                                     StudentsWriteRecord writeRecord = new StudentsWriteRecord();
                                     writeRecord.setX(result.getX());
                                     writeRecord.setY(result.getY());
@@ -218,7 +218,7 @@ public class ClientHandler implements Runnable {
                                         studentsEmendRecords = new ArrayList<>();
                                     }
                                 }else if(feedbackflag&&pCurrentMenu!=null){//反馈
-                                    System.out.println("=============反馈数据发送====");
+                                    //System.out.println("=============反馈数据发送====");
                                     StudentsWriteRecord writeRecord = new StudentsWriteRecord();
                                     writeRecord.setX(result.getX());
                                     writeRecord.setY(result.getY());
@@ -226,7 +226,7 @@ public class ClientHandler implements Runnable {
                                     writeRecord.setTimestamp(result.getTimestamp());
                                     studentsFeedbackRecords.add(writeRecord);
                                 }else if(errorTitleflag&&pCurrentMenu!=null){//错题
-                                    System.out.println("=============错题数据发送====");
+                                    //System.out.println("=============错题数据发送====");
                                     StudentsWriteRecord writeRecord = new StudentsWriteRecord();
                                     writeRecord.setX(result.getX());
                                     writeRecord.setY(result.getY());
@@ -234,7 +234,7 @@ public class ClientHandler implements Runnable {
                                     writeRecord.setTimestamp(result.getTimestamp());
                                     uploadErrorTitleRecords.add(writeRecord);
                                 }else {//课堂
-                                    System.out.println("=============课堂数据发送====");
+                                   // System.out.println("=============课堂数据发送====");
                                     result.setUserId(relation.getUserId());
                                     // 发送解析结果给客户端
                                     writer.println("服务器回复: " + result.toString());
@@ -277,7 +277,7 @@ public class ClientHandler implements Runnable {
                         }else {
                             result = ParseTcpDataUtil.parseButtonTcpPacketsBluetooth(fullPacketBuffer);
                         }
-                        System.out.println("按键数据解析结果数量：" + result.toString());
+                        //System.out.println("按键数据解析结果数量：" + result.toString());
                         if(relation!=null){
                             ClassroomResult classroomResult=new ClassroomResult();
                             classroomResult.setStudentId(relation.getUserId());
@@ -316,7 +316,7 @@ public class ClientHandler implements Runnable {
 
                                     if(pCurrentMenu.equals(homeworkMenu)&&1==querenJishu){
                                         String name = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem()).getDesc().trim();
-                                        System.out.println("=============作业选择=====当前目录："+name);
+                                        //System.out.println("=============作业选择=====当前目录："+name);
                                         if(work2Boards==null||work2Boards.size()==0){
                                             Long studentId = Long.parseLong(relation.getUserId());
                                             String day = sdf.format(new Date());
@@ -333,22 +333,22 @@ public class ClientHandler implements Runnable {
                                                     if(board.getHomeworkId()!=null) {
                                                         studentsHomeworkNewService.saveStartTime(board.getHomeworkId());
                                                     }
-                                                    System.out.println("++++++++开始时间设定——————————");
+                                                   // System.out.println("++++++++开始时间设定——————————");
                                                     //homeId = board.getHomeworkId();
                                                     //page_num = 1;
                                                     if((board.getPageSize()!=null&&board.getPageSize()>0)){
-                                                        System.out.println("++++++++作业名称："+homeworkName+"页个数" +board.getPageSize());
+                                                        //System.out.println("++++++++作业名称："+homeworkName+"页个数" +board.getPageSize());
                                                         for(int i=0;i<board.getPageSize();i++){
                                                             String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName+" " +(i+1);
-                                                            System.out.println("++++++++菜单详情 "+desc);
+                                                            //System.out.println("++++++++菜单详情 "+desc);
                                                             MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                             itemTList.add(menuItemT);
                                                             nb++;
                                                         }
                                                     }else{
-                                                        System.out.println("++++++++作业名称："+homeworkName);
+                                                        //System.out.println("++++++++作业名称："+homeworkName);
                                                         String desc = homeworkName.length()>12?homeworkName.substring(0,11):homeworkName+" 1";
-                                                        System.out.println("++++++++菜单详情 "+desc);
+                                                        //System.out.println("++++++++菜单详情 "+desc);
                                                         MenuItemT menuItemT = new MenuItemT(nb,board.getHomeworkId(),desc,null);
                                                         itemTList.add(menuItemT);
                                                         nb++;
@@ -356,7 +356,7 @@ public class ClientHandler implements Runnable {
 
                                                 }
                                             }
-                                            System.out.println("++++++++菜单详情完成 ");
+                                            //System.out.println("++++++++菜单详情完成 ");
                                             MenuT menuT = new MenuT(homeworkMenu,itemTList,0,0,3<itemTList.size()?3:itemTList.size(),itemTList.size());
                                             pCurrentMenu = menuT;
                                             pCurrentMenu.setShowStartItem(0);
@@ -377,7 +377,7 @@ public class ClientHandler implements Runnable {
                                                 }
                                             }
                                         }else {
-                                            System.out.println("没有相关作业！");
+                                            //System.out.println("没有相关作业！");
                                             pCurrentMenu = null;
                                             work2Boards = new ArrayList<>();
                                             studentsWriteRecords =new ArrayList<>();
@@ -395,7 +395,7 @@ public class ClientHandler implements Runnable {
                                         }
                                         //保存作业记录
                                         if (studentsWriteRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
-                                            System.out.println("=============作业保存============");
+                                            //System.out.println("=============作业保存============");
                                             MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                             String name = itemT.getDesc();
                                             Long homeworkId = itemT.getObjectId();
@@ -434,7 +434,7 @@ public class ClientHandler implements Runnable {
                                     }
                                 }else if(emendflag){//末级菜单作业订正
                                     if(pCurrentMenu.equals(emendMenu)&&1==querenJishu){
-                                        System.out.println("=============订正作业选择====");
+                                        //System.out.println("=============订正作业选择====");
                                         querenJishu = 2;
                                         if(emendBoards!=null&&emendBoards.size()>0){
                                             List<MenuItemT> itemTList = new ArrayList<>();
@@ -481,7 +481,7 @@ public class ClientHandler implements Runnable {
                                                 }
                                             }
                                         }else{
-                                            System.out.println("没有相关订正作业！");
+                                            //System.out.println("没有相关订正作业！");
                                             pCurrentMenu = null;
                                             work2Boards = new ArrayList<>();
                                             studentsEmendRecords =new ArrayList<>();
@@ -500,7 +500,7 @@ public class ClientHandler implements Runnable {
                                         }
                                         //保存作业记录
                                         if (studentsEmendRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
-                                            System.out.println("=============订正作业保存====");
+                                            //System.out.println("=============订正作业保存====");
                                             MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                             String name = itemT.getDesc();
                                             Long homeworkId = itemT.getObjectId();
@@ -542,14 +542,14 @@ public class ClientHandler implements Runnable {
                                         }
                                     }
                                 }else if(feedbackflag) {//末级菜单反馈数据保存
-                                    System.out.println("=============保存反馈数据====");
+                                    //System.out.println("=============保存反馈数据====");
                                     //保存反馈数据
                                     if (studentsFeedbackRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                         String name = itemT.getDesc();
-                                        System.out.println("=============保存反馈数据====科目："+name);
+                                        //System.out.println("=============保存反馈数据====科目："+name);
                                         studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,studentsFeedbackRecords);
-                                        System.out.println("=============保存反馈数据完成====");
+                                        //System.out.println("=============保存反馈数据完成====");
                                         pCurrentMenu = null;
                                         studentsFeedbackRecords = new ArrayList<>();
                                         homeworkflag = false;
@@ -560,14 +560,14 @@ public class ClientHandler implements Runnable {
                                         nMenuUpdate(out, writer);
                                     }
                                 }else if(errorTitleflag) {//末级菜单反馈数据保存
-                                    System.out.println("=============保存错题数据====");
+                                    //System.out.println("=============保存错题数据====");
                                     //保存错题数据
                                     if (uploadErrorTitleRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                         String name = itemT.getDesc();
-                                        System.out.println("=============保存反馈数据====科目："+name);
+                                        //System.out.println("=============保存反馈数据====科目："+name);
                                         studentsHomeworkNewService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,uploadErrorTitleRecords);
-                                        System.out.println("=============保存反馈数据完成====");
+                                        //System.out.println("=============保存反馈数据完成====");
                                         pCurrentMenu = null;
                                         uploadErrorTitleRecords = new ArrayList<>();
                                         homeworkflag = false;
@@ -578,7 +578,7 @@ public class ClientHandler implements Runnable {
                                         nMenuUpdate(out, writer);
                                     }
                                 }else if(StringUtils.isNotEmpty(relation.getUserId())) {
-                                    System.out.println("=============课堂数据发送====");
+                                    //System.out.println("=============课堂数据发送====");
                                     messagingTemplate.convertAndSend("/topic/endWrite", relation.getUserId());
                                 }
                                 if(pCurrentMenu!=null){//模式确认选择
@@ -587,7 +587,7 @@ public class ClientHandler implements Runnable {
                                     if("作业模式".equals(name)) {
                                         homeworkflag = true;
                                         querenJishu = 1;
-                                        System.out.println("作业模式确认");
+                                        //System.out.println("作业模式确认");
                                         if (relation != null) {
                                             Long studentId = Long.parseLong(relation.getUserId());
 
@@ -596,13 +596,13 @@ public class ClientHandler implements Runnable {
                                         }
 
                                         if(work2Boards!=null&&work2Boards.size()>0){
-                                            System.out.println("===========作业数"+work2Boards.size());
+                                            //System.out.println("===========作业数"+work2Boards.size());
                                             List<MenuItemT> homeworkItems = new ArrayList<>();
                                             Map<String,List<MenuItemT>> subjectMap = new HashMap<>();
                                             Map<String,MenuItemT> menuItemTMap = new HashMap<>();
                                             for (int i = 0; i < work2Boards.size(); i++) {
                                                 HomeWork2Board homeWork2Board = work2Boards.get(i);
-                                                System.out.println("---------------作业："+homeWork2Board.getHomeworkName()+":"+homeWork2Board.getPageSize());
+                                                //System.out.println("---------------作业："+homeWork2Board.getHomeworkName()+":"+homeWork2Board.getPageSize());
                                                 if(StringUtils.isEmpty(homeWork2Board.getSubject())){
                                                     continue;
                                                 }
@@ -612,32 +612,32 @@ public class ClientHandler implements Runnable {
                                                     List<MenuItemT> pItems = null;
                                                     MenuItemT itemT = null;
                                                     if(subjectMap.containsKey(subject)&&menuItemTMap.containsKey(subject)){
-                                                        System.out.println("---------------科目："+subject);
+                                                      //System.out.println("---------------科目："+subject);
                                                         pItems = subjectMap.get(subject);
                                                         itemT = menuItemTMap.get(subject);
                                                         //pItems.add(itemT);
                                                     }else{
-                                                        System.out.println("##############新建科目菜单："+subject);
+                                                      //System.out.println("##############新建科目菜单："+subject);
                                                         itemT = new MenuItemT(i + 1,null, subject, null);
                                                         pItems = new ArrayList<>();
                                                         pItems.add(itemT);
                                                         menuItemTMap.put(subject, itemT);
-                                                        System.out.println("---------------科目菜单："+subject);
+                                                      //System.out.println("---------------科目菜单："+subject);
                                                     }
-                                                    System.out.println("=====科目下的作业数+++++++："+pItems.size());
+                                                  //System.out.println("=====科目下的作业数+++++++："+pItems.size());
                                                     subjectMap.put(subject,pItems);
                                                 }
-                                                System.out.println("=====科目下的作业数："+subjectMap.size());
+                                              //System.out.println("=====科目下的作业数："+subjectMap.size());
                                             }
-                                            System.out.println("科目菜单数："+menuItemTMap.size());
+                                          //System.out.println("科目菜单数："+menuItemTMap.size());
                                             for(String subject: menuItemTMap.keySet()){
-                                                System.out.println("作业科目："+subject);
+                                              //System.out.println("作业科目："+subject);
                                                 MenuT subMenuT = new MenuT(homeworkMenu, subjectMap.get(subject), 0, 0, subjectMap.get(subject).size(), subjectMap.get(subject).size());
                                                 MenuItemT itemT=menuItemTMap.get(subject);
                                                 itemT.setPSubMenu(subMenuT);
                                                 homeworkItems.add(itemT);
                                             }
-                                            System.out.println("=============子菜单数："+homeworkItems.size());
+                                          //System.out.println("=============子菜单数："+homeworkItems.size());
                                             homeworkMenu = new MenuT(mainMenu,homeworkItems,0,0,homeworkItems.size(),homeworkItems.size());
                                             pCurrentMenu = homeworkMenu;
                                             pCurrentMenu.setShowStartItem(0);
@@ -645,7 +645,7 @@ public class ClientHandler implements Runnable {
                                             pCurrentMenu.setSelectItem(0);
                                             nMenuUpdate(out,writer);
                                         }else{
-                                            System.out.println("没有作业数");
+                                          //System.out.println("没有作业数");
                                             pCurrentMenu = null;
                                             work2Boards = new ArrayList<>();
                                             studentsWriteRecords =new ArrayList<>();
@@ -750,11 +750,11 @@ public class ClientHandler implements Runnable {
                                     }
                                 }
                                 mrnuflag = false;
-                                System.out.println("++++++++++++当前页数："+page_num+"++++++++");
+                              //System.out.println("++++++++++++当前页数："+page_num+"++++++++");
                             }
                             if(1==result.getButton()){//菜单
                                 mrnuflag = true;
-                                System.out.println("++++++++++++菜单++++++++++");
+                              //System.out.println("++++++++++++菜单++++++++++");
                                 List<MenuItemT> mainItems = new ArrayList<>();
 
                                 mainItems.add(new MenuItemT(1,null,"作业模式", null));
@@ -817,9 +817,9 @@ public class ClientHandler implements Runnable {
                                     if (studentsFeedbackRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                         String name = itemT.getDesc();
-                                        System.out.println("=============保存反馈数据====科目："+name);
+                                      //System.out.println("=============保存反馈数据====科目："+name);
                                         studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,studentsFeedbackRecords);
-                                        System.out.println("=============保存反馈数据完成====");
+                                      //System.out.println("=============保存反馈数据完成====");
                                         pCurrentMenu = null;
                                         studentsFeedbackRecords = new ArrayList<>();
                                         homeworkflag = false;
@@ -837,7 +837,7 @@ public class ClientHandler implements Runnable {
                                         pCurrentMenu.setSelectItem(0);
                                         nMenuUpdate(out, writer);
                                         String name = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem()).getDesc().trim();
-                                        System.out.println("++++++++++++++++返回后目录选择为："+name);
+                                      //System.out.println("++++++++++++++++返回后目录选择为："+name);
                                         if(pCurrentMenu.equals(homeworkMenu)||pCurrentMenu.equals(emendMenu)){
                                             querenJishu = 1;
                                         }
@@ -964,7 +964,7 @@ public class ClientHandler implements Runnable {
                             }
                             if(1024==result.getButton()){//上一页
                                 buttonTimes = result.getTimestamp();
-                                System.out.println("++++++++++++上一页++++++++++");
+                              //System.out.println("++++++++++++上一页++++++++++");
                                 if(homeworkflag) {
                                     if(lastList!=null&&lastList.size()>0&&homeId!=null&&page_num!=null){
                                         studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeId,"1", page_num+1, lastList,false);
@@ -1043,9 +1043,9 @@ public class ClientHandler implements Runnable {
                                     if (studentsFeedbackRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                         String name = itemT.getDesc();
-                                        System.out.println("=============保存反馈数据====科目："+name);
+                                      //System.out.println("=============保存反馈数据====科目："+name);
                                         studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,studentsFeedbackRecords);
-                                        System.out.println("=============保存反馈数据完成====");
+                                      //System.out.println("=============保存反馈数据完成====");
 
                                     }
                                     if (pCurrentMenu.getSelectItem() > pCurrentMenu.getShowStartItem()) {
@@ -1066,9 +1066,9 @@ public class ClientHandler implements Runnable {
                                     if (uploadErrorTitleRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                         String name = itemT.getDesc();
-                                        System.out.println("=============保存错题上传数据====科目："+name);
+                                      //System.out.println("=============保存错题上传数据====科目："+name);
                                         studentsHomeworkNewService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,uploadErrorTitleRecords);
-                                        System.out.println("=============保存错题上传完成====");
+                                      //System.out.println("=============保存错题上传完成====");
 
                                     }
                                     if (pCurrentMenu.getSelectItem() > pCurrentMenu.getShowStartItem()) {
@@ -1114,11 +1114,11 @@ public class ClientHandler implements Runnable {
                                         }
                                     }
                                 }
-                                System.out.println("++++++++++++当前页数："+page_num+"++++++++");
+                              //System.out.println("++++++++++++当前页数："+page_num+"++++++++");
                             }
                             if(2048==result.getButton()){//下一页
                                 buttonTimes = result.getTimestamp();
-                                System.out.println("++++++++++++下一页++++++++++");
+                              //System.out.println("++++++++++++下一页++++++++++");
                                 if(homeworkflag) {
                                     if(lastList!=null&&lastList.size()>0&&homeId!=null&&page_num!=null&&page_num>1){
                                         studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeId,"1", page_num-1, lastList,false);
@@ -1210,9 +1210,9 @@ public class ClientHandler implements Runnable {
                                     if (studentsFeedbackRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                         String name = itemT.getDesc();
-                                        System.out.println("=============保存反馈数据====科目："+name);
+                                      //System.out.println("=============保存反馈数据====科目："+name);
                                         studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,studentsFeedbackRecords);
-                                        System.out.println("=============保存反馈数据完成====");
+                                      //System.out.println("=============保存反馈数据完成====");
 
                                     }
                                     if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
@@ -1238,9 +1238,9 @@ public class ClientHandler implements Runnable {
                                     if (uploadErrorTitleRecords.size() > 0 && pCurrentMenu != null  && relation != null) {
                                         MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
                                         String name = itemT.getDesc();
-                                        System.out.println("=============保存错题上传数据====科目："+name);
+                                      //System.out.println("=============保存错题上传数据====科目："+name);
                                         studentsHomeworkNewService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,uploadErrorTitleRecords);
-                                        System.out.println("=============保存错题上传数据完成====");
+                                      //System.out.println("=============保存错题上传数据完成====");
 
                                     }
                                     if (pCurrentMenu.getSelectItem() < pCurrentMenu.getShowEndItem()) {
@@ -1299,26 +1299,26 @@ public class ClientHandler implements Runnable {
                                     }
                                 }
 
-                                System.out.println("++++++++++++当前页数："+page_num+"++++++++");
+                              //System.out.println("++++++++++++当前页数："+page_num+"++++++++");
                             }
 
                             //按键松开
                             if(0==result.getButton()){
-                                System.out.println("++++++++++++按键松开++++++++++");
+                              //System.out.println("++++++++++++按键松开++++++++++");
 
                             }
                         }else{
-                            System.out.println("=========没有获取到学生信息！======");
+                          //System.out.println("=========没有获取到学生信息！======");
                             relation=smartDeviceUserRelationService.selectByIpAddress(clientIP);
                             if(relation==null) {
-                                System.out.println("请检测" + clientIP + "与学生的绑定或者重启智能版");
+                              //System.out.println("请检测" + clientIP + "与学生的绑定或者重启智能版");
                                 writer.println("请检测" + clientIP + "与学生的绑定或者重启智能版");
                             }
                         }
 
                     } else if (dataType == 0x03) { // 序列号数据
                         MacParseResult result = ParseTcpDataUtil.parseSerialNumberTcpPacket(fullPacketBuffer);
-                        System.out.println("序列号数据解析结果：" + result.toString());
+                      //System.out.println("序列号数据解析结果：" + result.toString());
                         
                         // 处理序列号关联
                         SmartDeviceUserRelation deviceUserRelation = smartDeviceUserRelationService.selectByDeviceCode(result.getMac().toString());
@@ -1326,7 +1326,7 @@ public class ClientHandler implements Runnable {
                             deviceUserRelation.setIpAddress(clientIP);
                             smartDeviceUserRelationService.update(deviceUserRelation);
                         }else {
-                            System.out.println(result.getMac()+"设备还未绑定学生，请检查！");
+                          //System.out.println(result.getMac()+"设备还未绑定学生，请检查！");
                             // 设备绑定学生
                             deviceUserRelation = new SmartDeviceUserRelation();
                             deviceUserRelation.setIpAddress(clientIP);
@@ -1353,7 +1353,7 @@ public class ClientHandler implements Runnable {
             // 确保关闭客户端连接
             try {
                 clientSocket.close();
-                System.out.println("客户端断开: " + clientSocket.getInetAddress());
+              //System.out.println("客户端断开: " + clientSocket.getInetAddress());
             } catch (IOException e) {
                 System.err.println("关闭连接时出错: " + e.getMessage());
             }
@@ -1416,7 +1416,7 @@ public class ClientHandler implements Runnable {
         // 发送心跳包
         out.write(fullPacket);
         out.flush();
-        System.out.println("发送心跳包: " + Arrays.toString(fullPacket));
+      //System.out.println("发送心跳包: " + Arrays.toString(fullPacket));
     }
 
     // 添加计算校验和的辅助方法（从ParseTcpDataUtil类复制）
@@ -1443,7 +1443,7 @@ public class ClientHandler implements Runnable {
         // 对应C++的char buff[128] = {0}
         byte[] buff = new byte[128];
         int len = 0; // 对应C++的uint8_t len = 0
-        System.out.println("__________________+++++输出屏幕开始++++++++___________________");
+      //System.out.println("__________________+++++输出屏幕开始++++++++___________________");
         // 获取当前菜单
         MenuT pCurrentMenu = ClientHandler.pCurrentMenu;
         //System.out.println("菜单内容个数:"+pCurrentMenu.getPItems().size());
@@ -1484,13 +1484,13 @@ public class ClientHandler implements Runnable {
             buff[1] = 0x30;
             len = 2;
         }
-        System.out.println("+++++++++"+out.toString()+",长度:"+len);
+      //System.out.println("+++++++++"+out.toString()+",长度:"+len);
         // 创建长度为len的子数组并发送
         // 对应C++的tcp_send(sl, buff, len)
         if (len > 0 && out != null) {
             byte[] sendData = new byte[len];
             System.arraycopy(buff, 0, sendData, 0, len);
-            System.out.println(new String(sendData, StandardCharsets.UTF_16LE));
+          //System.out.println(new String(sendData, StandardCharsets.UTF_16LE));
             if(isBluetooth){
                 ParseTcpDataUtil.sendLcdDisplayDataBluetooth(out, sendData, len,mac);
             }else {
@@ -1519,7 +1519,7 @@ public class ClientHandler implements Runnable {
 
         pb.unread(signature);
 
-        System.out.println(signature.toString()+",签名标识：" +new String(signature));
+      //System.out.println(signature.toString()+",签名标识：" +new String(signature));
         // 识别协议版本
         if (new String(signature).equals("PROXY")) {
             parseV1(pb);

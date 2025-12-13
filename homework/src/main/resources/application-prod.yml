@@ -2,7 +2,11 @@
 # 生产环境配置 - Homework 服务
 # Spring Cloud Alibaba 2023 生产环境最佳实践
 # ===================================================================
-
+# Socket服务配置
+socket:
+  server:
+    port: 80
+    maxConnections: 10
 spring:
   cloud:
     nacos:

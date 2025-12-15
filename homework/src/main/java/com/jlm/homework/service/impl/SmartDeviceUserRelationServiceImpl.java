@@ -143,4 +143,17 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
         }
         return deviceUserRelation;
     }
+
+    @Override
+    public SmartDeviceUserRelation getByUseId(String userId) {
+        SmartDeviceUserRelation relation=new SmartDeviceUserRelation();
+        relation.setUserId(userId);
+        relation.setUserType(null);
+        Optional<SmartDeviceUserRelation> optional=smartDeviceUserRelationRepository.findOne(Example.of(relation));
+        SmartDeviceUserRelation deviceUserRelation= null;
+        if(!optional.isEmpty()){
+            deviceUserRelation=optional.get();
+        }
+        return deviceUserRelation;
+    }
 }

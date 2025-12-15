@@ -2183,7 +2183,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
 
                     for(HomeworkStudentWriteData writeData1:homeworkStudentWriteDataList){
-                        if(writeData1.getPageNum()==(i+1)) {
+                        if(writeData1.getPageNum()==(i+1)&&StringUtils.isNotEmpty(imageUrl)) {
                             List<StudentsWriteRecord> records = writeData1.getStudentsWriteRecords();
                             BufferedImage resultImage = null;
 
@@ -2848,7 +2848,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         // 学校ID条件
         Predicate schoolCondition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
         predicates.add(schoolCondition);
-        
+        if(studentsHomework != null && StringUtils.isNotEmpty(studentsHomework.getHomeworkPublishName())){
+            Predicate nameCondition = criteriaBuilder.like(root.get("homeworkPublishName"), "%"+studentsHomework.getHomeworkPublishName()+"%");
+            predicates.add(nameCondition);
+        }
         // 审批状态条件
         if (studentsHomework != null && studentsHomework.getAuditStatus() != null) {
             Predicate auditStatusCondition = criteriaBuilder.equal(root.get("auditStatus"), studentsHomework.getAuditStatus());

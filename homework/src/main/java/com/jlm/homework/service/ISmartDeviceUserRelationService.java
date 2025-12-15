@@ -21,4 +21,6 @@ public interface ISmartDeviceUserRelationService {
     SmartDeviceUserRelation selectByDeviceCode(String mac);
 
     SmartDeviceUserRelation selectByIpAddress(String clientAddress);
+
+    SmartDeviceUserRelation getByUseId(String userId);
 }

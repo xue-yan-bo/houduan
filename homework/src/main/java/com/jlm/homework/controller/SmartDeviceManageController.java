@@ -42,8 +42,6 @@ public class SmartDeviceManageController {
     public SmartDeviceUserRelation update(@RequestBody SmartDeviceUserRelation deviceUserRelation) {
         deviceUserRelation=smartDeviceUserRelationService.update(deviceUserRelation);
         return deviceUserRelation;
-
-
     }
 
     /**
@@ -84,5 +82,11 @@ public class SmartDeviceManageController {
         Page<StudentVo> list = smartDeviceUserRelationService.wxBindList(pageNum,pageSize, student);
 
         return list;
+    }
+
+    @GetMapping("/getByUserId")
+    public SmartDeviceUserRelation getByUseId(String userId) {
+        SmartDeviceUserRelation deviceUserRelation = smartDeviceUserRelationService.getByUseId(userId);
+        return deviceUserRelation;
     }
 }

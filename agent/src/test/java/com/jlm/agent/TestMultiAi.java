@@ -4,6 +4,7 @@ package com.jlm.agent;
 //import com.jlm.agent.AIServ.TongYiServ;
 
 import com.jlm.agent.AIServ.TongYiServ;
+import com.jlm.agent.AIServ.ZhiPuAIServ;
 import com.jlm.agent.AIServ.ZhiPuServ;
 import jakarta.annotation.Resource;
 import org.apache.commons.io.IOUtils;
@@ -29,6 +30,8 @@ public class TestMultiAi {
     TongYiServ tongYiServ;
     @Resource
     ZhiPuServ zhiPuServ;
+    @Resource
+    ZhiPuAIServ zhiPuAIServ;
 
 
     /**
@@ -98,6 +101,12 @@ public class TestMultiAi {
         if (lower.endsWith(".gif")) return "image/gif";
         if (lower.endsWith(".webp")) return "image/webp";
         return "image/jpeg"; // 默认
+    }
+
+
+    @Test
+    void testZhiPuAI() {
+        System.out.println(zhiPuAIServ.doChatWithReport("提取王二的答题内容，结构化输出", "https://img0.baidu.com/it/u=2412944529,4254979042&fm=253&app=138&f=JPEG?w=800&h=1067"));
     }
 
 

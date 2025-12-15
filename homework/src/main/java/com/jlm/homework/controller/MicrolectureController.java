@@ -95,7 +95,7 @@ public class MicrolectureController {
     public Page<StudentMicrolecture> studentPage(@RequestParam(value = "microlectureId", required = false) Long microlectureId,
                                                  @RequestParam(value = "pageNum",defaultValue = "1")Integer pageNum,
                                                  @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
-                                                 @RequestParam(value = "microlectureName", required = false) String microlecturename,
+                                                 @RequestParam(value = "microlectureName", required = false) String microlectureName,
                                                  @RequestParam(value = "studentId", required = false) Long studentId,
                                                  @RequestParam(value = "studentName", required = false) String studentName,
                                                  @RequestParam(value = "status", required = false) Integer status,
@@ -105,7 +105,7 @@ public class MicrolectureController {
 
 
         // 查询分页结果
-        Page<StudentMicrolecture> page = studentMicrolectureService.page(pageNum,pageSize, microlectureId,microlecturename,studentId,studentName,status,chapter,knowledgePoint,searchType);
+        Page<StudentMicrolecture> page = studentMicrolectureService.page(pageNum,pageSize, microlectureId,microlectureName,studentId,studentName,status,chapter,knowledgePoint,searchType);
         return page;
     }
 

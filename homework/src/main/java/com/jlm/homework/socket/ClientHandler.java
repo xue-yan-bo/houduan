@@ -99,7 +99,7 @@ public class ClientHandler implements Runnable {
             byte[] headerBuffer = new byte[4]; // 包头(2) + 长度(1) + 类型(1)
             int bytesRead;
             // 初始化心跳包定时发送器
-            //initHeartbeatScheduler(out);
+            initHeartbeatScheduler(out);
             while (true) {
                 // 首先读取包头和基本信息
                 bytesRead = in.read(headerBuffer);
@@ -245,7 +245,7 @@ public class ClientHandler implements Runnable {
                                         studentCalssRecords = new ArrayList<>();
                                     }*/
                                     // 通过WebSocket发送解析结果给前端
-                                    messagingTemplate.convertAndSend("/topic/writingData", result);
+                                    messagingTemplate.convertAndSend("/topic/writingData/"+relation.getUserId(), result);
                                 }
                             }else {
 
@@ -261,7 +261,7 @@ public class ClientHandler implements Runnable {
                                         messagingTemplate.convertAndSend("/topic/writingData", studentCalssRecords);
                                         studentCalssRecords = new ArrayList<>();
                                     }*/
-                                    messagingTemplate.convertAndSend("/topic/writingData", result);
+                                    messagingTemplate.convertAndSend("/topic/writingData/"+relation.getUserId(), result);
                                 }else {
                                     System.out.println("=========没有获取到学生信息！======");
                                 }
@@ -301,12 +301,12 @@ public class ClientHandler implements Runnable {
                             if(512==result.getButton()){//按键F  签到
                                 //classroomResult.setOption("F");
                                 if(StringUtils.isNotEmpty(relation.getUserId())) {
-                                    messagingTemplate.convertAndSend("/topic/studentSign", relation.getUserId());
+                                    messagingTemplate.convertAndSend("/topic/studentSign/"+relation.getUserId(), relation.getUserId());
                                 }
                             }
                             if(StringUtils.isNotEmpty(classroomResult.getOption())) {
                                 // 通过WebSocket发送解析结果给前端
-                                messagingTemplate.convertAndSend("/topic/classroomData", classroomResult);
+                                messagingTemplate.convertAndSend("/topic/classroomData/"+relation.getUserId(), classroomResult);
                             }
 
                             if(8==result.getButton()){//确定
@@ -579,7 +579,7 @@ public class ClientHandler implements Runnable {
                                     }
                                 }else if(StringUtils.isNotEmpty(relation.getUserId())) {
                                     //System.out.println("=============课堂数据发送====");
-                                    messagingTemplate.convertAndSend("/topic/endWrite", relation.getUserId());
+                                    messagingTemplate.convertAndSend("/topic/endWrite/"+relation.getUserId(), relation.getUserId());
                                 }
                                 if(pCurrentMenu!=null){//模式确认选择
 
@@ -959,7 +959,7 @@ public class ClientHandler implements Runnable {
                                     emendMenu = null;
                                     nMenuUpdate(out, writer);
                                 }else if (StringUtils.isNotEmpty(relation.getUserId())) {
-                                    messagingTemplate.convertAndSend("/topic/clean", relation.getUserId());
+                                    messagingTemplate.convertAndSend("/topic/clean/"+relation.getUserId(), relation.getUserId());
                                 }
                             }
                             if(1024==result.getButton()){//上一页
@@ -1099,7 +1099,7 @@ public class ClientHandler implements Runnable {
                                         }
                                     }
                                 }else{
-                                    messagingTemplate.convertAndSend("/topic/lastPage", relation.getUserId());
+                                    messagingTemplate.convertAndSend("/topic/lastPage/"+relation.getUserId(), relation.getUserId());
                                 }
                                 if(pCurrentMenu!=null) {
                                     MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());
@@ -1283,7 +1283,7 @@ public class ClientHandler implements Runnable {
                                     }
 
                                 }else{
-                                    messagingTemplate.convertAndSend("/topic/nextPage", relation.getUserId());
+                                    messagingTemplate.convertAndSend("/topic/nextPage/"+relation.getUserId(), relation.getUserId());
                                 }
                                 if(pCurrentMenu!=null) {
                                     MenuItemT itemT = pCurrentMenu.getPItems().get(pCurrentMenu.getSelectItem());

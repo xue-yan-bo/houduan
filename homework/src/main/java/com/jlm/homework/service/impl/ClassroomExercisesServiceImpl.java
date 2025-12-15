@@ -403,6 +403,8 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 List<Predicate> list = new ArrayList<>();
                 try {
+                    Predicate cond = criteriaBuilder.equal(root.get("schoolId"),userService.getCurrentSchoolIdSafely());
+                    list.add(cond);
                     if(classId!=null){
                         Predicate con = criteriaBuilder.like(root.get("classIds").as(String.class),"%"+classId+"%");
                         list.add(con);
@@ -452,7 +454,10 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 List<Predicate> list = new ArrayList<>();
                 try {
-                    if(classId!=null){
+
+                    Predicate cond = criteriaBuilder.equal(root.get("schoolId"),userService.getCurrentSchoolIdSafely());
+                    list.add(cond);
+                    if (classId != null) {
                         Predicate con = criteriaBuilder.like(root.get("classIds").as(String.class),"%"+classId+"%");
                         list.add(con);
                     }

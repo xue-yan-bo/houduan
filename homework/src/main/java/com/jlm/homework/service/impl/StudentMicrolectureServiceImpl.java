@@ -98,7 +98,7 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
     }
 
     @Override
-    public Page<StudentMicrolecture> page(Integer pageNum, Integer pageSize, Long microlectureId, String microlecturename, Long studentId, String studentName, Integer status,String chapter,String knowledgePoint,Integer searchType) {
+    public Page<StudentMicrolecture> page(Integer pageNum, Integer pageSize, Long microlectureId, String microlectureName, Long studentId, String studentName, Integer status,String chapter,String knowledgePoint,Integer searchType) {
         pageNum = pageNum == null ? 0 : pageNum-1;
         pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
@@ -118,8 +118,8 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                         Predicate condition = criteriaBuilder.equal(root.get("microlectureId"), microlectureId);
                         list.add(condition);
                     }
-                    if(StringUtils.isNotEmpty(microlecturename)) {
-                        Predicate condition = criteriaBuilder.like(root.get("microlecturename"), "%"+microlecturename+"%");
+                    if(StringUtils.isNotEmpty(microlectureName)) {
+                        Predicate condition = criteriaBuilder.like(root.get("microlectureName"), "%"+microlectureName+"%");
                         list.add(condition);
                     }
                     if(finalStudentId!=null) {
@@ -179,6 +179,10 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                 public Predicate toPredicate(Root<Microlecture> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                     List<Predicate> list = new ArrayList<>();
                     try {
+                        if(StringUtils.isNotEmpty(microlectureName)) {
+                            Predicate condition = criteriaBuilder.like(root.get("name"), "%"+microlectureName+"%");
+                            list.add(condition);
+                        }
                         if(StringUtils.isEmpty(chapter)&&StringUtils.isNotEmpty(knowledgePoint)) {
                             Predicate condition = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
                             list.add(condition);

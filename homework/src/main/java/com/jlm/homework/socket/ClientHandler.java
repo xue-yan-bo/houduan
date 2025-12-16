@@ -109,6 +109,7 @@ public class ClientHandler implements Runnable {
                 
                 // 验证包头
                 if (headerBuffer[0] != 0x55 || headerBuffer[1] != 0x56) {
+                    System.out.println("收到 [" + clientIP + "] TCP数据包: " + java.util.Arrays.toString(headerBuffer));
                     System.err.println("无效的数据包格式：包头不匹配");
                     writer.println("无效的数据包格式：包头不匹配");
                     continue;
@@ -130,6 +131,9 @@ public class ClientHandler implements Runnable {
                         deviceUserRelation.setIpAddress(clientIP);
                         deviceUserRelation.setDeviceCode(mac.toString());
                         messagingTemplate.convertAndSend("/topic/bindStudent", deviceUserRelation);
+                    }else if(StringUtils.isEmpty(relation.getIpAddress())){
+                        relation.setIpAddress(clientIP);
+                        smartDeviceUserRelationService.update(relation);
                     }
                 }else{
                     isBluetooth = false;

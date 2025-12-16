@@ -31,6 +31,7 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
         if(StringUtils.isNotEmpty(deviceUserRelation.getDeviceCode())){
             SmartDeviceUserRelation relation=new SmartDeviceUserRelation();
             relation.setDeviceCode(deviceUserRelation.getDeviceCode());
+            relation.setUserType(null);
             List<SmartDeviceUserRelation> list=smartDeviceUserRelationRepository.findAll(Example.of(relation));
             if(list.size()>0){
                 throw new RuntimeException("该设备"+deviceUserRelation.getDeviceCode()+"已绑定"+list.get(0).getUserName()+"，请检测！");
@@ -39,6 +40,7 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
         if(StringUtils.isNotEmpty(deviceUserRelation.getUserId())){
             SmartDeviceUserRelation relation=new SmartDeviceUserRelation();
             relation.setUserId(deviceUserRelation.getUserId());
+            relation.setUserType(null);
             List<SmartDeviceUserRelation> list=smartDeviceUserRelationRepository.findAll(Example.of(relation));
             if(list.size()>0){
                 throw new RuntimeException("该用户"+deviceUserRelation.getUserName()+"已绑定设备"+list.get(0).getDeviceCode()+"，请检测！");
@@ -124,6 +126,7 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
     public SmartDeviceUserRelation selectByDeviceCode(String mac) {
         SmartDeviceUserRelation relation=new SmartDeviceUserRelation();
         relation.setDeviceCode(mac);
+        relation.setUserType(null);
         Optional<SmartDeviceUserRelation> optional=smartDeviceUserRelationRepository.findOne(Example.of(relation));
         SmartDeviceUserRelation deviceUserRelation= null;
         if(optional!=null&&!optional.isEmpty()){
@@ -136,6 +139,7 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
     public SmartDeviceUserRelation selectByIpAddress(String clientAddress) {
         SmartDeviceUserRelation relation=new SmartDeviceUserRelation();
         relation.setIpAddress(clientAddress);
+        relation.setUserType(null);
         Optional<SmartDeviceUserRelation> optional=smartDeviceUserRelationRepository.findOne(Example.of(relation));
         SmartDeviceUserRelation deviceUserRelation= null;
         if(!optional.isEmpty()){

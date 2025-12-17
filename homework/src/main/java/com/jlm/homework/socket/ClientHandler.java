@@ -10,12 +10,16 @@ import com.jlm.homework.socket.boardmenu.MenuItemT;
 import com.jlm.homework.socket.boardmenu.MenuT;
 import com.jlm.homework.util.ParseTcpDataUtil;
 import com.alibaba.cloud.commons.lang.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -23,6 +27,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 // 客户端处理线程
+@Slf4j
 public class ClientHandler implements Runnable {
     
     public static int save_size = 2000;
@@ -48,6 +53,7 @@ public class ClientHandler implements Runnable {
 
     private InetSocketAddress realRemoteAddress;
     private boolean headerParsed = false;
+    private byte[] proxyHeaderReadBytes = null; // 保存readProxyHeader读取的字节（非PROXY Protocol时）
 
 
     List<HandwritingParseResult> studentCalssRecords =new ArrayList<>();
@@ -91,22 +97,123 @@ public class ClientHandler implements Runnable {
             InetSocketAddress realAddress = this.getRealRemoteAddress();
             String clientIP = realAddress.getHostString();
             int clientPort = realAddress.getPort();
-            //System.out.println("客户端真实IP:"+clientIP +" 端口号："+clientPort);
-
+            // #region agent log
+            Map<String, Object> finalData = new HashMap<>();
+            finalData.put("clientIP", clientIP);
+            finalData.put("clientPort", clientPort);
+            finalData.put("expectedIP", "124.165.206.34");
+            finalData.put("expectedPort", 20026);
+            writeDebugLog("C", "ClientHandler.java:96", "最终获取的客户端IP和端口", finalData);
+            // #endregion
             SmartDeviceUserRelation relation=smartDeviceUserRelationService.selectByIpAddress(clientIP);
-
             // 持续处理客户端消息
-            byte[] headerBuffer = new byte[4]; // 包头(2) + 长度(1) + 类型(1)
-            int bytesRead;
+            // 使用缓冲区处理TCP流式数据，解决粘包/拆包问题
+            byte[] buffer = new byte[2048]; // 缓冲区
+            int bufferPos = 0; // 缓冲区当前位置
+
+            // 如果readProxyHeader读取了数据（非PROXY Protocol），先放入缓冲区
+            if (proxyHeaderReadBytes != null && proxyHeaderReadBytes.length > 0) {
+                System.arraycopy(proxyHeaderReadBytes, 0, buffer, 0, proxyHeaderReadBytes.length);
+                bufferPos = proxyHeaderReadBytes.length;
+                proxyHeaderReadBytes = null; // 使用后清空
+                System.out.println("使用readProxyHeader读取的数据填充缓冲区，长度：" + bufferPos);
+            }
+
             // 初始化心跳包定时发送器
             initHeartbeatScheduler(out);
             while (true) {
-                // 首先读取包头和基本信息
-                bytesRead = in.read(headerBuffer);
-                if (bytesRead == -1) {
-                    break; // 连接关闭
+                // 确保缓冲区有足够的数据（至少4字节用于读取包头）
+                if (bufferPos < 4) {
+                    int read = in.read(buffer, bufferPos, buffer.length - bufferPos);
+                    if (read == -1) {
+                        break; // 连接关闭
+                    }
+                    bufferPos += read;
+                    if (bufferPos < 4) {
+                        continue; // 数据不足，继续读取
+                    }
                 }
-                
+
+                // 在缓冲区中查找包头 0x55 0x56
+                int headerIndex = -1;
+                for (int i = 0; i <= bufferPos - 2; i++) {
+                    if ((buffer[i] & 0xFF) == 0x55 && (buffer[i + 1] & 0xFF) == 0x56) {
+                        headerIndex = i;
+                        break;
+                    }
+                }
+
+                if (headerIndex == -1) {
+                    // 没找到包头，清空缓冲区（保留最后1字节，可能跨包）
+                    if (bufferPos > 0) {
+                        buffer[0] = buffer[bufferPos - 1];
+                        bufferPos = 1;
+                    }
+                    System.err.println("未找到有效的包头，跳过数据");
+                    // 继续读取新数据
+                    int read = in.read(buffer, bufferPos, buffer.length - bufferPos);
+                    if (read == -1) {
+                        break;
+                    }
+                    bufferPos += read;
+                    continue;
+                }
+
+                // 找到包头，移动数据到开头
+                if (headerIndex > 0) {
+                    System.arraycopy(buffer, headerIndex, buffer, 0, bufferPos - headerIndex);
+                    bufferPos -= headerIndex;
+                }
+
+                // 确保有4字节读取长度和类型
+                if (bufferPos < 4) {
+                    int read = in.read(buffer, bufferPos, 4 - bufferPos);
+                    if (read == -1) {
+                        break;
+                    }
+                    bufferPos += read;
+                    if (bufferPos < 4) {
+                        continue;
+                    }
+                }
+                // 提取headerBuffer（前4字节）
+                byte[] headerBuffer = new byte[4];
+                System.arraycopy(buffer, 0, headerBuffer, 0, 4);
+                // 获取数据长度和类型
+                int dataLength = headerBuffer[2] & 0xFF;
+                byte dataType = headerBuffer[3];
+
+                // 计算完整数据包长度
+                int packetTotalLength = 2 + 1 + 1 + (dataLength - 1) + 1; // Header(2)+Length(1)+Type(1)+Packet(Length-1)+Checksum(1)
+                if (dataType == 0x81 || dataType == 0x82){
+                    packetTotalLength = 2 + 1 + 1 + 6 + (dataLength - 1) + 1; // Header(2)+Length(1)+Type(1)+MAC(6)+Packet(Length-1)+Checksum(1)
+                }
+                // 确保缓冲区有完整的数据包
+                if (bufferPos < packetTotalLength) {
+                    // 扩展缓冲区或读取剩余数据
+                    if (buffer.length < packetTotalLength) {
+                        byte[] newBuffer = new byte[Math.max(packetTotalLength, buffer.length * 2)];
+                        System.arraycopy(buffer, 0, newBuffer, 0, bufferPos);
+                        buffer = newBuffer;
+                    }
+                    int read = in.read(buffer, bufferPos, packetTotalLength - bufferPos);
+                    if (read == -1) {
+                        break;
+                    }
+                    bufferPos += read;
+                    if (bufferPos < packetTotalLength) {
+                        continue; // 数据不完整，继续读取
+                    }
+                }
+
+                // 创建完整数据包缓冲区
+                byte[] fullPacketBuffer = new byte[packetTotalLength];
+                // 提取完整数据包
+                System.arraycopy(buffer, 0, fullPacketBuffer, 0, packetTotalLength);
+
+                // 从缓冲区移除已处理的数据
+                System.arraycopy(buffer, packetTotalLength, buffer, 0, bufferPos - packetTotalLength);
+                bufferPos -= packetTotalLength;
                 // 验证包头
                 if (headerBuffer[0] != 0x55 || headerBuffer[1] != 0x56) {
                     System.out.println("收到 [" + clientIP + "] TCP数据包: " + java.util.Arrays.toString(headerBuffer));
@@ -114,18 +221,17 @@ public class ClientHandler implements Runnable {
                     writer.println("无效的数据包格式：包头不匹配");
                     continue;
                 }
-                
-                // 获取数据长度和类型
-                int dataLength = headerBuffer[2] & 0xFF;
-                byte dataType = headerBuffer[3];
+
+
+                // 处理蓝牙类型（0x81/0x82）的MAC地址提取
                 if (dataType == 0x81 || dataType == 0x82) {
                     isBluetooth = true;
-                    // 提取Packet数据（序列号）
-                    byte[] packet = Arrays.copyOfRange(headerBuffer, 4, 10);
-                    mac = ParseTcpDataUtil.byteArrayToInt(packet);
-                    relation=smartDeviceUserRelationService.selectByDeviceCode(mac.toString());
-                    if(relation==null){
-                        System.out.println(mac+"设备还未绑定学生，请检查！");
+                    // 提取MAC地址（在Header(2)+Length(1)+Type(1)之后，共6字节）
+                    byte[] macBytes = Arrays.copyOfRange(fullPacketBuffer, 4, 10);
+                    mac = ParseTcpDataUtil.byteArrayToInt(macBytes);
+                    relation = smartDeviceUserRelationService.selectByDeviceCode(mac.toString());
+                    if(relation == null){
+                        System.out.println(mac + "设备还未绑定学生，请检查！");
                         // 设备绑定学生
                         SmartDeviceUserRelation deviceUserRelation = new SmartDeviceUserRelation();
                         deviceUserRelation.setIpAddress(clientIP);
@@ -138,40 +244,7 @@ public class ClientHandler implements Runnable {
                 }else{
                     isBluetooth = false;
                 }
-                // 计算完整数据包长度
-                int packetTotalLength = 2 + 1 + 1 + (dataLength - 1) + 1; // Header(2)+Length(1)+Type(1)+Packet(Length-1)+Checksum(1)
-                if (dataType == 0x81 || dataType == 0x82){
-                    packetTotalLength = 2 + 1 + 1 +6+ (dataLength - 1) + 1; // Header(2)+Length(1)+Type(1)+MAC(6)+Packet(Length-1)+Checksum(1)
 
-                }
-                // 创建完整数据包缓冲区
-                byte[] fullPacketBuffer = new byte[packetTotalLength];
-                
-                // 复制已读取的头部数据
-                if (dataType == 0x81 || dataType == 0x82){
-                    System.arraycopy(headerBuffer, 0, fullPacketBuffer, 0, 10);
-                }else {
-                    System.arraycopy(headerBuffer, 0, fullPacketBuffer, 0, 4);
-                }
-                
-                // 读取剩余数据
-                int remainingBytes = packetTotalLength - 4;
-                int bytesReadSoFar = 4;
-                if (dataType == 0x81 || dataType == 0x82){
-                    remainingBytes = packetTotalLength - 10;
-                    bytesReadSoFar = 10;
-                }
-                while (remainingBytes > 0) {
-                    int bytesReadNow = in.read(fullPacketBuffer, bytesReadSoFar, remainingBytes);
-                    if (bytesReadNow == -1) {
-                        throw new IOException("连接意外关闭");
-                    }
-                    bytesReadSoFar += bytesReadNow;
-                    remainingBytes -= bytesReadNow;
-                }
-                
-                //System.out.println("收到 [" + clientIP + "] TCP数据包: " + java.util.Arrays.toString(fullPacketBuffer));
-                
                 try {
 
                     // 根据数据类型进行解析
@@ -1532,6 +1605,8 @@ public class ClientHandler implements Runnable {
         } else {
             // 无 PROXY Protocol，使用原始地址
             realRemoteAddress = (InetSocketAddress) clientSocket.getRemoteSocketAddress();
+            // 保存读取的字节，供后续代码使用（这些字节可能是业务数据包的开头）
+            proxyHeaderReadBytes = Arrays.copyOf(signature, bytesRead);
         }
 
         headerParsed = true;
@@ -1595,5 +1670,42 @@ public class ClientHandler implements Runnable {
         return realRemoteAddress;
     }
 
+    // #region agent log
+    private void writeDebugLog(String hypothesisId, String location, String message, Map<String, Object> data) {
+        try {
+            // 使用slf4j日志，确保输出到应用日志文件
+            String dataJson = new com.alibaba.fastjson.JSONObject(data).toJSONString();
+            log.info("[PROXY-DEBUG] [{}] {} | {} | {}", hypothesisId, location, message, dataJson);
 
+            // 同时尝试写入到文件（可选，如果失败不影响日志输出）
+            try {
+                // 尝试多个可能的日志路径
+                String[] possiblePaths = {
+                        System.getProperty("user.dir") + "/logs/proxy-debug.log",
+                        "./logs/proxy-debug.log",
+                        "/tmp/proxy-debug.log"
+                };
+
+                for (String appLogPath : possiblePaths) {
+                    try {
+                        Files.write(Paths.get(appLogPath),
+                                (message + ": " + dataJson + "\n").getBytes(StandardCharsets.UTF_8),
+                                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                        break; // 成功写入后退出
+                    } catch (Exception e) {
+                        // 尝试下一个路径
+                        continue;
+                    }
+                }
+            } catch (Exception e) {
+                // 文件写入失败不影响，日志已通过slf4j输出
+                log.debug("写入proxy-debug.log文件失败: {}", e.getMessage());
+            }
+        } catch (Exception e) {
+            // 确保即使JSON序列化失败也能记录
+            log.error("写入调试日志失败: {}", e.getMessage(), e);
+            log.info("[PROXY-DEBUG] {} | {}", message, data != null ? data.toString() : "null");
+        }
+    }
+    // #endregion
 }

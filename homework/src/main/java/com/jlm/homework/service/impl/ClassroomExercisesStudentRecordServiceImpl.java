@@ -3,6 +3,7 @@ package com.jlm.homework.service.impl;
 import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.dto.ExerciseWriteData;
 import com.jlm.homework.dto.StudentWriteDto;
+import com.jlm.homework.dto.TeacherWriteDto;
 import com.jlm.homework.entity.*;
 import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
@@ -10,6 +11,7 @@ import com.jlm.homework.repository.ClassroomExercisesStudentRecordRepository;
 import com.jlm.homework.service.IClassroomExercisesQuestionService;
 import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
 import com.jlm.homework.service.IClassroomStudentWriteDataService;
+import com.jlm.homework.service.IClassroomTeacherWriteDataService;
 import com.jlm.homework.util.*;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -40,7 +42,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
     private ClassroomExercisesStudentRecordRepository classroomExercisesStudentRecordRepository;
     @Autowired
     private IClassroomStudentWriteDataService classroomStudentWriteDataService;
-
+    @Autowired
+    private IClassroomTeacherWriteDataService classroomTeacherWriteDataService;
     @Autowired
     private IClassroomExercisesQuestionService classroomExercisesQuestionService;
 
@@ -149,6 +152,13 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 classroomExercisesRepository.save(exercises);
             }
 
+        }
+        if(exerciseWriteData.getTeacherWriteDto()!=null){
+            for(ClassroomTeacherWriteData teacherWriteData:exerciseWriteData.getTeacherWriteDto().getTeacherWriteDataList()){
+                teacherWriteData.setClassroomExercisesId(classroomExercisesId);
+                teacherWriteData.setCreateTime(new Date());
+                classroomTeacherWriteDataService.save(teacherWriteData);
+            }
         }
         final Long exercisesId =classroomExercisesId;
         FutureTask<String> futureTask = new FutureTask<>(() -> {
@@ -378,5 +388,17 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public TeacherWriteDto getLiveStreamtRecordTeacher(Long classroomExercisesId) {
+        TeacherWriteDto  teacherWriteDto = new TeacherWriteDto();
+        List<ClassroomTeacherWriteData> writeDataList=classroomTeacherWriteDataService.findByClassroomExercisesId(classroomExercisesId);
+        teacherWriteDto.setTeacherWriteDataList(writeDataList);
+        if(writeDataList!=null&&writeDataList.size()>0){
+            teacherWriteDto.setTeacherId(writeDataList.get(0).getTeacherId());
+            teacherWriteDto.setTeacherName(writeDataList.get(0).getTeacherName());
+        }
+        return teacherWriteDto;
     }
 }

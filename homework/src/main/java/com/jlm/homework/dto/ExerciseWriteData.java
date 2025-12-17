@@ -22,4 +22,9 @@ public class ExerciseWriteData {
      * 老师黑板出题轨迹
      */
     private List<TeacherWriteRecord> teacherWriteRecords;
+
+    /**
+     * 老师板子书写笔记
+     */
+    private TeacherWriteDto TeacherWriteDto;
 }

@@ -57,5 +57,5 @@ plus:
 minio:
   endpoint: http://124.165.206.34:20029
   accessKey: admin
-  secretKey: sxjlm@1234
+  secretKey: HTTPSxjlm@2017.cn
   bucketName: exercise

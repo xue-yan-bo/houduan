@@ -2,6 +2,7 @@ package com.jlm.homework.controller;
 
 import com.jlm.homework.dto.ExerciseWriteData;
 import com.jlm.homework.dto.StudentWriteDto;
+import com.jlm.homework.dto.TeacherWriteDto;
 import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
 import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -93,7 +94,15 @@ public class ClassroomExercisesStudentRecordController {
         List<StudentWriteDto> recordList= classroomExercisesStudentRecordService.getLiveStreamtRecord(classroomExercisesId,classId);
         return recordList;
     }
-
+    /**
+     * 获取学生直播记录
+     */
+    @GetMapping("/liveStreamtRecordTeacher")
+    @Operation(summary = "获取老师直播记录")
+    public TeacherWriteDto getLiveStreamtRecordTeacher(Long classroomExercisesId){
+        TeacherWriteDto teacherWriteDto= classroomExercisesStudentRecordService.getLiveStreamtRecordTeacher(classroomExercisesId);
+        return teacherWriteDto;
+    }
 
     /**
      * AI分析学生书写记录

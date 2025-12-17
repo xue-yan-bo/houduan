@@ -726,6 +726,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Override
     public List<StudentChapterAccuracy> studentChapterStatistics(String subject, Long classId, String chapter) {
+
         Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
 
             @Override
@@ -797,6 +798,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             studentChapterAccuracy.setAccuracy(averageAccuracy);
             studentChapterAccuracyList.add(studentChapterAccuracy);
         }
+        studentChapterAccuracyList.sort(Comparator.comparing(StudentChapterAccuracy::getChapter));
         return studentChapterAccuracyList;
     }
 
@@ -1132,14 +1134,14 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             homeworkRightRate.setClassName(grade);
             Double gradeSubmitRate = 0.0d;
             if (gradeTotalMap != null && gradeTotalMap.get(grade) != null
-                &&gradeSubmitMap !=null && gradeSubmitMap.get(grade) != null){
+                &&gradeSubmitMap !=null &&gradeSubmitMap.containsKey(grade) &&gradeSubmitMap.get(grade) != null){
                 gradeSubmitRate = BigDecimal.valueOf(gradeSubmitMap.get(grade)).divide(BigDecimal.valueOf(gradeTotalMap.get(grade)), 4, BigDecimal.ROUND_HALF_UP)
                         .multiply(BigDecimal.valueOf(100)).doubleValue();
             }
             gradeHomeworkSubmit.setSubmitRate(gradeSubmitRate);
             Double gradeUnsubmitRate = 0.0d;
             if (gradeTotalMap != null && gradeTotalMap.containsKey(grade)
-                && gradeUnSubmitMap!=null && gradeUnSubmitMap.get(grade) != null) {
+                && gradeUnSubmitMap!=null &&gradeUnSubmitMap.containsKey(grade) && gradeUnSubmitMap.get(grade) != null) {
                 gradeUnsubmitRate = BigDecimal.valueOf(gradeUnSubmitMap.get(grade)).divide(BigDecimal.valueOf(gradeTotalMap.get(grade)), 4, BigDecimal.ROUND_HALF_UP)
                         .multiply(BigDecimal.valueOf(100)).doubleValue();
             }
@@ -1155,7 +1157,11 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             TodayHomeworkSubmit homeworkSubmit = new TodayHomeworkSubmit();
             homeworkSubmit.setClassName(className);
             homeworkSubmit.setStudentNum(classTotalMap.get(className));
-            homeworkSubmit.setSubmitNum(classSubmitMap.get(className));
+            if(classSubmitMap.containsKey(className)) {
+                homeworkSubmit.setSubmitNum(classSubmitMap.get(className));
+            }else{
+                homeworkSubmit.setSubmitNum(0);
+            }
             Double submitRate = 0.0d;
             if(classSubmitMap.containsKey(className)&&classSubmitMap.get(className) != null){
                 submitRate = BigDecimal.valueOf(classSubmitMap.get(className))

@@ -101,8 +101,6 @@ public class ClientHandler implements Runnable {
             Map<String, Object> finalData = new HashMap<>();
             finalData.put("clientIP", clientIP);
             finalData.put("clientPort", clientPort);
-            finalData.put("expectedIP", "124.165.206.34");
-            finalData.put("expectedPort", 20026);
             writeDebugLog("C", "ClientHandler.java:96", "最终获取的客户端IP和端口", finalData);
             // #endregion
             SmartDeviceUserRelation relation=smartDeviceUserRelationService.selectByIpAddress(clientIP);
@@ -149,7 +147,7 @@ public class ClientHandler implements Runnable {
                         buffer[0] = buffer[bufferPos - 1];
                         bufferPos = 1;
                     }
-                    System.err.println("未找到有效的包头，跳过数据");
+                    log.info("未找到有效的包头，跳过数据");
                     // 继续读取新数据
                     int read = in.read(buffer, bufferPos, buffer.length - bufferPos);
                     if (read == -1) {
@@ -217,7 +215,7 @@ public class ClientHandler implements Runnable {
                 // 验证包头
                 if (headerBuffer[0] != 0x55 || headerBuffer[1] != 0x56) {
                     System.out.println("收到 [" + clientIP + "] TCP数据包: " + java.util.Arrays.toString(headerBuffer));
-                    System.err.println("无效的数据包格式：包头不匹配");
+                    log.info("无效的数据包格式：包头不匹配");
                     writer.println("无效的数据包格式：包头不匹配");
                     continue;
                 }
@@ -244,7 +242,7 @@ public class ClientHandler implements Runnable {
                 }else{
                     isBluetooth = false;
                 }
-
+                log.info("包体大小"+fullPacketBuffer.length);
                 try {
 
                     // 根据数据类型进行解析
@@ -1408,6 +1406,7 @@ public class ClientHandler implements Runnable {
                             deviceUserRelation = new SmartDeviceUserRelation();
                             deviceUserRelation.setIpAddress(clientIP);
                             deviceUserRelation.setDeviceCode(result.getMac().toString());
+                            log.info("发送绑定学生请求/topic/bindStudent,设备编号："+deviceUserRelation.getDeviceCode());
                             messagingTemplate.convertAndSend("/topic/bindStudent", deviceUserRelation);
                         }
                     }
@@ -1417,13 +1416,13 @@ public class ClientHandler implements Runnable {
                     out.flush();
                     
                 } catch (IllegalArgumentException e) {
-                    System.err.println("解析失败：" + e.getMessage());
+                    log.info("解析失败：" + e.getMessage());
                     writer.println("解析失败：" + e.getMessage());
                 }
             }
 
         } catch (IOException e) {
-            System.err.println("客户端处理异常: " + e.getMessage());
+            log.info("客户端处理异常: " + e.getMessage());
         } finally {
             // 关闭连接时取消心跳包定时任务
             cancelHeartbeat();
@@ -1432,7 +1431,7 @@ public class ClientHandler implements Runnable {
                 clientSocket.close();
               //System.out.println("客户端断开: " + clientSocket.getInetAddress());
             } catch (IOException e) {
-                System.err.println("关闭连接时出错: " + e.getMessage());
+                log.info("关闭连接时出错: " + e.getMessage());
             }
         }
     }
@@ -1443,7 +1442,7 @@ public class ClientHandler implements Runnable {
             try {
                 sendHeartbeat(out);
             } catch (IOException e) {
-                System.err.println("发送心跳包失败: " + e.getMessage());
+                log.info("发送心跳包失败: " + e.getMessage());
                 cancelHeartbeat();
             }
         }, HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL, TimeUnit.SECONDS);

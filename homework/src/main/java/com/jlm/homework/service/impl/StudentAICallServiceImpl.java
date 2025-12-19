@@ -4,6 +4,8 @@ import com.alibaba.cloud.commons.lang.StringUtils;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
+//import com.jlm.agent.AIServ.TongYiAIAgent;
+import com.jlm.agent.AIServ.TongYiSDKServ;
 import com.jlm.agent.AIServ.ZhiPuAIAgent;
 import com.jlm.agent.domain.TopicReportEnt;
 import com.jlm.homework.config.ZhipuAIConfig;
@@ -28,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MimeType;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -45,6 +48,13 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
 
     @Resource
     private ZhiPuAIAgent zhiPuAIAgent;
+//    @Resource
+//    private TongYiAIAgent tongYiAIAgent;
+    @Autowired
+    private AIUtil aiUtil;
+    @Resource
+    private TongYiSDKServ tongYiSDKServ;
+
 
 
     private static final String OBTAIN_STUDENTANSWER_SYSTEM_PROMPT = """
@@ -240,32 +250,81 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
 
     @Override
     public ZhiPuAIAgent.TopicReport obtainStudentAnswer(String userMessage, List<Media> media) {
+        AIUtil util = aiUtil.getAIUtil();
+        String aiName = util.getAiName();
+        if("qianwen".equals(aiName)){
+            log.debug("AI--使用--通义千问----------");
+//            tongYiAIAgent.multiCall(OBTAIN_STUDENTANSWER_SYSTEM_PROMPT, userMessage, media);
+        }
         return zhiPuAIAgent.multiCall(OBTAIN_STUDENTANSWER_SYSTEM_PROMPT, userMessage, media);
     }
 
     @Override
     public TopicReportEnt obtainStudentAnswerNoStruc(String userMessage, List<Media> media) {
+        String aiName = aiUtil.getAiName();
+        if("qianwen".equals(aiName)){
+            log.debug("AI--使用--通义千问----------");
+//            tongYiAIAgent.multiCallNoStruc(OBTAIN_STUDENTANSWER_SYSTEM_PROMPT, userMessage, media);
+        }
         return zhiPuAIAgent.multiCallNoStruc(OBTAIN_STUDENTANSWER_SYSTEM_PROMPT, userMessage, media);
     }
 
     @Override
     public ZhiPuAIAgent.TopicReport obtainTeacherAnswer(String userMessage, List<Media> media) {
+        String aiName = aiUtil.getAiName();
+        if("qianwen".equals(aiName)){
+            log.debug("AI--使用--通义千问----------");
+//            tongYiAIAgent.multiCall(OBTAIN_TEACHERANSWER_SYSTEM_PROMPT, userMessage, media);
+        }
         return zhiPuAIAgent.multiCall(OBTAIN_TEACHERANSWER_SYSTEM_PROMPT, userMessage, media);
     }
 
     public TopicReportEnt obtainTeacherAnswerNoStruc(String userMessage, List<Media> media){
+        String aiName = aiUtil.getAiName();
+        if("qianwen".equals(aiName)){
+            log.debug("AI--使用--通义千问----------");
+            return tongYiSDKServ.multiModalCall(OBTAIN_TEACHERANSWER_SYSTEM_PROMPT,userMessage,transMediaToStr(media));
+//            tongYiAIAgent.multiCallNoStruc(OBTAIN_TEACHERANSWER_SYSTEM_PROMPT, userMessage, media);
+        }
         return zhiPuAIAgent.multiCallNoStruc(OBTAIN_TEACHERANSWER_SYSTEM_PROMPT, userMessage, media);
     }
 
 
     @Override
     public ZhiPuAIAgent.TopicJudgeReport obtainTeacherJudgeAnswer(String userMessage, List<Media> media) {
+        String aiName = aiUtil.getAiName();
+        if("qianwen".equals(aiName)){
+            log.debug("AI--使用--通义千问----------");
+//            tongYiAIAgent.multiJudgeCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT, userMessage, media);
+        }
         return zhiPuAIAgent.multiJudgeCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT, userMessage, media);
     }
 
     @Override
     public TopicReportEnt obtainTeacherJudgeAnswerNoStruc(String userMessage, List<Media> media) {
+
+        AIUtil util = aiUtil.getAIUtil();
+        String aiName = util.getAiName();
+
+//        String aiName = aiUtil.getAiName();
+        if("qianwen".equals(aiName)){
+            log.debug("AI--使用--通义千问----------");
+//            tongYiAIAgent.multiCallNoStruc(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT, userMessage, media);
+           return tongYiSDKServ.multiModalCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT,userMessage,transMediaToStr(media));
+        }
         return zhiPuAIAgent.multiCallNoStruc(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT, userMessage, media);
+
+    }
+
+    private List<String> transMediaToStr(List<Media> medias){
+
+        List<String> retList = new ArrayList<>();
+        for(Media media : medias){
+            MimeType mimeType = media.getMimeType();
+            String data = media.getData().toString();
+            retList.add("data:"+mimeType + ";base64," + data);
+        }
+        return retList;
     }
 
 

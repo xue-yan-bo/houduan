@@ -2591,9 +2591,6 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             }
         }
 
-
-
-
         Map<String, List<HomeworkAISmallDto>> aiResultMap = new HashMap<>();
         List<QuestionAnalysis> errorList = new ArrayList<>();
         Map<String, String> map = new HashMap<>();
@@ -2650,7 +2647,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             if ("选择题".equals(questionAnalysis.getQuestionType())
                                     || "单选题".equals(questionAnalysis.getQuestionType())
                                     || "判断题".equals(questionAnalysis.getQuestionType())) {
-                                if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())
+
+                                Boolean judgeRes = Boolean.valueOf(stuWriteAnswer.getIs_correct());
+                                questionAnalysis.setIsCorrect(judgeRes == null ? false : judgeRes);
+                                /*if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())
                                         && questionAnalysis.getStudentAnswer().equals(questionAnalysis.getReferenceAnswer())) {
                                     stringBuilder = stringBuilder.append("正确 ");
                                     smallDto.setCorrectFlag("正确");
@@ -2662,9 +2662,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                 } else {
                                     stringBuilder = stringBuilder.append("未答题 ");
                                     smallDto.setCorrectFlag("未答题");
-                                }
+                                }*/
                             } else {
-                               /* String pamt = "作为一个作业批阅助手，请批阅该题：" + questionAnalysis.getContent() + ",参考答案：" + questionAnalysis.getReferenceAnswer()
+                                String pamt = "作为一个作业批阅助手，请批阅该题：" + questionAnalysis.getContent() + ",参考答案：" + questionAnalysis.getReferenceAnswer()
                                         + ",学生作答：" + questionAnalysis.getStudentAnswer() + ", 返回批阅结果，严格就判断正确与否";
                                 String piyue = util.analyzeText(pamt);
                                 if (piyue.contains("正确")) {
@@ -2675,7 +2675,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                     questionAnalysis.setIsCorrect(false);
                                     stringBuilder = stringBuilder.append("错误 ");
                                     smallDto.setCorrectFlag("错误");
-                                }*/
+                                }
                             }
 
                         }
@@ -2715,7 +2715,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
                         if ("选择题".equals(questionAnalysis.getQuestionType())
                                 || "单选题".equals(questionAnalysis.getQuestionType()) || "多选题".equals(questionAnalysis.getQuestionType())
-                                || "判断题".equals(questionAnalysis.getQuestionType()) || "填空题".equals(questionAnalysis.getQuestionType())){
+                                || "判断题".equals(questionAnalysis.getQuestionType())){
 
                             Boolean judgeRes = Boolean.valueOf(stuWriteAnswer.getIs_correct());
                             questionAnalysis.setIsCorrect(judgeRes == null ? false : judgeRes);

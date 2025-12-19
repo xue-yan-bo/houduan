@@ -133,7 +133,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
 
         FutureTask<String> futureTask = new FutureTask<>(() -> {
 
-            this.homeworkQuestion(homeworkPublish);
+            this.homeworkQuestionStuc(homeworkPublish);
 
 
             return "异步-OK";

@@ -6,12 +6,14 @@ import com.jlm.homework.entity.Microlecture;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.repository.IMicrolectureRepository;
 import com.jlm.homework.service.IMicrolectureService;
+import com.jlm.homework.service.IUserService;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import com.alibaba.cloud.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +29,8 @@ import java.util.List;
 public class MicrolectureServiceImpl implements IMicrolectureService {
     @Resource
     private IMicrolectureRepository microlectureRepository;
+    @Autowired
+    private IUserService userService;
     @Override
     public Page<Microlecture> selectPage(Integer pageNum, Integer pageSize, Long schoolId, String name, Long teacherId, String teacherName, Long gradeId, String gradeName, Long classId, String className, String subject, String chapter,String knowledgePoint, LocalDateTime startTime, LocalDateTime endTime) {
         pageNum = pageNum == null ? 0 : pageNum-1;
@@ -42,6 +46,9 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
                 try {
                     if(schoolId!=null) {
                         Predicate condition = criteriaBuilder.equal(root.get("schoolId"), schoolId);
+                        list.add(condition);
+                    }else{
+                        Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
                         list.add(condition);
                     }
                     if(StringUtils.isNotEmpty(name)) {

@@ -23,10 +23,7 @@ import jakarta.persistence.criteria.Root;
 import com.alibaba.cloud.commons.lang.StringUtils;
 import org.springframework.ai.content.Media;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -314,6 +311,9 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             studentsHomeworkNewService.updateSubmietNull(homeworkPublishId);
             homeworkPublish.setPublishStatus(0);
             homeworkPublishRepository.save(homeworkPublish);
+            HomeworkPublishQuestion quSearch = new HomeworkPublishQuestion();
+            quSearch.setHomeworkPublishId(homeworkPublishId);
+            homeworkPublishQuestionRepository.delete(quSearch);
         }
     }
 
@@ -375,6 +375,15 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             }
             homeworkPublish.setPublishStatus(1);
             homeworkPublishRepository.save(homeworkPublish);
+            FutureTask<String> futureTask = new FutureTask<>(() -> {
+
+                this.homeworkQuestionStuc(homeworkPublish);
+
+                return "异步-OK";
+
+            });
+            Thread thread = new Thread(futureTask);
+            thread.start();
         }
     }
 

@@ -1736,7 +1736,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         if(isFinish){
             FutureTask<String> futureTask = new FutureTask<>(() -> {
                 if("1".equals(type)){
-                    aIaudit(studentsHomework.getId());
+                    aIauditStruc(studentsHomework.getId());
                 }else {
                     String auditImages = "";
                     List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();

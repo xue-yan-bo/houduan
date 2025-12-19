@@ -176,7 +176,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         FutureTask<String> futureTask = new FutureTask<>(() -> {
             List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
             for (ClassroomExercisesStudentRecord record : studentRecordList) {
-                aiParseWriteRecord(record.getId());
+                aiParseWriteStrucRecord(record.getId());
             }
 
             return "异步-OK";

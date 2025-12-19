@@ -7,6 +7,7 @@ import com.jlm.homework.entity.AuditLogoCoordinate;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.exception.ParameterNewException;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
+//import com.jlm.homework.service.impl.StudentsHomeworkNewServiceStrucImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.alibaba.cloud.commons.lang.StringUtils;
@@ -88,10 +89,10 @@ public class StudentsHomeworkNewController {
         }
 
         studentsHomework.setAuditTime(new Date());
-        
+
         // 根据老师审批坐标点判断学生作业错误逻辑
         judgeHomeworkErrorByCoordinate(studentsHomework);
-        
+
         if(studentsHomework.getEmendStatus()!=null
                 &&Integer.valueOf(2).compareTo(studentsHomework.getEmendStatus())==0){
             studentsHomework.setEmendStatus(3);
@@ -103,7 +104,7 @@ public class StudentsHomeworkNewController {
         studentsHomework=studentsHomeworkNewService.audit(studentsHomework);
         return studentsHomework;
     }
-    
+
     /**
      * 根据老师审批坐标点判断学生作业错误逻辑
      * @param studentsHomework 学生作业对象
@@ -112,20 +113,20 @@ public class StudentsHomeworkNewController {
         // 获取老师审批坐标
         List<AuditLogoCoordinate> auditCoordinates = studentsHomework.getAuditCoordinate();
         List<AuditLogoCoordinate> auditLogoCoordinates = studentsHomework.getAuditLogoCoordinate();
-        
+
         // 存储错误原因和审批建议
         StringBuilder errorReasonBuilder = new StringBuilder();
         StringBuilder auditSuggestBuilder = new StringBuilder();
-        
+
         // 判断是否有错误标记
         boolean hasError = false;
-        
+
         // 处理老师审批坐标
         if (auditCoordinates != null && !auditCoordinates.isEmpty()) {
             hasError = true;
             errorReasonBuilder.append("发现").append(auditCoordinates.size()).append("处错误点\n");
             auditSuggestBuilder.append("请检查并修改标记的错误点\n");
-            
+
             // 统计错误类型
             Map<String, Integer> errorTypeCount = new HashMap<>();
             for (AuditLogoCoordinate coord : auditCoordinates) {
@@ -134,20 +135,20 @@ public class StudentsHomeworkNewController {
                     errorTypeCount.put(symbolStr, errorTypeCount.getOrDefault(symbolStr, 0) + 1);
                 }
             }
-            
+
             // 添加错误类型统计到错误原因
             for (Map.Entry<String, Integer> entry : errorTypeCount.entrySet()) {
                 errorReasonBuilder.append("类型'").append(entry.getKey()).append("': "
                         + entry.getValue()).append("处\n");
             }
         }
-        
+
         // 处理老师审批标识坐标
         if (auditLogoCoordinates != null && !auditLogoCoordinates.isEmpty()) {
             hasError = true;
             errorReasonBuilder.append("发现").append(auditLogoCoordinates.size()).append("处标识错误\n");
         }
-        
+
         // 如果有错误，设置错误相关字段
         if (hasError&&studentsHomework.getEmendStatus()==null) {
             studentsHomework.setErrorReason(errorReasonBuilder.toString());
@@ -228,7 +229,7 @@ public class StudentsHomeworkNewController {
     @GetMapping("/aIaudit")
     @Operation(summary = "AI分析学生作业")
     public String aIaudit(Long studentsHomeworkId){
-        String auditAiImage=studentsHomeworkNewService.aIaudit(studentsHomeworkId);
+        String auditAiImage=studentsHomeworkNewService.aIauditStruc(studentsHomeworkId);
         return auditAiImage;
     }
 

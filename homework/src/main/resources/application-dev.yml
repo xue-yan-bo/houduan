@@ -30,6 +30,45 @@ spring:
         format_sql: true
         use_sql_comments: true
 
+  #AI
+  # 智谱
+  ai:
+    zhipuai:
+      api-key: ${ZHIPU_API_KEY}
+      #      base-url: "https://open.bigmodel.cn"
+      image:
+        options:
+          model: ${ZHIPU_IMAGE_MODEL}
+      chat:
+        options:
+          model: ${ZHIPU_CHAT_MODEL}
+
+    # openAI配置
+    openai:
+      api-key: ${}
+      base-url: ${}
+      chat:
+        options:
+          model: ${}
+    # 千问配置
+    dashscope:
+      # 需要替换为你自己的 key
+      api-key: ${TONGYI_API_KEY}
+      chat:
+        options:
+          model: ${TONGYI_MODEL}
+# 2.智谱
+ZHIPU_API_KEY: "22d592c665f749799d69f2b0c15233db.jw1mkeTjslTeGtJf"
+ZHIPU_CHAT_MODEL: "GLM-4.6V-Flash"
+ZHIPU_IMAGE_MODEL: "Cogview-3-Flash"
+
+# 1.通义千问
+TONGYI_API_KEY: "sk-234cb378f4484f3e9f6fc5b8304508e5"
+##1.1 多模态图文分析 qwen-vl-max
+TONGYI_MODEL: "qwen-vl-max"
+
+
+
 # 开发环境日志配置
 logging:
   level:

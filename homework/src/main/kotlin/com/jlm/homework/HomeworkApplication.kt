@@ -12,7 +12,7 @@ import org.springframework.context.annotation.ComponentScan
  * JPA配置在DatabaseConfig中处理
  */
 @SpringBootApplication
-@ComponentScan(basePackages = ["com.jlm.homework"])
+@ComponentScan(basePackages = ["com.jlm.homework","com.jlm.agent"])
 @EnableDiscoveryClient  // 启用服务发现客户端
 @EnableFeignClients(basePackages = ["com.jlm.homework.feign"])  // 启用Feign客户端
 class HomeworkApplication

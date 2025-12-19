@@ -75,6 +75,8 @@ public class HomeworkPublishController {
 
     @GetMapping("/aIHomeworkPublic")
     public void aIHomeworkPublic(Long homeworkPublishId) {
-        homeworkPublishService.aIHomeworkPublic(homeworkPublishId);
+//        homeworkPublishService.aIHomeworkPublic(homeworkPublishId);
+//         因题目中有转义等字符，导致json格式化异常，需要优化
+        homeworkPublishService.aIHomeworkPublicStruc(homeworkPublishId);
     }
 }

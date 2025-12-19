@@ -58,6 +58,9 @@ public interface IStudentsHomeworkNewService {
     void saveFeedbackRecords(Long studentId,String subject ,List<StudentsWriteRecord> studentsFeedbackRecords);
 
     String aIaudit(Long studentsHomeworkId);
+    /*AI�ṹ��*/
+    String aIauditStruc(Long studentsHomeworkId);
+
 
     Long getSubmitNumByHomeworkPublishId(Long id);
 
@@ -68,6 +71,9 @@ public interface IStudentsHomeworkNewService {
     StudentsHomeworkNew appEmendSubmit(StudentsHomeworkNew studentsHomework);
 
     String aIauditEmend(Long studentsHomeworkId);
+
+    String aIauditEmendStruc(Long studentsHomeworkId);
+
 
     Page<StudentsHomeworkSimpleDTO> getEmendPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 

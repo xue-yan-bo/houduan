@@ -2498,12 +2498,6 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         }
                     }
                 }
-
-                //analyses=util.batchReviewExamQuestions(imageNames);
-                /*imageNames.stream().forEach(imageFile->{
-                    File file = new File(imageFile);
-                    file.delete();
-                });*/
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -2513,53 +2507,19 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
                 DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
 
-                //试题识别
-                //analyses=util.reviewExamQuestions(outputPath);
+
                 imageNames = Arrays.asList(outputPath);
-                /*File imageFile = new File(outputPath);
-                imageFile.delete();*/
+
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }else if(StringUtils.isNotEmpty(studentsHomework.getSubmitFileUrl())) {
             imageNames = Arrays.asList(studentsHomework.getSubmitFileUrl().split(","));
-           /* try {
-                analyses=util.batchReviewExamQuestions(imageNames);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }*/
+
         }
 
         TopicReportEnt topicReport = null;
-        /*if(imageNames!=null&&imageNames.size()>0) {
-            try {
 
-                *//*修改AI分析，调用组件*//*
-                List<Media> medias = new ArrayList<Media>();
-
-                for (String imagePath : imageNames) {
-                    String base64Image = null;
-                    try {
-                        base64Image = AIFileUtil.encodeImageToBase64(imagePath);
-                        Media media = Media.builder().mimeType(MediaType.IMAGE_PNG).data(base64Image)
-                                .build();
-                        medias.add(media);
-                    } catch (IOException e) {
-                        continue;
-                    }
-                }
-                topicReport = aiCallService.obtainStudentAnswerNoStruc("请分析所有图片卷子题目，结构化输出学生手写答案", medias);
-                log.info("AI_STRUC获取学生答题内容, 分析结果"+topicReport.toString());
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-
-            for (String image : imageNames) {
-                File imageFile = new File(image);
-                imageFile.delete();
-
-            }
-        }*/
 
         if(imageNames!=null&&imageNames.size()>0) {
             try {
@@ -2636,6 +2596,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         if (stuWriteAnswer!=null) {
                             List<String> answerText = stuWriteAnswer.getAnswer_text();
                             questionAnalysis.setStudentAnswer(answerText != null ? String.join(",,,", answerText) : "");
+                            questionAnalysis.setReferenceAnswer(stuWriteAnswer.getCorrect_answer()!= null ? String.join(",,,", stuWriteAnswer.getCorrect_answer()) : "");
                         }
                         HomeworkAISmallDto smallDto = new HomeworkAISmallDto();
                         smallDto.setSmallNumber(questionAnalysis.getSmallNumber());
@@ -2649,20 +2610,21 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                     || "判断题".equals(questionAnalysis.getQuestionType())) {
 
                                 Boolean judgeRes = Boolean.valueOf(stuWriteAnswer.getIs_correct());
-                                questionAnalysis.setIsCorrect(judgeRes == null ? false : judgeRes);
-                                /*if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())
-                                        && questionAnalysis.getStudentAnswer().equals(questionAnalysis.getReferenceAnswer())) {
-                                    stringBuilder = stringBuilder.append("正确 ");
-                                    smallDto.setCorrectFlag("正确");
-                                } else if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())) {
-                                    stringBuilder = stringBuilder.append("错误 ");
-                                    smallDto.setCorrectFlag("错误");
-                                    questionAnalysis.setIsCorrect(false);
-                                    errorList.add(questionAnalysis);
-                                } else {
+                                if(judgeRes == null){
+                                    questionAnalysis.setIsCorrect(null);
                                     stringBuilder = stringBuilder.append("未答题 ");
                                     smallDto.setCorrectFlag("未答题");
-                                }*/
+                                }else {
+                                    questionAnalysis.setIsCorrect(judgeRes);
+                                    if(judgeRes){
+                                        stringBuilder = stringBuilder.append("正确 ");
+                                        smallDto.setCorrectFlag("正确");
+                                    }else{
+                                        stringBuilder = stringBuilder.append("错误 ");
+                                        smallDto.setCorrectFlag("错误");
+                                    }
+                                }
+
                             } else {
                                 String pamt = "作为一个作业批阅助手，请批阅该题：" + questionAnalysis.getContent() + ",参考答案：" + questionAnalysis.getReferenceAnswer()
                                         + ",学生作答：" + questionAnalysis.getStudentAnswer() + ", 返回批阅结果，严格就判断正确与否";
@@ -2718,21 +2680,20 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                 || "判断题".equals(questionAnalysis.getQuestionType())){
 
                             Boolean judgeRes = Boolean.valueOf(stuWriteAnswer.getIs_correct());
-                            questionAnalysis.setIsCorrect(judgeRes == null ? false : judgeRes);
-                            /*if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())
-                                    && questionAnalysis.getStudentAnswer().equals(questionAnalysis.getReferenceAnswer())) {
-                                stringBuilder = stringBuilder.append("正确 ");
-                                smallDto.setCorrectFlag("正确");
-                                questionAnalysis.setIsCorrect(true);
-                            } else if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())) {
-                                stringBuilder = stringBuilder.append("错误 ");
-                                smallDto.setCorrectFlag("错误");
-                                questionAnalysis.setIsCorrect(false);
-                                errorList.add(questionAnalysis);
-                            } else {
+                            if(judgeRes == null){
+                                questionAnalysis.setIsCorrect(null);
                                 stringBuilder = stringBuilder.append("未答题 ");
                                 smallDto.setCorrectFlag("未答题");
-                            }*/
+                            }else {
+                                questionAnalysis.setIsCorrect(judgeRes);
+                                if(judgeRes){
+                                    stringBuilder = stringBuilder.append("正确 ");
+                                    smallDto.setCorrectFlag("正确");
+                                }else{
+                                    stringBuilder = stringBuilder.append("错误 ");
+                                    smallDto.setCorrectFlag("错误");
+                                }
+                            }
                         } else if (StringUtils.isNotEmpty(questionAnalysis.getStudentAnswer())&&!"未作答".equals(questionAnalysis.getStudentAnswer())) {
 //                            log.debug("作为一个作业批阅助手，请批阅该题!!!");
                             String pamt = "作为一个作业批阅助手，请批阅该题：" + questionAnalysis.getContent() + ",参考答案：" + questionAnalysis.getReferenceAnswer()

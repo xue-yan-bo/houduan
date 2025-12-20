@@ -47,10 +47,10 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
                     if(schoolId!=null) {
                         Predicate condition = criteriaBuilder.equal(root.get("schoolId"), schoolId);
                         list.add(condition);
-                    }else{
+                    }/*else{
                         Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
                         list.add(condition);
-                    }
+                    }*/
                     if(StringUtils.isNotEmpty(name)) {
                         Predicate condition = criteriaBuilder.like(root.get("name"), "%"+name+"%");
                         list.add(condition);

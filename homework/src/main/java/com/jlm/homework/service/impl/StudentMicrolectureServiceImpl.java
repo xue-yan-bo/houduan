@@ -60,6 +60,7 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                 studentMicrolecture.setKnowledgePoint(microlecture.getKnowledgePoint());
                 studentMicrolecture.setSubject(microlecture.getSubject());
                 studentMicrolecture.setSchoolId(microlecture.getSchoolId());
+                studentMicrolecture.setSchoolName(microlecture.getSchoolName());
                 studentMicrolecture.setGradeId(microlecture.getGradeId());
                 studentMicrolecture.setGradeName(microlecture.getGradeName());
                 studentMicrolecture.setClassId(microlecture.getClassId());
@@ -162,8 +163,8 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                         Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
                         list.add(condition1);
                     }
-                    Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
-                    list.add(condition);
+                    /*Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
+                    list.add(condition);*/
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -212,8 +213,8 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                             Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
                             list.add(condition1);
                         }
-                        Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
-                        list.add(condition);
+                        /*Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
+                        list.add(condition);*/
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }

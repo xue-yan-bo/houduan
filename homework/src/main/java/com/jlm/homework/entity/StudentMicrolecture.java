@@ -33,6 +33,8 @@ public class StudentMicrolecture implements Serializable {
 
     @Column(name = "school_id")
     private Long schoolId;
+    @Column(name = "school_name")
+    private String schoolName;
 
     @Column(name = "grade_id")
     private Long gradeId;

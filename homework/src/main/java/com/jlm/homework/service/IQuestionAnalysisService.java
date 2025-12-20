@@ -12,4 +12,6 @@ public interface IQuestionAnalysisService {
     List<QuestionAnalysis> findQuestionAnalysis(Long homeworkPublishId, Long classesId,String bigNumber,String smallNumber,Boolean isCorrect);
 
     List<QuestionAnalysis> findListByStudHomeId(Long studentsHomeworkId);
+
+    void deleteByStudHomeId(Long studentsHomeworkId);
 }

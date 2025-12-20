@@ -89,4 +89,11 @@ public class QuestionAnalysisServiceImpl implements IQuestionAnalysisService {
 
         return questionAnalysisRepository.findAll(Example.of(search));
     }
+
+    @Override
+    public void deleteByStudHomeId(Long studentsHomeworkId) {
+        QuestionAnalysis search = new QuestionAnalysis();
+        search.setStudentsHomeworkId(studentsHomeworkId);
+        questionAnalysisRepository.delete(search);
+    }
 }

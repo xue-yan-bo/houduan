@@ -2558,17 +2558,13 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
         if("qianwen".equals(util.getAiName())){
             // 千问，准确性高，结果直接入库
-
-
-
             List<SubQuestionsEnt> answers = topicReport.getAnswers();
             if(topicReport != null && CollectionUtils.isNotEmpty(topicReport.getAnswers())){
 
                 // 清理库中解析答案
-                List<QuestionAnalysis> listByStudHomeId = questionAnalysisService.findListByStudHomeId(studentsHomework.getHomeworkPublishId());
+                //List<QuestionAnalysis> listByStudHomeId = questionAnalysisService.findListByStudHomeId(studentsHomework.getHomeworkPublishId());
                 //todo 删除上面数据
-
-
+                questionAnalysisService.deleteByStudHomeId(studentsHomeworkId);
                 for(SubQuestionsEnt temp:answers) {
 
                     // 若库里没有试题和答案，则直接用AI阅卷，返回的内容出结果

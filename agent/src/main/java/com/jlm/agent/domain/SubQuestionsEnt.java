@@ -12,7 +12,16 @@ public class SubQuestionsEnt {
     private List<String> correct_answer;
     private String is_correct;
     private String feedback;
+    private String score; //得分
+    private String question_score; //分值
 
+    public String getQuestion_score() {
+        return question_score;
+    }
+
+    public void setQuestion_score(String question_score) {
+        this.question_score = question_score;
+    }
 
     public String getMajor_question_id() {
         return major_question_id;
@@ -84,5 +93,13 @@ public class SubQuestionsEnt {
 
     public void setFeedback(String feedback) {
         this.feedback = feedback;
+    }
+
+    public String getScore() {
+        return score;
+    }
+
+    public void setScore(String score) {
+        this.score = score;
     }
 }

@@ -2594,7 +2594,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     questionAnalysis.setBigNumber(temp.getMajor_question_id());
                     questionAnalysis.setSmallNumber(temp.getQuestion_id());
                     questionAnalysis.setQuestionType(temp.getQuestion_type());
-
+                    questionAnalysis.setKnowledgePoints(CollectionUtils.isNotEmpty(temp.getKnowledge_points())?String.join(",",temp.getKnowledge_points()):"");
+                    questionAnalysis.setAnalysis(temp.getFeedback());
+                    questionAnalysis.setObtainedScore(temp.getScore() != null && temp.getScore().matches("\\d+")?Integer.valueOf(temp.getScore()):0);
+                    questionAnalysis.setScore(temp.getQuestion_score() == null && temp.getScore().matches("\\d+") ?Integer.valueOf(temp.getQuestion_score()):0);
                     List<String> answerText = temp.getAnswer_text();
                     questionAnalysis.setStudentAnswer(answerText != null ? String.join(",,,", answerText) : "");
                     questionAnalysis.setReferenceAnswer(temp.getCorrect_answer() != null ? String.join(",,,", temp.getCorrect_answer()) : "");

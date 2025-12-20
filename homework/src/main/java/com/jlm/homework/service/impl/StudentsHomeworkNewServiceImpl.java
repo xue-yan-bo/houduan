@@ -2591,6 +2591,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     questionAnalysis.setContent(temp.getQuestion_content());
                     questionAnalysis.setBigNumber(temp.getMajor_question_id());
                     questionAnalysis.setSmallNumber(temp.getQuestion_id());
+                    questionAnalysis.setQuestionType(temp.getQuestion_type());
 
                     List<String> answerText = temp.getAnswer_text();
                     questionAnalysis.setStudentAnswer(answerText != null ? String.join(",,,", answerText) : "");

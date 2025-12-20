@@ -36,6 +36,7 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -2460,6 +2461,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         return auditImages;
     }
 
+    @Transactional
     public String aIauditStruc(Long studentsHomeworkId) {
         StudentsHomeworkNew studentsHomework = this.getById(studentsHomeworkId);
         String auditImages = "";

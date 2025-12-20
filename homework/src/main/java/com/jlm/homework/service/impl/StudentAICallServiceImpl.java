@@ -48,13 +48,12 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
 
     @Resource
     private ZhiPuAIAgent zhiPuAIAgent;
-//    @Resource
+    //    @Resource
 //    private TongYiAIAgent tongYiAIAgent;
     @Autowired
     private AIUtil aiUtil;
     @Resource
     private TongYiSDKServ tongYiSDKServ;
-
 
 
     private static final String OBTAIN_STUDENTANSWER_SYSTEM_PROMPT = """
@@ -113,8 +112,7 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
             不得修改、纠正或润色学生原始答案内容。除非是将判断题的非标准表示（如“√”、“对”、“T”等）统一转换为“正确”或“错误”
             若图像中无任何可识别内容，返回空 answers 数组。
             输出前进行JSON合法性校验，去掉不合法的内容
-            """
-            ;
+            """;
 
 
     private static final String OBTAIN_TEACHERANSWER_SYSTEM_PROMPT = """
@@ -172,8 +170,7 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
             转义规范：若答案或知识点中包含换行符、引号、制表符等特殊字符，必须按 JSON 标准进行转义。
             一致性：相同 question_id 的内容必须合并，不得拆分为多条记录。
             类型准确性：question_type 必须从预定义列表中选择，不得自创类别。
-            """
-            ;
+            """;
 
     private static final String bak1 = """
             你是一个高精度的智能试卷分析助手，能够从学生手写试卷图像中准确识别题目内容与作答信息。能够从试卷图像中准确识别并提取学生手写的答案内容,并对每道题目进行类型分类,请严格遵循以下指令处理所有上传的图片，确保每张图中出现的所有题目均被完整识别与结构化输出：
@@ -244,8 +241,78 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
             输出必须是合法、可解析的 JSON，不包含任何额外解释、注释或 Markdown。
             不得修改、纠正或润色学生原始答案内容。除非是将判断题的非标准表示（如“√”、“对”、“T”等）统一转换为“正确”或“错误”
             若图像中无任何可识别内容，返回空 answers 数组。
-            """
-            ;
+            """;
+
+    private static final String bak2 = """
+            你是一个顶级的、高度严谨的试卷分析AI专家。你的核心任务是：从OCR文本中精确提取题目和学生答案，生成标准答案，判断正误，并以严格的JSON格式输出。你的最高指令是保持原始数据的绝对完整性，禁止任何形式的“智能”修改或润色。 </SYSTEM>
+            ·核心原则（不可违背）
+                1.绝对忠实原则：question_content 和 answer_text 必须是100%未经编辑的原始OCR文本。禁止添加、删除、修改、修正或“润色”任何字符、标点、空格或格式。
+                2.最小干预原则：仅对判断题的答案进行严格标准化。所有其他题型的答案（数字、公式、文字、符号等）必须逐字原样保留。
+                3.客观判断原则：仅对答案可被明确、直接验证的客观题进行正误判断。所有主观题或因题干信息不足而无法验证的题目，其 is_correct 必须为 null。
+            详细执行规则
+            步骤1：数据提取与标准化
+            ·提取：从OCR文本中提取 question_content 和 answer_text。
+            ·标准化：
+            ·判断题答案：将 ["√", "对", "T", "true"] 统一为 ["正确"]；将 ["×", "错", "F", "false"] 统一为 ["错误"]；其他任何形式（包括空白）统一为 ["答案不可读"]。
+            ·其他题型答案：严格保留原始文本。例如：["6.0"] 保留为 ["6.0"]，["三点五"] 保留为 ["三点五"]，["H₂O"] 保留为 ["H₂O"]。
+            ·步骤2：题型分类
+                客观题：选择题、填空题、判断题。
+                主观题：简答题、计算题、证明题、作文题、作图题、开放性问题等。
+            步骤3：标准答案生成
+            ·条件：仅当 question_content 信息完整、无歧义，足以推导出唯一正确答案时，才生成 correct_answer。
+            ·操作：否则，correct_answer 必须设为 "[标准答案未知]"。
+            步骤4：正误判断与反馈生成
+            这是一个严格的决策流程：
+            
+            1.如果 题型是主观题：
+                is_correct: null
+                feedback: "[需人工阅卷]"
+                correct_answer: "[标准答案未知]"
+            2.否则（题型是客观题）：
+                ·如果 answer_text 为空列表 [] 或 ["答案不可读"]：
+                ··is_correct: false
+                ··feedback: "未作答" 或 "答案无法识别"
+               ·否则（answer_text 有内容）：
+                ··如果 correct_answer 是 "[标准答案未知]"：
+                ···is_correct: null
+                ···feedback: "题干信息不足，无法判断"
+               ·否则（correct_answer 可知）：
+                ··比较 answer_text 和 correct_answer：
+                ···如果匹配：
+                ····is_correct: true
+                ····feedback: "答案正确"
+                ···如果不匹配：
+                ····is_correct: false
+                ····feedback: 提供具体错误原因，如 "计算错误"、"单位缺失"、"选项不符"、"数值错误" 等。
+            输出格式要求
+            输出：必须是单一、纯净的JSON对象，不包含任何Markdown代码块（```json）、解释性文字或前后缀。
+            结构：严格遵循以下JSON结构。
+            
+            
+            {
+              "title": "试卷标题",
+              "answers": [
+                {
+                  "major_question_id": "大题号",
+                  "question_id": "小题号",
+                  "question_type": "题型",
+                  "answer_text": ["学生答案原始文本"],
+                  "question_content": "题目原始文本",
+                  "knowledge_points": ["知识点1", "知识点2"],
+                  "correct_answer": "标准答案或[标准答案未知]",
+                  "is_correct": true/false/null,
+                  "feedback": "具体反馈或[需人工阅卷]"
+                }
+              ],
+              "metadata": {
+                "total_questions_detected": 题目总数
+              }
+            }
+            特殊情况处理
+            跨图合并：如果多个图片包含同一题目（major_question_id + question_id 相同），需将其内容合并。
+            无内容：如果输入无任何有效题目，输出：{"title":"未命名试卷","answers":[],"metadata":{"total_questions_detected":0}}。
+            """;
+
 
     private static String OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT_QianWen = """
             你是一个高精度试卷分析助手，**执行以下规则时必须100%原样输出**，不得修改任何字符：
@@ -338,13 +405,11 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
             """;
 
 
-
-
     @Override
     public ZhiPuAIAgent.TopicReport obtainStudentAnswer(String userMessage, List<Media> media) {
         AIUtil util = aiUtil.getAIUtil();
         String aiName = util.getAiName();
-        if("qianwen".equals(aiName)){
+        if ("qianwen".equals(aiName)) {
             log.debug("AI--使用--通义千问----------");
 //            tongYiAIAgent.multiCall(OBTAIN_STUDENTANSWER_SYSTEM_PROMPT, userMessage, media);
         }
@@ -354,7 +419,7 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
     @Override
     public TopicReportEnt obtainStudentAnswerNoStruc(String userMessage, List<Media> media) {
         String aiName = aiUtil.getAiName();
-        if("qianwen".equals(aiName)){
+        if ("qianwen".equals(aiName)) {
             log.debug("AI--使用--通义千问----------");
 //            tongYiAIAgent.multiCallNoStruc(OBTAIN_STUDENTANSWER_SYSTEM_PROMPT, userMessage, media);
         }
@@ -364,18 +429,18 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
     @Override
     public ZhiPuAIAgent.TopicReport obtainTeacherAnswer(String userMessage, List<Media> media) {
         String aiName = aiUtil.getAiName();
-        if("qianwen".equals(aiName)){
+        if ("qianwen".equals(aiName)) {
             log.debug("AI--使用--通义千问----------");
 //            tongYiAIAgent.multiCall(OBTAIN_TEACHERANSWER_SYSTEM_PROMPT, userMessage, media);
         }
         return zhiPuAIAgent.multiCall(OBTAIN_TEACHERANSWER_SYSTEM_PROMPT, userMessage, media);
     }
 
-    public TopicReportEnt obtainTeacherAnswerNoStruc(String userMessage, List<Media> media){
+    public TopicReportEnt obtainTeacherAnswerNoStruc(String userMessage, List<Media> media) {
         String aiName = aiUtil.getAiName();
-        if("qianwen".equals(aiName)){
+        if ("qianwen".equals(aiName)) {
             log.debug("AI--使用--通义千问----------");
-            return tongYiSDKServ.multiModalCall(OBTAIN_TEACHERANSWER_SYSTEM_PROMPT,userMessage,transMediaToStr(media));
+            return tongYiSDKServ.multiModalCall(OBTAIN_TEACHERANSWER_SYSTEM_PROMPT, userMessage, transMediaToStr(media));
 //            tongYiAIAgent.multiCallNoStruc(OBTAIN_TEACHERANSWER_SYSTEM_PROMPT, userMessage, media);
         }
         return zhiPuAIAgent.multiCallNoStruc(OBTAIN_TEACHERANSWER_SYSTEM_PROMPT, userMessage, media);
@@ -385,7 +450,7 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
     @Override
     public ZhiPuAIAgent.TopicJudgeReport obtainTeacherJudgeAnswer(String userMessage, List<Media> media) {
         String aiName = aiUtil.getAiName();
-        if("qianwen".equals(aiName)){
+        if ("qianwen".equals(aiName)) {
             log.debug("AI--使用--通义千问----------");
 //            tongYiAIAgent.multiJudgeCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT_QianWen, userMessage, media);
         }
@@ -399,30 +464,25 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
         String aiName = util.getAiName();
 
 //        String aiName = aiUtil.getAiName();
-        if("qianwen".equals(aiName)){
+        if ("qianwen".equals(aiName)) {
             log.debug("AI--使用--通义千问----------");
 //            tongYiAIAgent.multiCallNoStruc(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT, userMessage, media);
-           return tongYiSDKServ.multiModalCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT_QianWen,userMessage,transMediaToStr(media));
+            return tongYiSDKServ.multiModalCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT_QianWen, userMessage, transMediaToStr(media));
         }
-        return zhiPuAIAgent.multiCallNoStruc(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT_QianWen, userMessage, media);
+        return zhiPuAIAgent.multiCallNoStruc(bak2, userMessage, media);
 
     }
 
-    private List<String> transMediaToStr(List<Media> medias){
+    private List<String> transMediaToStr(List<Media> medias) {
 
         List<String> retList = new ArrayList<>();
-        for(Media media : medias){
+        for (Media media : medias) {
             MimeType mimeType = media.getMimeType();
             String data = media.getData().toString();
-            retList.add("data:"+mimeType + ";base64," + data);
+            retList.add("data:" + mimeType + ";base64," + data);
         }
         return retList;
     }
-
-
-
-
-
 
 
 }

@@ -175,7 +175,7 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
             """
             ;
 
-    private static final String OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT = """
+    private static final String bak1 = """
             你是一个高精度的智能试卷分析助手，能够从学生手写试卷图像中准确识别题目内容与作答信息。能够从试卷图像中准确识别并提取学生手写的答案内容,并对每道题目进行类型分类,请严格遵循以下指令处理所有上传的图片，确保每张图中出现的所有题目均被完整识别与结构化输出：
             ·输入：一张或多张包含学生手写答案的试卷图像。
                 所有图像共同构成一份完整的答题内容，需跨图合并相同题号的答案，并确保每道题仅出现一次
@@ -247,6 +247,98 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
             """
             ;
 
+    private static String OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT_QianWen = """
+            你是一个高精度试卷分析助手，**执行以下规则时必须100%原样输出**，不得修改任何字符：
+            
+            【核心原则】
+            1. **原样输出（绝对优先）**：
+               - `answer_text` 和 `question_content` 必须是OCR识别的**原始文本**，**禁止**添加、删除、修改或润色任何字符。
+               - 仅允许对判断题答案进行标准化：将“√”→`["正确"]`，“错”→`["错误"]`，其他非标准形式→`[答案不可读]`。
+               - 例：学生写“6.0” → `["6.0"]`；写“三点五” → `["三点五"]`；写“6” → `["6"]`（不改为“6.0”）。
+            2. **判断准确性（仅限客观题）**：
+               - 仅当题干信息充分且答案可直接比对时，才设置 `is_correct` 为 `true`/`false`。
+               - 非客观题（简答/作文/作图等）→ `is_correct: null`。
+               - 未作答（`answer_text` 为空列表）→ `is_correct: false`（对选择题/填空题等）。
+            
+            【必须禁止的行为（违反即导致错误）】
+             任何字符修改： \s
+               - 例：将“6”改为“6.0” → 严格保留“6” \s
+               - 例：将“三点五”改为“3.5” → 严格保留“三点五” \s
+             未作答设为 `true`： \s
+               - 例：选择题空答案 → `is_correct: false`（非 `true`） \s
+             主观判断： \s
+               - 例：简答写“重力加速度9.8” → `is_correct: null` + `feedback: "[需人工阅卷]"`
+             信息不足强行推理： \s
+               - 例：题干缺失单位 → `correct_answer: "[标准答案未知]"`
+               - 例：题干不完整 → `correct_answer: "[标准答案未知]"`
+            
+            【操作细则】
+            1. **答案标准化（必须执行）**：
+               - 判断题： \s
+                 - 输入“√” → `["正确"]` \s
+                 - 输入“对” → `["正确"]` \s
+                 - 输入“×” → `["错误"]` \s
+                 - 输入“错” → `["错误"]` \s
+                 - 其他 → `[答案不可读]`
+               - 其他题型：**原样保留**（如“6.0”、“H₂O”、“三点五”）。
+            2. **标准答案生成**：
+               - 仅当题干信息完整时推理（例：物理题“求速度”→`correct_answer: "6 m/s"`）。
+               - 信息不足 → `correct_answer: "[标准答案未知]"`
+            3. **输出字段规则**：
+               - `is_correct` 为 `true`/`false` 时，`feedback` 必须具体（如“单位缺失”）。
+               - `is_correct` 为 `null` 时，`feedback: "[需人工阅卷]"`。
+            
+            【输出示例（严格遵循原样）】
+            {
+              "title": "高三物理试卷",
+              "answers": [
+                {
+                  "major_question_id": "一",
+                  "question_id": "1",
+                  "question_type": "填空题",
+                  "answer_text": ["6.0"],
+                  "question_content": "物体初速0，加速度2m/s²，求3秒末速度",
+                  "knowledge_points": ["匀变速直线运动"],
+                  "correct_answer": "6 m/s",
+                  "is_correct": false,
+                  "feedback": "单位缺失"
+                },
+                {
+                  "major_question_id": "二",
+                  "question_id": "1",
+                  "question_type": "判断题",
+                  "answer_text": ["正确"],
+                  "question_content": "物体在真空中下落速度与质量无关。",
+                  "knowledge_points": ["自由落体"],
+                  "correct_answer": "正确",
+                  "is_correct": true,
+                  "feedback": "答案正确"
+                },
+                {
+                  "major_question_id": "三",
+                  "question_id": "1",
+                  "question_type": "简答题",
+                  "answer_text": ["重力加速度g=9.8m/s²"],
+                  "question_content": "解释重力加速度",
+                  "knowledge_points": ["万有引力"],
+                  "correct_answer": "[标准答案未知]",
+                  "is_correct": null,
+                  "feedback": "[需人工阅卷]"
+                }
+              ],
+              "metadata": {
+                "total_questions_detected": 3
+              }
+            }
+            
+            【强制要求】
+            - 处理所有图片，跨图合并相同 `major_question_id + question_id`。
+            - 输出**必须是纯JSON**，无任何额外文字、注释或Markdown。
+            - 无识别内容 → `{"title":"未命名试卷","answers":[],"metadata":{"total_questions_detected":0}}`
+            """;
+
+
+
 
     @Override
     public ZhiPuAIAgent.TopicReport obtainStudentAnswer(String userMessage, List<Media> media) {
@@ -295,9 +387,9 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
         String aiName = aiUtil.getAiName();
         if("qianwen".equals(aiName)){
             log.debug("AI--使用--通义千问----------");
-//            tongYiAIAgent.multiJudgeCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT, userMessage, media);
+//            tongYiAIAgent.multiJudgeCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT_QianWen, userMessage, media);
         }
-        return zhiPuAIAgent.multiJudgeCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT, userMessage, media);
+        return zhiPuAIAgent.multiJudgeCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT_QianWen, userMessage, media);
     }
 
     @Override
@@ -310,9 +402,9 @@ public class StudentAICallServiceImpl implements IStudentAICallService {
         if("qianwen".equals(aiName)){
             log.debug("AI--使用--通义千问----------");
 //            tongYiAIAgent.multiCallNoStruc(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT, userMessage, media);
-           return tongYiSDKServ.multiModalCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT,userMessage,transMediaToStr(media));
+           return tongYiSDKServ.multiModalCall(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT_QianWen,userMessage,transMediaToStr(media));
         }
-        return zhiPuAIAgent.multiCallNoStruc(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT, userMessage, media);
+        return zhiPuAIAgent.multiCallNoStruc(OBTAIN_TEACHERJUDGE_SYSTEM_PROMPT_QianWen, userMessage, media);
 
     }
 

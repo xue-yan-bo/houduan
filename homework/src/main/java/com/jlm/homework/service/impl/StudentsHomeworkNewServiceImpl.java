@@ -2565,7 +2565,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 Sort sort = Sort.by(Sort.Direction.ASC,"id");
                 List<HomeworkPublishQuestion> questionList = homeworkPublishQuestionRepository.findAll(Example.of(search));
 
-
+                // 1.若库里有试题和答案，则用AI提取学生答案，和库里的答案对比出结果 ，
+                // 2.若库里没有试题和答案，则直接用AI阅卷，返回的内容出结果
                 if (questionList != null && questionList.size() > 0) {
 
                     System.out.println(analyses.toString());
@@ -2654,9 +2655,66 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         questionAnalysisService.save(questionAnalysis);
                     }
                     auditImages = stringBuilder.toString();
+                }else{
+
+                    List<SubQuestionsEnt> answers = topicReport.getAnswers();
+                    for(SubQuestionsEnt temp:answers) {
+
+                        // 若库里没有试题和答案，则直接用AI阅卷，返回的内容出结果
+                        QuestionAnalysis questionAnalysis = new QuestionAnalysis();
+                        questionAnalysis.setId(null);
+                        if (StringUtils.isNotEmpty(questionAnalysis.getBigNumber()) && !map.containsKey(questionAnalysis.getBigNumber())) {
+                            stringBuilder = stringBuilder.append(questionAnalysis.getBigNumber()).append("、").append(questionAnalysis.getQuestionType());
+                            map.put(questionAnalysis.getBigNumber(), questionAnalysis.getQuestionType());
+                        }
+                        if (StringUtils.isNotEmpty(questionAnalysis.getSmallNumber())) {
+                            stringBuilder = stringBuilder.append(questionAnalysis.getSmallNumber()).append(".");
+                        }
+                        questionAnalysis.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
+                        questionAnalysis.setStudentsHomeworkId(studentsHomework.getId());
+                        questionAnalysis.setClassesId(studentsHomework.getClassesId());
+                        questionAnalysis.setStudentId(studentsHomework.getStudentId());
+                        questionAnalysis.setStudentName(studentsHomework.getStudentName());
+                        questionAnalysis.setGrade(studentsHomework.getGrade());
+                        questionAnalysis.setSchoolId(studentsHomework.getSchoolId());
+                        questionAnalysis.setContent(temp.getQuestion_content());
+                        questionAnalysis.setBigNumber(temp.getMajor_question_id());
+                        questionAnalysis.setSmallNumber(temp.getQuestion_id());
+
+                        List<String> answerText = temp.getAnswer_text();
+                        questionAnalysis.setStudentAnswer(answerText != null ? String.join(",,,", answerText) : "");
+                        questionAnalysis.setReferenceAnswer(temp.getCorrect_answer() != null ? String.join(",,,", temp.getCorrect_answer()) : "");
+
+                        HomeworkAISmallDto smallDto = new HomeworkAISmallDto();
+                        smallDto.setSmallNumber(questionAnalysis.getSmallNumber());
+                        Boolean judgeRes = Boolean.valueOf(temp.getIs_correct());
+                        if (judgeRes == null) {
+                            questionAnalysis.setIsCorrect(null);
+                            smallDto.setCorrectFlag("未答题");
+                        } else {
+                            questionAnalysis.setIsCorrect(judgeRes);
+                            if (judgeRes) {
+                                stringBuilder = stringBuilder.append("正确 ");
+                                smallDto.setCorrectFlag("正确");
+                            } else {
+                                stringBuilder = stringBuilder.append("错误 ");
+                                smallDto.setCorrectFlag("错误");
+                            }
+                        }
+                        String key = questionAnalysis.getBigNumber() + ":" + questionAnalysis.getQuestionType();
+                        if (aiResultMap.containsKey(key)) {
+                            List<HomeworkAISmallDto> smallDtoList = aiResultMap.get(key);
+                            smallDtoList.add(smallDto);
+                            aiResultMap.put(key, smallDtoList);
+                        } else {
+                            List<HomeworkAISmallDto> smallDtoList = new ArrayList<>();
+                            smallDtoList.add(smallDto);
+                            aiResultMap.put(key, smallDtoList);
+                        }
+                        questionAnalysisService.save(questionAnalysis);
+                    }
                 }
             }else{
-                // 题目没被解析过
 
                 for(QuestionAnalysis questionAnalysis:questionAnalysisList){
                     SubQuestionsEnt stuWriteAnswer = getStuWriteAnswerNoStruc(topicReport.getAnswers(), questionAnalysis.getBigNumber(), questionAnalysis.getSmallNumber(), null);

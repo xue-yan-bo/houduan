@@ -2,6 +2,9 @@ package com.jlm.agent.domain;
 
 import java.util.List;
 
+/**
+ *  struc 题目
+ */
 public class SubQuestionsEnt {
     private String major_question_id;
     private String question_id;

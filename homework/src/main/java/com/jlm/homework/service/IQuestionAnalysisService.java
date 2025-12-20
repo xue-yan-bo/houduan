@@ -14,4 +14,6 @@ public interface IQuestionAnalysisService {
     List<QuestionAnalysis> findListByStudHomeId(Long studentsHomeworkId);
 
     void deleteByStudHomeId(Long studentsHomeworkId);
+
+    void deleteById(Long id);
 }

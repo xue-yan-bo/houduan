@@ -2565,6 +2565,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 List<QuestionAnalysis> listByStudHomeId = questionAnalysisService.findListByStudHomeId(studentsHomeworkId);
                 if(CollectionUtils.isNotEmpty(listByStudHomeId)){
                     questionAnalysisService.deleteByStudHomeId(studentsHomeworkId);
+                    /*listByStudHomeId.forEach(analysis->{
+                        questionAnalysisService.deleteById(analysis.getId());
+                    });*/
                 }
                 for(SubQuestionsEnt temp:answers) {
 

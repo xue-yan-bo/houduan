@@ -43,7 +43,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            
+
             <!-- 明确排除Retrofit依赖，防止引入Kotlin 2.1.0 -->
             <dependency>
                 <groupId>com.squareup.retrofit2</groupId>
@@ -51,7 +51,7 @@
                 <version>2.9.0</version> <!-- 使用与Kotlin 1.9.25兼容的版本 -->
                 <scope>provided</scope> <!-- 不实际引入，只提供版本信息 -->
             </dependency>
-            
+
             <!-- Spring Cloud 依赖管理 - 必须在Spring Cloud Alibaba之前 -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>

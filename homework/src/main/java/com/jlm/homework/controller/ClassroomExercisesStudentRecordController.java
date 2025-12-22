@@ -110,6 +110,7 @@ public class ClassroomExercisesStudentRecordController {
     @GetMapping("/aiParseWriteRecord")
     @Operation(summary = "AI分析学生书写记录")
     public void aiParseWriteRecord(Long studentRecordId){
-        classroomExercisesStudentRecordService.aiParseWriteRecord(studentRecordId);
+//        classroomExercisesStudentRecordService.aiParseWriteRecord(studentRecordId);
+        classroomExercisesStudentRecordService.aiParseWriteStrucRecord(studentRecordId);
     }
 }

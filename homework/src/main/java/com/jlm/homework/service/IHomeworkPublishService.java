@@ -20,4 +20,6 @@ public interface IHomeworkPublishService {
     void rePublish(Long homeworkPublishId);
 
     void aIHomeworkPublic(Long homeworkPublishId);
+
+    void aIHomeworkPublicStruc(Long homeworkPublishId);
 }

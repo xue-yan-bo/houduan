@@ -28,6 +28,7 @@
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
+
         <!-- Servlet API -->
         <!--<dependency>
             <groupId>javax.servlet</groupId>
@@ -45,7 +46,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
-        
+
         <!-- Jakarta Persistence API (替代 javax.persistence) -->
         <dependency>
             <groupId>jakarta.persistence</groupId>
@@ -255,6 +256,18 @@
                     <artifactId>slf4j-simple</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>com.jlm</groupId>
+            <artifactId>agent</artifactId>
+            <version>1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.victools</groupId>
+            <artifactId>jsonschema-generator</artifactId>
+            <version>4.38.0</version>
         </dependency>
     </dependencies>
 

@@ -22,5 +22,11 @@ public interface IClassroomExercisesStudentRecordService {
 
     void aiParseWriteRecord(Long studentRecordId);
 
+    /**
+     * AI 结构化
+     * @param studentRecordId
+     */
+    void aiParseWriteStrucRecord(Long studentRecordId);
+
     TeacherWriteDto getLiveStreamtRecordTeacher(Long classroomExercisesId);
 }

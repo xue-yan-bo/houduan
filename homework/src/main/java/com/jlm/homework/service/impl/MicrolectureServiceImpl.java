@@ -4,6 +4,7 @@ package com.jlm.homework.service.impl;
 
 import com.jlm.homework.entity.Microlecture;
 import com.jlm.homework.entity.StudentsHomeworkNew;
+import com.jlm.homework.feign.School;
 import com.jlm.homework.repository.IMicrolectureRepository;
 import com.jlm.homework.service.IMicrolectureService;
 import com.jlm.homework.service.IUserService;
@@ -47,10 +48,10 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
                     if(schoolId!=null) {
                         Predicate condition = criteriaBuilder.equal(root.get("schoolId"), schoolId);
                         list.add(condition);
-                    }else{
+                    }/*else{
                         Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
                         list.add(condition);
-                    }
+                    }*/
                     if(StringUtils.isNotEmpty(name)) {
                         Predicate condition = criteriaBuilder.like(root.get("name"), "%"+name+"%");
                         list.add(condition);
@@ -124,6 +125,11 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
 
     @Override
     public void save(Microlecture microlecture) {
+        School school=userService.getCurrentSchool();
+        if(school!=null&&StringUtils.isNotEmpty(school.getSchoolName())
+                &&StringUtils.isEmpty(microlecture.getSchoolName())){
+            microlecture.setSchoolName(school.getSchoolName());
+        }
         microlectureRepository.save(microlecture);
     }
 

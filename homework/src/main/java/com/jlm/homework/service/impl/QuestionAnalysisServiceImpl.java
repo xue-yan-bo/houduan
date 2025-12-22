@@ -2,14 +2,21 @@ package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.AIQuestionAnalysisDto;
 import com.jlm.homework.entity.QuestionAnalysis;
+import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.repository.QuestionAnalysisRepository;
 import com.jlm.homework.service.IQuestionAnalysisService;
 import jakarta.annotation.Resource;
 import com.alibaba.cloud.commons.lang.StringUtils;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service
@@ -88,5 +95,26 @@ public class QuestionAnalysisServiceImpl implements IQuestionAnalysisService {
         search.setStudentsHomeworkId(studentsHomeworkId);
 
         return questionAnalysisRepository.findAll(Example.of(search));
+    }
+
+    @Override
+    public void deleteByStudHomeId(Long studentsHomeworkId) {
+        Specification<QuestionAnalysis> specification = new Specification<QuestionAnalysis>() {
+
+            @Override
+            public Predicate toPredicate(Root<QuestionAnalysis> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                Predicate con = criteriaBuilder.equal(root.get("studentsHomeworkId"),studentsHomeworkId);
+                list.add(con);
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        questionAnalysisRepository.delete(specification);
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        questionAnalysisRepository.deleteById(id);
     }
 }

@@ -3,8 +3,6 @@ package com.jlm.agent;
 
 //import com.jlm.agent.AIServ.TongYiServ;
 
-import com.jlm.agent.AIServ.TongYiServ;
-import com.jlm.agent.AIServ.ZhiPuAIServ;
 import com.jlm.agent.AIServ.ZhiPuServ;
 import jakarta.annotation.Resource;
 import org.apache.commons.io.IOUtils;
@@ -27,37 +25,34 @@ public class TestMultiAi {
     @Resource
     ZhiPuAiChatModel zhiPuAiChatModel;
     @Resource
-    TongYiServ tongYiServ;
-    @Resource
     ZhiPuServ zhiPuServ;
-    @Resource
-    ZhiPuAIServ zhiPuAIServ;
+
 
 
     /**
      *  调用通义千问 统一图文模型，进行图文解析
      */
-    @Test
-    void testTongyiSDK() {
-
-        List<String> imageUrls = new ArrayList<>();
-
-        // 一 内网图片，转base64发送，注意拼接前缀 data:image/.
-        String localPath = "http://192.168.1.29/homework-design/assets/background-c4d9e324.jpg";
-        String base64Pic = null;
-        try {
-            base64Pic = downloadImageToBase64(localPath);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        imageUrls.add(base64Pic);
-
-        // 二 外网图片，直接传图片地址
-        imageUrls.add("https://img1.baidu.com/it/u=2172818577,3783888802&fm=253&app=138&f=JPEG?w=800&h=1422");
-
-        String ret = tongYiServ.multiModalCall("描述所有图片内容", imageUrls);
-        System.out.println(ret);
-    }
+//    @Test
+//    void testTongyiSDK() {
+//
+//        List<String> imageUrls = new ArrayList<>();
+//
+//        // 一 内网图片，转base64发送，注意拼接前缀 data:image/.
+//        String localPath = "http://192.168.1.29/homework-design/assets/background-c4d9e324.jpg";
+//        String base64Pic = null;
+//        try {
+//            base64Pic = downloadImageToBase64(localPath);
+//        } catch (Exception e) {
+//            throw new RuntimeException(e);
+//        }
+//        imageUrls.add(base64Pic);
+//
+//        // 二 外网图片，直接传图片地址
+//        imageUrls.add("https://img1.baidu.com/it/u=2172818577,3783888802&fm=253&app=138&f=JPEG?w=800&h=1422");
+//
+//        String ret = tongYiServ.multiModalCall("描述所有图片内容", imageUrls);
+//        System.out.println(ret);
+//    }
 
 
 
@@ -104,10 +99,10 @@ public class TestMultiAi {
     }
 
 
-    @Test
+   /* @Test
     void testZhiPuAI() {
         System.out.println(zhiPuAIServ.doChatWithReport("提取王二的答题内容，结构化输出", "https://img0.baidu.com/it/u=2412944529,4254979042&fm=253&app=138&f=JPEG?w=800&h=1067"));
-    }
+    }*/
 
 
 }

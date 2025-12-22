@@ -4,6 +4,7 @@ import com.jlm.homework.dto.Result;
 import com.jlm.homework.entity.Microlecture;
 import com.jlm.homework.entity.Student;
 import com.jlm.homework.entity.StudentMicrolecture;
+import com.jlm.homework.feign.School;
 import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.IMicrolectureRepository;
 import com.jlm.homework.repository.IStudentMicrolectureRepository;
@@ -45,6 +46,11 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
         if(list==null||list.size()>0){
             return;
         }
+        School school=userService.getCurrentSchool();
+        if(school!=null&&StringUtils.isNotEmpty(school.getSchoolName())
+                &&StringUtils.isEmpty(microlecture.getSchoolName())){
+            microlecture.setSchoolName(school.getSchoolName());
+        }
         Result<Student> result = studentFeignClient.getStudentList(1,100,microlecture.getSchoolId(),microlecture.getGradeId(),microlecture.getClassId(),"0");
         if(result.getCode()!=200){
             throw new RuntimeException(result.getMsg());
@@ -60,6 +66,7 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                 studentMicrolecture.setKnowledgePoint(microlecture.getKnowledgePoint());
                 studentMicrolecture.setSubject(microlecture.getSubject());
                 studentMicrolecture.setSchoolId(microlecture.getSchoolId());
+                studentMicrolecture.setSchoolName(microlecture.getSchoolName());
                 studentMicrolecture.setGradeId(microlecture.getGradeId());
                 studentMicrolecture.setGradeName(microlecture.getGradeName());
                 studentMicrolecture.setClassId(microlecture.getClassId());
@@ -162,8 +169,8 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                         Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
                         list.add(condition1);
                     }
-                    Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
-                    list.add(condition);
+                    /*Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
+                    list.add(condition);*/
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -212,8 +219,8 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                             Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
                             list.add(condition1);
                         }
-                        Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
-                        list.add(condition);
+                        /*Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
+                        list.add(condition);*/
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }

@@ -137,4 +137,9 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
     public void delete(Long microlectureId) {
         microlectureRepository.deleteById(microlectureId);
     }
+
+    @Override
+    public Microlecture getById(Long microlectureId) {
+        return microlectureRepository.findById(microlectureId).orElse(null);
+    }
 }

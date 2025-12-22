@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface IStudentMicrolectureService {
-    void createStudentMicrolecture(Microlecture microlecture);
+    //void createStudentMicrolecture(Microlecture microlecture);
 
     void save(StudentMicrolecture studentMicrolecture);
 
@@ -17,7 +17,7 @@ public interface IStudentMicrolectureService {
 
     void updateById(StudentMicrolecture studentMicrolecture);
 
-    Page<StudentMicrolecture> page(Integer pageNum, Integer pageSize, Long microlectureId, String microlectureName, Long studentId, String studentName, Integer status,String chapter,String knowledgePoint,Integer searchType);
+    Page<StudentMicrolecture> page(Integer pageNum, Integer pageSize, Long microlectureId, String microlectureName, Long studentId,String subject,String teacherName,String chapter,String knowledgePoint,Integer searchType);
 
     Page<StudentMicrolecture> recordPage(Integer pageNum, Integer pageSize, Long microlectureId,Long studentId);
 
@@ -26,4 +26,6 @@ public interface IStudentMicrolectureService {
     List<StudentMicrolecture> findByMicrolectureId(Long microlectureId);
 
     void deleteById(Long id);
+
+    StudentMicrolecture createStudMicroOne(Microlecture microlecture, Long studentId);
 }

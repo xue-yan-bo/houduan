@@ -64,7 +64,7 @@ public class MicrolectureController {
 
 
             microlectureService.save(microlecture);
-            studentMicrolectureService.createStudentMicrolecture(microlecture);
+            //studentMicrolectureService.createStudentMicrolecture(microlecture);
 
             return microlecture;
 
@@ -76,14 +76,14 @@ public class MicrolectureController {
             throw new IllegalArgumentException("微课ID不能为空");
         }
         try {
-            List<StudentMicrolecture> studentMicrolectureList = studentMicrolectureService.findByMicrolectureId(id);
+            /*List<StudentMicrolecture> studentMicrolectureList = studentMicrolectureService.findByMicrolectureId(id);
             if (!studentMicrolectureList.isEmpty()) {
                 studentMicrolectureList.forEach(
                         studentMicrolecture -> {
                             studentMicrolectureService.deleteById(studentMicrolecture.getId());
                         }
                 );
-            }
+            }*/
             microlectureService.delete(id);
         } catch (Exception e) {
             throw new RuntimeException("删除微课失败: " + e.getMessage(), e);
@@ -97,15 +97,15 @@ public class MicrolectureController {
                                                  @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
                                                  @RequestParam(value = "microlectureName", required = false) String microlectureName,
                                                  @RequestParam(value = "studentId", required = false) Long studentId,
-                                                 @RequestParam(value = "studentName", required = false) String studentName,
-                                                 @RequestParam(value = "status", required = false) Integer status,
+                                                 @RequestParam(value = "subject", required = false) String subject,
+                                                 @RequestParam(value = "teacherName", required = false) String teacherName,
                                                  @RequestParam(value = "chapter", required = false) String chapter,
                                                  @RequestParam(value = "knowledgePoint", required = false) String knowledgePoint,
                                                  @RequestParam(value = "searchType", defaultValue = "0") Integer searchType) {
 
 
         // 查询分页结果
-        Page<StudentMicrolecture> page = studentMicrolectureService.page(pageNum,pageSize, microlectureId,microlectureName,studentId,studentName,status,chapter,knowledgePoint,searchType);
+        Page<StudentMicrolecture> page = studentMicrolectureService.page(pageNum,pageSize, microlectureId,microlectureName,studentId,chapter,subject,teacherName,knowledgePoint,searchType);
         return page;
     }
 
@@ -126,9 +126,9 @@ public class MicrolectureController {
     @GetMapping("/start")
     public StudentMicrolecture start(@RequestParam(value = "microlectureId", required = true) Long microlectureId,
                                                  @RequestParam(value = "studentId", required = true) Long studentId) {
-
-
-        StudentMicrolecture studentMicrolecture=studentMicrolectureService.selectByMicrolectureAndStudent(microlectureId,studentId);
+        Microlecture microlecture=microlectureService.getById(microlectureId);
+        StudentMicrolecture studentMicrolecture = studentMicrolectureService.createStudMicroOne(microlecture,studentId);
+        //StudentMicrolecture studentMicrolecture=studentMicrolectureService.selectByMicrolectureAndStudent(microlectureId,studentId);
         if(studentMicrolecture!=null){
             studentMicrolecture.setStartTime(new Date());
             studentMicrolecture.setStatus(1);

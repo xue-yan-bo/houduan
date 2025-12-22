@@ -12,4 +12,6 @@ public interface IMicrolectureService  {
     void save(Microlecture microlecture);
 
     void delete(Long microlectureId);
+
+    Microlecture getById(Long microlectureId);
 }

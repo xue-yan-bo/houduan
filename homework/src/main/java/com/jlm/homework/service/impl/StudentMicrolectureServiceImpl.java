@@ -269,6 +269,13 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
 
     @Override
     public StudentMicrolecture createStudMicroOne(Microlecture microlecture, Long studentId) {
+        StudentMicrolecture search = new StudentMicrolecture();
+        search.setMicrolectureId(microlecture.getId());
+        search.setStudentId(studentId);
+        StudentMicrolecture studMicro = studentMicrolectureRepository.findOne(Example.of(search)).orElse(null);
+        if(studMicro!=null){
+            return studMicro;
+        }
         ResultDto<Student> resultDto= studentFeignClient.getStudentInfo(studentId);
         if(resultDto!=null&&resultDto.getData()!=null){
             Student student = resultDto.getData();

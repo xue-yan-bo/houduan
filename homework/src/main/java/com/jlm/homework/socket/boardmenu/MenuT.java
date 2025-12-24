@@ -6,7 +6,7 @@ import java.util.List;
 @Data
 public class MenuT {
     //父菜单
-    private MenuT  parentMenu;
+    public MenuT  parentMenu;
     //菜单内容列表
     private List<MenuItemT> pItems;
 
@@ -22,5 +22,13 @@ public class MenuT {
         this.showStartItem = showStartItem;
         this.showEndItem = showEndItem;
         this.maxItems = maxItems;
+    }
+
+    public void setSelectItem(Integer selectItem, MenuT menuT) {
+        this.selectItem = selectItem;
+    }
+
+    public void setShowEndItem(Integer showEndItem, MenuT menuT) {
+        this.showEndItem = showEndItem;
     }
 }

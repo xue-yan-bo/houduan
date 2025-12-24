@@ -1,6 +1,7 @@
 package com.jlm.homework.controller;
 
 
+import com.jlm.homework.dto.MicroBatchQueryInDTO;
 import com.jlm.homework.entity.Microlecture;
 import com.jlm.homework.entity.StudentMicrolecture;
 import com.jlm.homework.service.IMicrolectureService;
@@ -15,6 +16,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +58,21 @@ public class MicrolectureController {
         return page;
 
     }
+
+
+    @PostMapping("/batchQuery")
+    @Operation(summary = "批量查询微课信息")
+    public List<Microlecture> batchQuery(@RequestBody MicroBatchQueryInDTO inDTO)  {
+        List<Long> ids = inDTO.getIds();
+        if(ids == null){
+            return new ArrayList<>();
+        }
+        // 批量查询Microlecture
+        return microlectureService.batchGetMicrolectures(ids);
+
+    }
+
+
 
 
     @Operation(summary = "老师新增微课")

@@ -142,4 +142,11 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
     public Microlecture getById(Long microlectureId) {
         return microlectureRepository.findById(microlectureId).orElse(null);
     }
+
+    @Override
+    public List<Microlecture> batchGetMicrolectures(List<Long> ids) {
+        List<Microlecture> microlectures = microlectureRepository.findAllById(ids);
+        return microlectures;
+    }
+
 }

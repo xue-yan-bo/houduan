@@ -51,16 +51,21 @@ public class ResponseSender {
             len = 2;
         }
 
-        if (len > 0) {
-            byte[] sendData = new byte[len];
-            System.arraycopy(buff, 0, sendData, 0, len);
-            
-            if (context.isBluetooth() && context.getMac() != null) {
-                ParseTcpDataUtil.sendLcdDisplayDataBluetooth(out, sendData, len, context.getMac());
-            } else {
-                ParseTcpDataUtil.sendLcdDisplayData(out, sendData, len);
+        if (len > 0 && out != null) {
+            try {
+                byte[] sendData = new byte[len];
+                System.arraycopy(buff, 0, sendData, 0, len);
+                
+                if (context.isBluetooth() && context.getMac() != null) {
+                    ParseTcpDataUtil.sendLcdDisplayDataBluetooth(out, sendData, len, context.getMac());
+                } else {
+                    ParseTcpDataUtil.sendLcdDisplayData(out, sendData, len);
+                }
+                // 注意：sendLcdDisplayData已经包含了flush操作，这里不需要重复调用
+            } catch (IOException e) {
+                log.error("Failed to send menu update: {}", e.getMessage());
+                // 连接可能已关闭，记录日志但不抛出异常，避免程序崩溃
             }
-            out.flush();
         }
     }
 

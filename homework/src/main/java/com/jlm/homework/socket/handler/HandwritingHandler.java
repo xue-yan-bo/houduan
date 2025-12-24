@@ -60,6 +60,7 @@ public class HandwritingHandler implements MessageHandler {
                 }
             }
         }
+
     }
 
     private void processRecord(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation, ResponseSender sender) {

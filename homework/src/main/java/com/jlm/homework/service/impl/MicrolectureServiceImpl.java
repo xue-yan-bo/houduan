@@ -69,7 +69,7 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
                         list.add(condition);
                     }
                     if(StringUtils.isNotEmpty(gradeName)) {
-                        Predicate condition = criteriaBuilder.equal(root.get("gradeName"), gradeName);
+                        Predicate condition = criteriaBuilder.equal(root.get("gradeName"), gradeName.trim());
                         list.add(condition);
                     }
                     if(classId!=null) {
@@ -81,16 +81,37 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
                         list.add(condition);
                     }
                     if(StringUtils.isNotEmpty(subject)) {
-                        Predicate condition = criteriaBuilder.equal(root.get("subject"), subject);
+                        Predicate condition = criteriaBuilder.equal(root.get("subject"), subject.trim());
                         list.add(condition);
                     }
                     if(StringUtils.isEmpty(chapter)&&StringUtils.isNotEmpty(knowledgePoint)) {
+                        List<Predicate> list1 = new ArrayList<>();
+                        Predicate cond = criteriaBuilder.like(root.get("chapter"), "%"+knowledgePoint+"%");
+                        list1.add(cond);
                         Predicate condition = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
-                        list.add(condition);
+                        list1.add(condition);
+                        if(knowledgePoint.length()>2) {
+                            Predicate condit1 = criteriaBuilder.like(root.get("chapter"), "%"+knowledgePoint.substring(2)+"%");
+                            list1.add(condit1);
+                            Predicate condition1 = criteriaBuilder.like(root.get("knowledgePoint"), "%" + knowledgePoint.substring(2) + "%");
+                            list1.add(condition1);
+                        }
+                        if(knowledgePoint.length()>4) {
+                            Predicate condit1 = criteriaBuilder.like(root.get("chapter"), "%"+knowledgePoint.substring(4)+"%");
+                            list1.add(condit1);
+                            Predicate condition1 = criteriaBuilder.like(root.get("knowledgePoint"), "%" + knowledgePoint.substring(4) + "%");
+                            list1.add(condition1);
+                        }
+                        Predicate condit = criteriaBuilder.or(list1.toArray(new Predicate[0]));
+                        list.add(condit);
                     }else if(StringUtils.isNotEmpty(chapter)&&StringUtils.isNotEmpty(knowledgePoint)) {
                         List<Predicate> list1 = new ArrayList<>();
                         Predicate cond1 = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
                         list1.add(cond1);
+                        if(knowledgePoint.length()>2) {
+                            Predicate condition1 = criteriaBuilder.like(root.get("knowledgePoint"), "%" + knowledgePoint.substring(2) + "%");
+                            list1.add(condition1);
+                        }
                         Predicate cond2= criteriaBuilder.like(root.get("chapter"), "%"+chapter+"%");
                         list1.add(cond2);
                         if(chapter.contains("/")){
@@ -107,9 +128,19 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
                         Predicate condition = criteriaBuilder.or(list1.toArray(new Predicate[0]));
                         list.add(condition);
                     }else if(StringUtils.isNotEmpty(chapter)) {
+                        List<Predicate> list1 = new ArrayList<>();
+                        Predicate condition = criteriaBuilder.like(root.get("chapter"), "%"+chapter+"%");
+                        list1.add(condition);
                         String chapterSub = chapter.substring(chapter.lastIndexOf("/")+1).trim();
                         Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
-                        list.add(condition1);
+                        list1.add(condition1);
+                        if(chapterSub.length()>4){
+                            String chapterSub1 = chapterSub.substring(4);
+                            Predicate cond4= criteriaBuilder.like(root.get("chapter"), "%"+chapterSub1+"%");
+                            list1.add(cond4);
+                        }
+                        Predicate condit = criteriaBuilder.or(list1.toArray(new Predicate[0]));
+                        list.add(condit);
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);

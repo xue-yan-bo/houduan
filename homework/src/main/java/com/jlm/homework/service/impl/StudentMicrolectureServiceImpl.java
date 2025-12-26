@@ -2,13 +2,13 @@ package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.Result;
 import com.jlm.homework.dto.ResultDto;
-import com.jlm.homework.entity.Microlecture;
-import com.jlm.homework.entity.Student;
-import com.jlm.homework.entity.StudentMicrolecture;
+import com.jlm.homework.entity.*;
 import com.jlm.homework.feign.School;
+import com.jlm.homework.feign.SchoolFeignClient;
 import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.IMicrolectureRepository;
 import com.jlm.homework.repository.IStudentMicrolectureRepository;
+import com.jlm.homework.service.IMicroPurchaseService;
 import com.jlm.homework.service.IMicrolectureService;
 import com.jlm.homework.service.IStudentMicrolectureService;
 import com.jlm.homework.service.UserService;
@@ -36,9 +36,12 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
     private IMicrolectureRepository microlectureRepository;
     @Autowired
     private StudentFeignClient studentFeignClient;
-
+    @Autowired
+    private SchoolFeignClient schoolFeignClient;
     @Autowired
     private UserService userService;
+    @Autowired
+    private IMicroPurchaseService microPurchaseService;
    /* @Override
     public void createStudentMicrolecture(Microlecture microlecture) {
         StudentMicrolecture search = new StudentMicrolecture();
@@ -123,7 +126,51 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                 classId = student.getClassesId();
             }
         }
+        List<MicroPurchase> microPurchaseList;
+        Long schoolId = userService.getCurrentSchoolIdSafely();
+        ResultDto<SysSchool> schoolR = schoolFeignClient.getInfo(schoolId);
+        boolean hxyFlag;
+        /*if(schoolR!=null&&schoolR.getData()!=null){
+            SysSchool sysSchool = schoolR.getData();
+            if("huaxiayuan".equals(sysSchool.getStyle())){
+                microPurchaseList = microPurchaseService.listByStudentId(studentId);
+                hxyFlag = true;
+            } else {
+                hxyFlag = false;
+                microPurchaseList = null;
+            }
+        } else {
+            hxyFlag = false;
+            microPurchaseList = null;
+        }*/
+        List<String> subjectList = new ArrayList<>();
+        List<Long> gradeList = new ArrayList<>();
+        /*
+        if(hxyFlag&&(microPurchaseList==null||microPurchaseList.isEmpty())){
+            return null;
+        }else if(hxyFlag){
+            Date now =new Date();
+            boolean isOver = true;
+            for(MicroPurchase micro:microPurchaseList) {
+                if(micro.getStartDate()==null&&micro.getEndDate()==null){
+                    subjectList.add(micro.getSubject());
+                    gradeList.add(micro.getMicroGradeId());
+                    isOver = false;
+                }else if(micro.getStartDate()!=null&&micro.getEndDate()!=null&&
+                        micro.getStartDate().before(now)&&micro.getEndDate().after(now)){
+                    subjectList.add(micro.getSubject());
+                    gradeList.add(micro.getMicroGradeId());
+                    isOver = false;
+                }
+            }
+            if(isOver){
+                return null;
+            }
+        }*/
+        //暂时华夏园不区分，m默认false
+        hxyFlag = false;
         Long finalClassId = classId;
+        boolean finalHxyFlag = hxyFlag;
         Specification<Microlecture> specification1 = new Specification<Microlecture>() {
 
             @Override
@@ -173,8 +220,19 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                         Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
                         list.add(condition1);
                     }
+                    if(finalHxyFlag){
+                        if(subjectList.size()>0){
+                            Predicate condition = criteriaBuilder.in(root.get("subject")).value(subjectList);
+                            list.add(condition);
+                        }
+                        if(gradeList.size()>0){
+                            Predicate condition = criteriaBuilder.in(root.get("gradeId")).value(gradeList);
+                            list.add(condition);
+                        }
+                    }
                     /*Predicate condition = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
                     list.add(condition);*/
+
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -229,8 +287,8 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                         Predicate condition1 = criteriaBuilder.equal(root.get("studentId"), finalStudentId);
                         list.add(condition1);
                     }
-                    Predicate condit = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
-                    list.add(condit);
+                    /*Predicate condit = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
+                    list.add(condit);*/
 
                     Predicate condition = criteriaBuilder.notEqual(root.get("status"), 0);
                     list.add(condition);

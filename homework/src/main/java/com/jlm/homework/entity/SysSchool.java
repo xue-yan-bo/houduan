@@ -44,5 +44,8 @@ public class SysSchool {
      *  版本
      */
     private String version;
-
+    /**
+     *  样式
+     */
+    private String style;
 }

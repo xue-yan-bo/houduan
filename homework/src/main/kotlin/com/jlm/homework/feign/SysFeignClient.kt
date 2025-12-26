@@ -18,5 +18,6 @@ interface SysFeignClient {
 
 data class School(
     val schoolId: Long,
-    val schoolName: String
+    val schoolName: String,
+    val style: String
 )

@@ -122,7 +122,7 @@ public class MicrolectureController {
 
 
         // 查询分页结果
-        Page<StudentMicrolecture> page = studentMicrolectureService.page(pageNum,pageSize, microlectureId,microlectureName,studentId,chapter,subject,teacherName,knowledgePoint,searchType);
+        Page<StudentMicrolecture> page = studentMicrolectureService.page(pageNum,pageSize, microlectureId,microlectureName,studentId,subject,teacherName,chapter,knowledgePoint,searchType);
         return page;
     }
 

@@ -229,8 +229,8 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                         Predicate condition1 = criteriaBuilder.equal(root.get("studentId"), finalStudentId);
                         list.add(condition1);
                     }
-                    Predicate condit = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
-                    list.add(condit);
+                    /*Predicate condit = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
+                    list.add(condit);*/
 
                     Predicate condition = criteriaBuilder.notEqual(root.get("status"), 0);
                     list.add(condition);

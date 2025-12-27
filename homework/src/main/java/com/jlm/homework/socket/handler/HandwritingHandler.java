@@ -40,7 +40,7 @@ public class HandwritingHandler implements MessageHandler {
             results = ParseTcpDataUtil.parseHandwritingTcpPacketsBluetooth(packet.getRawData());
         }
 
-        log.info("Handwriting data parsed, count: {}", results.size());
+        log.debug("Handwriting data parsed, count: {}", results.size());
 
         for (HandwritingParseResult result : results) {
             SmartDeviceUserRelation relation = context.getRelation();
@@ -53,14 +53,14 @@ public class HandwritingHandler implements MessageHandler {
                 if (relation != null) {
                     context.setRelation(relation); // Update context
                     result.setUserId(relation.getUserId());
-                    sender.sendText("Server Reply: " + result.toString());
+                    // Removed verbose server reply to reduce bandwidth
+                    // sender.sendText("Server Reply: " + result.toString());
                     messagingTemplate.convertAndSend("/topic/writingData/" + relation.getUserId(), result);
                 } else {
                     log.warn("Student info not found for IP: {}", context.getClientIP());
                 }
             }
         }
-
     }
 
     private void processRecord(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation, ResponseSender sender) {
@@ -144,7 +144,8 @@ public class HandwritingHandler implements MessageHandler {
 
     private void handleClassroomMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation, ResponseSender sender) {
         result.setUserId(relation.getUserId());
-        sender.sendText("Server Reply: " + result.toString());
+        // Removed verbose server reply to reduce bandwidth
+        // sender.sendText("Server Reply: " + result.toString());
         messagingTemplate.convertAndSend("/topic/writingData/" + relation.getUserId(), result);
     }
 

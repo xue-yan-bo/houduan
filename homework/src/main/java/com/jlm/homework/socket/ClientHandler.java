@@ -15,10 +15,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -130,31 +126,15 @@ public class ClientHandler implements Runnable {
                         handler.handle(sessionContext, packet, responseSender);
                     } catch (Exception e) {
                         log.error("Error handling packet type {}", packet.getType(), e);
-                        responseSender.sendText("Error processing packet: " + e.getMessage());
+                        // responseSender.sendText("Error processing packet: " + e.getMessage());
                     }
                 } else {
                     log.warn("Unknown packet type: {}", String.format("0x%02X", packet.getType()));
                 }
                 
-                // Echo back for Type 0x03 is handled in SerialNumberHandler
-                // Original code echoed 0x03 (MacParseResult)
-                // And it seems it didn't echo others generally, except explicit writes in logic.
-                // Wait, line 1415 says "out.write(fullPacketBuffer)" inside the loop!
-                // It seems it echos EVERYTHING?
-                // Let's re-read line 1415. It's inside the loop, after the if-else if chain.
-                // Yes, it echos back the full packet buffer at the end of loop.
-                // BUT, ButtonHandler and HandwritingHandler send SPECIFIC replies.
-                // Does the client expect an echo AND a reply?
-                // Line 315: writer.println("服务器回复: " + result.toString());
-                // Line 1415: out.write(fullPacketBuffer);
-                // This seems redundant or specific protocol behavior.
-                // I will add the echo logic here to match original behavior.
-                
-                // Only echo if not 0x03 because SerialNumberHandler handles its own logic? 
-                // Original code: 0x03 logic ends, then line 1415 executes.
-                // So ALL packets are echoed.
-                
-                responseSender.sendRaw(packet.getRawData());
+                // Removed global echo to prevent bandwidth saturation. 
+                // Specific handlers (like SerialNumberHandler) should handle their own responses/echos if needed.
+                // responseSender.sendRaw(packet.getRawData());
             }
 
         } catch (IOException e) {
@@ -177,6 +157,12 @@ public class ClientHandler implements Runnable {
         byte[] macBytes = Arrays.copyOfRange(packet.getRawData(), 4, 10);
         Integer mac = ParseTcpDataUtil.byteArrayToInt(macBytes);
         sessionContext.setMac(mac);
+        
+        // Optimization: Skip DB query if relation is already cached and matches MAC
+        if (sessionContext.getRelation() != null && 
+            String.valueOf(mac).equals(sessionContext.getRelation().getDeviceCode())) {
+            return;
+        }
         
         SmartDeviceUserRelation relation = smartDeviceUserRelationService.selectByDeviceCode(mac.toString());
         if (relation == null) {

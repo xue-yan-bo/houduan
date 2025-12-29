@@ -59,7 +59,7 @@ public class RongCloudUtil {
         } catch (IOException e) {
             e.printStackTrace();
         }
-         System.out.println("res=" + res.toString());
+         //System.out.println("res=" + res.toString());
         String  token = "";
         if(res.indexOf("token")>0){
             JSONObject jsonObject = JSON.parseObject(res.toString());
@@ -70,7 +70,7 @@ public class RongCloudUtil {
         }
 
         //Logger.i(userRespone.getCode()+"");
-        //  System.out.println(jsonObject.getString("token"));
+        //  //System.out.println(jsonObject.getString("token"));
         return token;
     }
 

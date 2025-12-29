@@ -175,10 +175,8 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             Thread thread = new Thread(futureTask);
             thread.start(); // 启动线程执行任务
 
-            System.out.println(futureTask.get()); // 获取结果，会阻塞直到任务完成
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
+            //System.out.println(futureTask.get()); // 获取结果，会阻塞直到任务完成
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -337,7 +335,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 resultStr=util.analyzeImageToJson(wrongTitleBook.getTitleImage(),prompt);
             }
 
-            System.out.println("AI分析结果: " + resultStr);
+            //System.out.println("AI分析结果: " + resultStr);
             Map<String, Object> resultMap = JSONObject.parseObject(resultStr);
             String content = resultMap.get("content").toString();
             if(StringUtils.isNotEmpty(content)&&resultStr.contains("知识点")&&resultStr.contains("知识图谱")){

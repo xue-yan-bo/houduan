@@ -51,7 +51,7 @@ public class TestMultiAi {
 //        imageUrls.add("https://img1.baidu.com/it/u=2172818577,3783888802&fm=253&app=138&f=JPEG?w=800&h=1422");
 //
 //        String ret = tongYiServ.multiModalCall("描述所有图片内容", imageUrls);
-//        System.out.println(ret);
+//        //System.out.println(ret);
 //    }
 
 
@@ -59,7 +59,7 @@ public class TestMultiAi {
     @Test
     void test() {
         String string = zhiPuAiChatModel.call("你好");
-        System.out.println(string);
+        //System.out.println(string);
     }
 
     @Test
@@ -69,7 +69,7 @@ public class TestMultiAi {
         Media media = new Media(MediaType.IMAGE_PNG, URI.create(picUrl));
         medias.add(media);
         String string = zhiPuServ.multiModalCall("请描述图片内容", medias);
-        System.out.println(string);
+        //System.out.println(string);
     }
 
 
@@ -101,7 +101,7 @@ public class TestMultiAi {
 
    /* @Test
     void testZhiPuAI() {
-        System.out.println(zhiPuAIServ.doChatWithReport("提取王二的答题内容，结构化输出", "https://img0.baidu.com/it/u=2412944529,4254979042&fm=253&app=138&f=JPEG?w=800&h=1067"));
+        //System.out.println(zhiPuAIServ.doChatWithReport("提取王二的答题内容，结构化输出", "https://img0.baidu.com/it/u=2412944529,4254979042&fm=253&app=138&f=JPEG?w=800&h=1067"));
     }*/
 
 

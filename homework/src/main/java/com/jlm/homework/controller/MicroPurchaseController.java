@@ -1,11 +1,22 @@
 package com.jlm.homework.controller;
 
+import com.alibaba.cloud.commons.lang.StringUtils;
+import com.jlm.homework.entity.ClassroomExercises;
 import com.jlm.homework.entity.MicroPurchase;
 import com.jlm.homework.service.IMicroPurchaseService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 @Tag(name = "微课购买接口", description = "微课购买接口")
 @RestController

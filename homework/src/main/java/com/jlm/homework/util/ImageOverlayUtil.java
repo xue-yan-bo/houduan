@@ -336,7 +336,7 @@ public class ImageOverlayUtil {
         // 保存结果图片
         CoordinateImageGenerator.saveImage(resultImage, "output_with_writing.png");
         
-        System.out.println("图片已成功生成并保存！");
+        //System.out.println("图片已成功生成并保存！");
         
     } catch (Exception e) {
         e.printStackTrace();

@@ -69,7 +69,7 @@ public class TokenInterceptor implements HandlerInterceptor {
                // }
            // }
             Long userId = SecurityUtils.getUserId();
-            System.out.println("当前用户id："+userId);
+            //System.out.println("当前用户id："+userId);
             if(StringUtils.isEmpty(UserContext.getUserId())){
                 UserContext.setUserId(userId+"");
             }

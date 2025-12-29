@@ -33,7 +33,7 @@ public class HomeWorkTask {
     @GetMapping("/deadlineStatus")
     @Scheduled(cron = "0 0 1 * * ?") // 每天凌晨1点执行
     public void deadlineStatus(){
-        System.out.println("定时任务开始执行: " + LocalDateTime.now());
+        //System.out.println("定时任务开始执行: " + LocalDateTime.now());
         Specification<HomeworkPublish> specification = new Specification<HomeworkPublish>() {
 
             @Override
@@ -56,7 +56,7 @@ public class HomeWorkTask {
             publish.setPublishStatus(2);
             homeworkPublishRepository.save(publish);
         }
-        System.out.println("定时任务执行完成: " + LocalDateTime.now() + ", 更新了 " + publishList.size() + " 个作业的状态");
+        //System.out.println("定时任务执行完成: " + LocalDateTime.now() + ", 更新了 " + publishList.size() + " 个作业的状态");
     }
 
 

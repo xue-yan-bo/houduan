@@ -153,12 +153,20 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
             boolean isOver = true;
             for(MicroPurchase micro:microPurchaseList) {
                 if(micro.getStartDate()==null&&micro.getEndDate()==null){
-                    subjectList.add(micro.getSubject());
+                    if(micro.getSubject().contains(",")){
+                        subjectList.addAll(Arrays.asList(micro.getSubject().split(",")));
+                    }else {
+                        subjectList.add(micro.getSubject());
+                    }
                     gradeList.add(micro.getMicroGradeId());
                     isOver = false;
                 }else if(micro.getStartDate()!=null&&micro.getEndDate()!=null&&
                         micro.getStartDate().before(now)&&micro.getEndDate().after(now)){
-                    subjectList.add(micro.getSubject());
+                    if(micro.getSubject().contains(",")){
+                        subjectList.addAll(Arrays.asList(micro.getSubject().split(",")));
+                    }else {
+                        subjectList.add(micro.getSubject());
+                    }
                     gradeList.add(micro.getMicroGradeId());
                     isOver = false;
                 }

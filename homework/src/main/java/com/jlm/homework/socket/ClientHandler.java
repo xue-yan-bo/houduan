@@ -166,7 +166,7 @@ public class ClientHandler implements Runnable {
         
         SmartDeviceUserRelation relation = smartDeviceUserRelationService.selectByDeviceCode(mac.toString());
         if (relation == null) {
-            System.out.println(mac + "设备还未绑定学生，请检查！");
+            //System.out.println(mac + "设备还未绑定学生，请检查！");
             SmartDeviceUserRelation newRelation = new SmartDeviceUserRelation();
             newRelation.setIpAddress(sessionContext.getClientIP());
             newRelation.setDeviceCode(mac.toString());

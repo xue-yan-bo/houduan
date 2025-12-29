@@ -21,6 +21,13 @@ public class MicroPurchase  implements Serializable {
 
     @Column(name = "student_name")
     private String studentName;//学生姓名
+
+    @Column(name = "class_id")
+    private Long classId;//学生班级ID
+
+    @Column(name = "class_name")
+    private String className;//学生班级名称
+
     @Column(name = "micro_grade_id")
     private Long microGradeId;//微课年级
     @Column(name = "micro_grade_name")

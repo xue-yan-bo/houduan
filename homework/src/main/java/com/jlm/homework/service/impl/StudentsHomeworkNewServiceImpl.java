@@ -1112,7 +1112,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 HomeworkRightRate homeworkRightRate = new HomeworkRightRate();
                 Long classId =(Long) rightRateMap.get("classId");
                 homeworkRightRate.setClassId(classId);
-                homeworkRightRate.setClassName(classMap.get(classId));
+                if(classMap.containsKey(classId)) {
+                    homeworkRightRate.setClassName(classMap.get(classId));
+                }
                 homeworkRightRate.setGrade((String) rightRateMap.get("grade"));
                 // 安全地将Number转换为Integer
                 homeworkRightRate.setTotalNum(((Number) rightRateMap.get("totalNum")).intValue());
@@ -1166,13 +1168,13 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             TodayHomeworkSubmit homeworkSubmit = new TodayHomeworkSubmit();
             homeworkSubmit.setClassName(className);
             homeworkSubmit.setStudentNum(classTotalMap.get(className));
-            if(classSubmitMap.containsKey(className)) {
+            if(classSubmitMap!=null&&classSubmitMap.containsKey(className)) {
                 homeworkSubmit.setSubmitNum(classSubmitMap.get(className));
             }else{
                 homeworkSubmit.setSubmitNum(0);
             }
             Double submitRate = 0.0d;
-            if(classSubmitMap.containsKey(className)&&classSubmitMap.get(className) != null){
+            if(classSubmitMap!=null&&classSubmitMap.containsKey(className)&&classSubmitMap.get(className) != null){
                 submitRate = BigDecimal.valueOf(classSubmitMap.get(className))
                     .divide(BigDecimal.valueOf(classTotalMap.get(className)),4,BigDecimal.ROUND_HALF_UP)
                     .multiply(BigDecimal.valueOf(100)).doubleValue();
@@ -1790,7 +1792,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                 imageFile.delete();
                             }
 
-                            System.out.println("批阅结果: " + auditImages);
+                            //System.out.println("批阅结果: " + auditImages);
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
@@ -1809,7 +1811,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             if (titleImage.contains("<|end_of_box|>")) {
                                 titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
                             }
-                            System.out.println("批阅结果: " + titleImage);
+                            //System.out.println("批阅结果: " + titleImage);
                             List<HomeworkAIBigDto> bigDtoList= JSONArray.parseArray(titleImage,HomeworkAIBigDto.class);
                             bigDtoAll.addAll(bigDtoList);
                             auditImages = auditImages + "\n" + titleImage;
@@ -2057,10 +2059,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             Thread thread = new Thread(futureTask);
             thread.start(); // 启动线程执行任务
 
-            System.out.println(futureTask.get()); // 获取结果，会阻塞直到任务完成
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
+            //System.out.println(futureTask.get()); // 获取结果，会阻塞直到任务完成
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         return studentsHomework;
@@ -2275,7 +2275,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
                 if (questionList != null && questionList.size() > 0) {
 
-                    System.out.println(analyses.toString());
+                    //System.out.println(analyses.toString());
 
                     for (HomeworkPublishQuestion question : questionList) {
                         QuestionAnalysis questionAnalysis = new QuestionAnalysis();
@@ -2651,7 +2651,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 //                    // 2.若库里没有试题和答案，则直接用AI阅卷，返回的内容出结果
 //                    if (questionList != null && questionList.size() > 0) {
 //
-//                        System.out.println(analyses.toString());
+//                        //System.out.println(analyses.toString());
 //
 //                        for (HomeworkPublishQuestion question : questionList) {
 //                            QuestionAnalysis questionAnalysis = new QuestionAnalysis();
@@ -2989,7 +2989,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         "错题分析：大题号： 小题号：  题内容： 学生答案：  解析：     \n";
                 String scoreAndAccuracy = util.analyzeImage(imageUrl,prompt);
                 String wrongTitleStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("错题分析："));
-                System.out.println("错题分析: " + wrongTitleStr);
+                //System.out.println("错题分析: " + wrongTitleStr);
                 String[] wrongTitleList = wrongTitleStr.split("\n");
                 for(int i=0;i<wrongTitleList.length;i++) {
                     String wrongTitle = wrongTitleList[i];
@@ -3020,7 +3020,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 File file = new File(imageUrl);
                 file.delete();
             } catch (Exception e) {
-                System.out.println("+++++解析分数错误++++++++++ "+e.getMessage() );
+                //System.out.println("+++++解析分数错误++++++++++ "+e.getMessage() );
             }
 
 
@@ -3055,7 +3055,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     List<QuestionAnalysis> errorList = new ArrayList<>();
                     if(analyses!=null&&analyses.size()>0){
 
-                        System.out.println(analyses.toString());
+                        //System.out.println(analyses.toString());
                         Map<String,String> map = new HashMap<>();
                         StringBuilder stringBuilder = new StringBuilder();
                         for(QuestionAnalysis questionAnalysis:analyses){
@@ -3155,7 +3155,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         File imageFile = new File(key);
                         imageFile.delete();
                     }
-                    System.out.println("批阅结果: " + auditImages);
+                    //System.out.println("批阅结果: " + auditImages);
 
                     finalStudentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoAll));
                     studentsHomeworkNewRepository.save(finalStudentsHomework);
@@ -3208,7 +3208,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     File imageFile = new File(key);
                     imageFile.delete();
                 }
-                System.out.println("批阅结果: " + auditImages);
+                //System.out.println("批阅结果: " + auditImages);
             }else if(!homeworkStudentWriteDataList.isEmpty()){
                 List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
                 if (studentsHomework.getTopicImages() != null && studentsHomework.getTopicImages().size() > 0
@@ -3250,7 +3250,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             imageFile.delete();
                         }
 
-                        System.out.println("批阅结果: " + auditImages);
+                        //System.out.println("批阅结果: " + auditImages);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -3268,7 +3268,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         if (titleImage.contains("<|end_of_box|>")) {
                             titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
                         }
-                        System.out.println("批阅结果: " + titleImage);
+                        //System.out.println("批阅结果: " + titleImage);
                         if(titleImage.startsWith("[")) {
                             List<HomeworkAIBigDto> bigDtoList = JSONArray.parseArray(titleImage, HomeworkAIBigDto.class);
                             bigDtoAll.addAll(bigDtoList);
@@ -3276,7 +3276,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             HomeworkAIBigDto bigDto= JSONObject.parseObject(titleImage,HomeworkAIBigDto.class);
                             bigDtoAll.add(bigDto);
                         }else{
-                            System.out.println("json格式不对："+titleImage);
+                            //System.out.println("json格式不对："+titleImage);
                         }
                         auditImages = auditImages + "\n" + titleImage;
                         File imageFile = new File(outputPath);
@@ -3329,7 +3329,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     File imageFile = new File(key);
                     imageFile.delete();
                 }
-                System.out.println("批阅结果: " + auditImages);
+                //System.out.println("批阅结果: " + auditImages);
             }else if(!homeworkStudentWriteDataList.isEmpty()){
                 List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
                 if (studentsHomework.getTopicImages() != null && studentsHomework.getTopicImages().size() > 0
@@ -3371,7 +3371,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             imageFile.delete();
                         }
 
-                        System.out.println("批阅结果: " + auditImages);
+                        //System.out.println("批阅结果: " + auditImages);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -3389,7 +3389,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         if (titleImage.contains("<|end_of_box|>")) {
                             titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
                         }
-                        System.out.println("批阅结果: " + titleImage);
+                        //System.out.println("批阅结果: " + titleImage);
                         if(titleImage.startsWith("[")) {
                             List<HomeworkAIBigDto> bigDtoList = JSONArray.parseArray(titleImage, HomeworkAIBigDto.class);
                             bigDtoAll.addAll(bigDtoList);
@@ -3397,7 +3397,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             HomeworkAIBigDto bigDto= JSONObject.parseObject(titleImage,HomeworkAIBigDto.class);
                             bigDtoAll.add(bigDto);
                         }else{
-                            System.out.println("json格式不对："+titleImage);
+                            //System.out.println("json格式不对："+titleImage);
                         }
                         auditImages = auditImages + "\n" + titleImage;
                         File imageFile = new File(outputPath);

@@ -313,7 +313,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             }
             prompt = prompt + " 请输出题号、学生作答文字内容、批阅结果，格式如 1.  作答:A ，批阅:正确。";
             String aiText=util.analyzeImage(imageUrl,prompt);
-            System.out.println("学生书写答案："+aiText);
+            //System.out.println("学生书写答案："+aiText);
             if(aiText!=null) {
                 String text = aiText;
                 if(text.contains("<|begin_of_box|>")){
@@ -345,7 +345,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                                 }else {
                                     continue;
                                 }
-                                System.out.println("题答案："+answerStr);
+                                //System.out.println("题答案："+answerStr);
                                 String studAnswer = "";
                                 String piyue="";
                                 if(answerStr.contains("作答")&&answerStr.contains("批阅")){
@@ -429,7 +429,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             /*AI处理*/
             String userMessage = "结构化输出";
             ZhiPuAIAgent.TopicJudgeReport topicReport = studentAICallService.obtainTeacherJudgeAnswer(userMessage, medias);
-            System.out.println("学生书写答案：" + topicReport);
+            //System.out.println("学生书写答案：" + topicReport);
 
 
             List<ZhiPuAIAgent.SubJudgeQuestions> answers = topicReport.answers();

@@ -18,7 +18,7 @@ public class DemoCController {
         String s = "39503234";
         byte[] b=hexStrToByteArr(s);
 
-        System.out.println(new String(b));
+        //System.out.println(new String(b));
     }
 
     public static byte[] hexStrToByteArr(String strIn) throws Exception {

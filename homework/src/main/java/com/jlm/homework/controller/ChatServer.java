@@ -27,12 +27,12 @@ public class ChatServer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println("onOpen");
+        //System.out.println("onOpen");
     }
 
     @OnMessage
     public void onMessage(String message, Session session) {
-        System.out.println("onMessage");
+        //System.out.println("onMessage");
     }
     @OnMessage
     public void onMessage(byte[] message, Session userSession) throws IOException {
@@ -54,7 +54,7 @@ public class ChatServer {
 
     @OnClose
     public void onClose(Session session) {
-        System.out.println("onClose");
+        //System.out.println("onClose");
     }
 
     @OnError

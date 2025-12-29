@@ -376,7 +376,7 @@ public class ButtonHandler implements MessageHandler {
             Map<String,MenuItemT> menuItemTMap = new HashMap<>();
             for (int i = 0; i < context.getWork2Boards().size(); i++) {
                 HomeWork2Board homeWork2Board = context.getWork2Boards().get(i);
-                //System.out.println("---------------作业："+homeWork2Board.getHomeworkName()+":"+homeWork2Board.getPageSize());
+                ////System.out.println("---------------作业："+homeWork2Board.getHomeworkName()+":"+homeWork2Board.getPageSize());
                 if(StringUtils.isEmpty(homeWork2Board.getSubject())){
                     continue;
                 }
@@ -386,7 +386,7 @@ public class ButtonHandler implements MessageHandler {
                     List<MenuItemT> pItems = null;
                     MenuItemT itemT = null;
                     if(subjectMap.containsKey(subject)&&menuItemTMap.containsKey(subject)){
-                        //System.out.println("---------------科目："+subject);
+                        ////System.out.println("---------------科目："+subject);
                         pItems = subjectMap.get(subject);
                         itemT = menuItemTMap.get(subject);
                         //pItems.add(itemT);

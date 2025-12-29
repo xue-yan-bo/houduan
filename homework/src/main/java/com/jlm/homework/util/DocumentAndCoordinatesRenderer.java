@@ -75,12 +75,12 @@ public class DocumentAndCoordinatesRenderer {
             
             // 检查Content-Type
             String contentType = connection.getContentType();
-            System.out.println("下载文档Content-Type: " + contentType);
+            //System.out.println("下载文档Content-Type: " + contentType);
             
             // 验证Content-Type是否为预期的文档类型
             if (!isValidContentType(contentType)) {
                 // 即使Content-Type不符合预期，也尝试下载并检查文件内容
-                System.out.println("警告：Content-Type不符合预期，但将继续下载并验证文件内容");
+                //System.out.println("警告：Content-Type不符合预期，但将继续下载并验证文件内容");
             }
             
             // 创建临时文件
@@ -105,7 +105,7 @@ public class DocumentAndCoordinatesRenderer {
                     throw new IOException("下载的文档为空，无法处理。URL: " + documentUrl);
                 }
                 
-                System.out.println("成功下载文档，文件大小: " + totalBytesRead + " 字节");
+                //System.out.println("成功下载文档，文件大小: " + totalBytesRead + " 字节");
             }
             
             // 下载后进行文件内容验证
@@ -173,7 +173,7 @@ public class DocumentAndCoordinatesRenderer {
                 byte[] header = new byte[2];
                 int bytesRead = fis.read(header);
                 if (bytesRead == 2 && header[0] == 'P' && header[1] == 'K') {
-                    System.out.println("文件验证通过：是有效的ZIP格式");
+                    //System.out.println("文件验证通过：是有效的ZIP格式");
                     return true;
                 }
             }
@@ -194,7 +194,7 @@ public class DocumentAndCoordinatesRenderer {
                                           header[7] == (byte)0xE1);
                     
                     if (isOle2Format) {
-                        System.out.println("文件验证通过：是有效的OLE2格式（可能是.doc文件）");
+                        //System.out.println("文件验证通过：是有效的OLE2格式（可能是.doc文件）");
                         return true;
                     }
                 }
@@ -607,7 +607,7 @@ public class DocumentAndCoordinatesRenderer {
             File outputFile = new File(outputPath);
             ImageIO.write(resultImage, "PNG", outputFile);
             
-            System.out.println("图片生成成功: " + outputPath);
+            //System.out.println("图片生成成功: " + outputPath);
         } finally {
             // 清理临时文件
             docxFile.delete();
@@ -635,7 +635,7 @@ public class DocumentAndCoordinatesRenderer {
         try {
             // 2. 获取文档总页数
             int totalPages = getDocumentPageCount(docxFile);
-            System.out.println("文档总页数: " + totalPages);
+            //System.out.println("文档总页数: " + totalPages);
             
             // 3. 为每一页生成图片
             for (int pageNum = 1; pageNum <= totalPages; pageNum++) {
@@ -655,7 +655,7 @@ public class DocumentAndCoordinatesRenderer {
                         ImageIO.write(docImage, "PNG", outputFile);
                     }
 
-                    System.out.println("第" + pageNum + "页图片生成成功: " + pageOutputPath);
+                    //System.out.println("第" + pageNum + "页图片生成成功: " + pageOutputPath);
                     generatedImages.add(pageOutputPath);
                 } catch (Exception e) {
                     System.err.println("生成第" + pageNum + "页图片失败: " + e.getMessage());

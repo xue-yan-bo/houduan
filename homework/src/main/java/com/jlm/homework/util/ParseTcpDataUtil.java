@@ -321,9 +321,9 @@ public class ParseTcpDataUtil {
         byte[] handwritingData = {0x55, 0x56, 0x0B, 0x01, 0x27, 0x24, 0x58, 0x19, (byte)0xE8, 0x1C, 0x62, 0x00, 0x00, 0x00, (byte)0xD9};
         try {
             List<HandwritingParseResult> handwritingResults = parseHandwritingTcpPackets(handwritingData);
-            System.out.println("手写数据解析结果:");
+            //System.out.println("手写数据解析结果:");
             for (HandwritingParseResult result : handwritingResults) {
-                System.out.println(result);
+                //System.out.println(result);
             }
         } catch (IllegalArgumentException e) {
             System.err.println("手写数据解析失败：" + e.getMessage());
@@ -333,10 +333,10 @@ public class ParseTcpDataUtil {
         byte[] buttonData = {0x55, 0x56, 0x07, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x08};
         try {
             ButtonParseResult buttonResult = parseButtonTcpPackets(buttonData);
-            System.out.println("按键数据解析结果:");
-            System.out.println(buttonResult.toString());
-            System.out.println("按键状态:");
-            System.out.println("按键 " + buttonResult.getButton() + ": " + (buttonResult.isButtonState()? "按下" : "弹起"));
+            //System.out.println("按键数据解析结果:");
+            //System.out.println(buttonResult.toString());
+            //System.out.println("按键状态:");
+            //System.out.println("按键 " + buttonResult.getButton() + ": " + (buttonResult.isButtonState()? "按下" : "弹起"));
 
         } catch (IllegalArgumentException e) {
             System.err.println("按键数据解析失败：" + e.getMessage());
@@ -392,11 +392,11 @@ public class ParseTcpDataUtil {
         buff[3] = 0x04;
         // 复制数据到缓冲区
         System.arraycopy(data, 0, buff, 4, length);
-        System.out.println(buff.toString());
+        //System.out.println(buff.toString());
         // 计算并设置校验和
         int checksum = calculateChecksum(buff, 0, 4 + length - 1);
         buff[4 + length] = (byte)(checksum & 0xFF);
-        System.out.println("发向板子数据："+java.util.Arrays.toString(buff));
+        //System.out.println("发向板子数据："+java.util.Arrays.toString(buff));
         // 发送整个数据包
         outputStream.write(buff, 0, length + 5);
         outputStream.flush();
@@ -423,11 +423,11 @@ public class ParseTcpDataUtil {
         // 复制数据到缓冲区
         System.arraycopy(macByte, 0, buff, 4, 6);
         System.arraycopy(data, 0, buff, 10, length);
-        System.out.println(buff.toString());
+        //System.out.println(buff.toString());
         // 计算并设置校验和
         int checksum = calculateChecksum(buff, 0, 4+ 6 + length - 1);
         buff[10 + length] = (byte)(checksum & 0xFF);
-        System.out.println("发向板子数据："+java.util.Arrays.toString(buff));
+        //System.out.println("发向板子数据："+java.util.Arrays.toString(buff));
         // 发送整个数据包
         outputStream.write(buff, 0, length + 5 + 6);
         outputStream.flush();

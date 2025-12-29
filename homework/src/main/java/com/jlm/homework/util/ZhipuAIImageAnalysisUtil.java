@@ -515,7 +515,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
                 .size("1024x1024")
                 .build();
         ImageResponse response = client.images().createImage(request);
-        System.out.println(response.getData());
+        //System.out.println(response.getData());
         return response.getData();
 
     }
@@ -629,7 +629,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
         // 获取AI分析结果
         String aiResult = analyzeImage(imagePath, prompt);
-        System.out.println("AI分析结果:" + aiResult);
+        //System.out.println("AI分析结果:" + aiResult);
         // 解析AI结果为QuestionAnalysis列表
         List<QuestionAnalysis> questionAnalysisList = parseAIResultToQuestionAnalysisList(aiResult);
         return questionAnalysisList;
@@ -655,7 +655,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
         // 获取AI分析结果
         String aiResult = analyzeImage(imagePath, prompt);
-        System.out.println("AI分析结果:" + aiResult);
+        //System.out.println("AI分析结果:" + aiResult);
         // 解析AI结果为QuestionAnalysis列表
         List<HomeworkPublishQuestion> questionAnalysisList = parseAIResultToHomreWorkQuestionList(aiResult);
         return questionAnalysisList;
@@ -681,7 +681,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
         // 获取AI分析结果
         String aiResult = analyzeImages(imagePaths, prompt);
-        System.out.println("AI分析结果:" + aiResult);
+        //System.out.println("AI分析结果:" + aiResult);
         // 解析AI结果为QuestionAnalysis列表
         List<HomeworkPublishQuestion> questionAnalysisList = parseAIResultToHomreWorkQuestionList(aiResult);
         return questionAnalysisList;
@@ -1482,7 +1482,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        System.out.println(analyses.toString());
+        //System.out.println(analyses.toString());
     }
 
 }

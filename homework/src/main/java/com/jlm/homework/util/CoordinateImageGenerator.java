@@ -164,7 +164,7 @@ public class CoordinateImageGenerator {
             // 保存图片
             saveImage(image, "output.png");
             
-            System.out.println("图片已成功生成并保存为output.png");
+            //System.out.println("图片已成功生成并保存为output.png");
             
         } catch (Exception e) {
             e.printStackTrace();

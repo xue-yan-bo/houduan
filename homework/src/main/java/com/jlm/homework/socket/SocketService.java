@@ -43,11 +43,11 @@ public class SocketService implements SmartLifecycle {
 
                 serverSocket = new ServerSocket(socketPort);
                 running = true;
-                System.out.println("Socket server started on port " + socketPort);
+                //System.out.println("Socket server started on port " + socketPort);
                 
                 while (running) {
                     Socket socket = serverSocket.accept();
-                    System.out.println("New client connected");
+                    //System.out.println("New client connected");
                     String clientAddress = socket.getInetAddress().getHostAddress();
                     log.info("New client connected from: {}", clientAddress);
                     // 提交客户端连接到线程池处理

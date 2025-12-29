@@ -107,6 +107,6 @@ public class ProblemParserUtil {
         String textContent = "#### 一、填空。（第6题4分，其余每空1分，共19分）  \\n 1. **小题号**：1  \\n    **题内容**：一个数由2个十、2个十分之一、3个百分之一和6个千分之一组成，这个数是( )，读作( )。  \\n    **题类型**：填空  \\n    **考察知识点**：小数的组成与读写  \\n    **答题是否正确**：暂无  \\n    **参考答案**：(20.236，二十点二三六)  \\n    **解析**：2个十是20，2个十分之一是0.2，3个百分之一是0.03，6个千分之一是0.006。";
         
         List<MathProblem> problems = parseMathProblems(textContent);
-        System.out.println("解析出" + problems.size() + "道题目");
+        //System.out.println("解析出" + problems.size() + "道题目");
     }
 }

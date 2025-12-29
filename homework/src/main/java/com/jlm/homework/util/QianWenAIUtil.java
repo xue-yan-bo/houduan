@@ -156,7 +156,7 @@ public class QianWenAIUtil extends AIUtil{
        /* GenerationResult result = callWithMessage(imagePath, prompt);
         String aiResult=result.getOutput().getChoices().get(0).getMessage().getContent();*/
         String aiResult=getTongYiServ().multiModalCall(prompt,Arrays.asList(imagePath));
-        System.out.println("AI分析结果:"+aiResult);
+        //System.out.println("AI分析结果:"+aiResult);
         // 解析AI结果为QuestionAnalysis列表
         ZhipuAIImageAnalysisUtil analysisUtil=zhipuAIConfig.zhipuAIImageAnalysisUtil();
         List<QuestionAnalysis> questionAnalysisList = analysisUtil.parseAIResultToQuestionAnalysisList(aiResult);
@@ -218,7 +218,7 @@ public class QianWenAIUtil extends AIUtil{
 
         // 获取AI分析结果
         String aiResult = getTongYiServ().multiModalCall(prompt,imageNames);
-        System.out.println("AI分析结果:"+aiResult);
+        //System.out.println("AI分析结果:"+aiResult);
         // 解析AI结果为QuestionAnalysis列表
         ZhipuAIImageAnalysisUtil analysisUtil=zhipuAIConfig.zhipuAIImageAnalysisUtil();
         List<HomeworkPublishQuestion> questionAnalysisList = analysisUtil.parseAIResultToHomreWorkQuestionList(aiResult);
@@ -266,10 +266,10 @@ public class QianWenAIUtil extends AIUtil{
        /* GenerationResult result = callWithMessage(imagePath,prompt);
         String aiResult = result.getOutput().getChoices().get(0).getMessage().getContent();*/
         String aiResult=getTongYiServ().multiModalCall(prompt,imagePaths);
-        System.out.println(aiResult);
+        //System.out.println(aiResult);
         ZhipuAIImageAnalysisUtil analysisUtil=zhipuAIConfig.zhipuAIImageAnalysisUtil();
         Map<String,String> map = analysisUtil.parseAIResultToMap(aiResult);
-        System.out.println(map.toString());
+        //System.out.println(map.toString());
         return map;
     }
     /**

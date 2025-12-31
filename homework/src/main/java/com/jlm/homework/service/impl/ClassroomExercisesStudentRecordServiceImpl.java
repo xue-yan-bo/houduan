@@ -28,6 +28,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Base64Utils;
 import org.springframework.util.CollectionUtils;
 
@@ -106,6 +107,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
     }
 
     @Override
+    @Transactional
     public void endAllAnswer(ExerciseWriteData exerciseWriteData) {
         Date now = new Date();
         List<ClassroomExercisesStudentRecord> recordList = new ArrayList<>();
@@ -153,7 +155,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                     this.save(record);
                 }
             }
-            classroomExercisesStudentRecordRepository.save(record);
+            //classroomExercisesStudentRecordRepository.save(record);
 
         }
         if (exerciseWriteData.getTeacherWriteRecords() != null && exerciseWriteData.getTeacherWriteRecords().size() > 0) {

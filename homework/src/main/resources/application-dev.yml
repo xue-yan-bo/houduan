@@ -5,7 +5,7 @@ server:
 # Socket服务配置
 socket:
   server:
-    port: 6000
+    port: 80
     maxConnections: 10
 # 开发环境数据库配置覆盖
 spring:
@@ -94,7 +94,10 @@ plus:
   cron-remove: 0 30 0 * * ?
 
 minio:
-  endpoint: http://124.165.206.34:20029
+  # 内网地址用于上传
+  endpoint: http://172.31.100.8:80
+  # 外网地址用于访问下载
+  publicEndpoint: http://124.165.206.34:20029
   accessKey: admin
   secretKey: HTTPSxjlm@2017.cn
   bucketName: exercise

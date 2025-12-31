@@ -107,6 +107,16 @@ management:
 # 生产环境特定配置
 debug: false
 
+# MinIO配置
+minio:
+  # 内网地址用于上传
+  endpoint: http://172.31.100.8:80
+  # 外网地址用于访问下载
+  publicEndpoint: http://124.165.206.34:20029
+  accessKey: admin
+  secretKey: HTTPSxjlm@2017.cn
+  bucketName: exercise
+
 # 生产环境JVM配置建议（在启动脚本中设置）
 # -Xms2g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200
 # -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/log/homework/

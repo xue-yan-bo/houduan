@@ -1,9 +1,9 @@
 package com.jlm.homework.service.impl;
 
 import cn.hutool.core.util.StrUtil;
+import com.jlm.homework.config.MinioConfig;
 import com.jlm.homework.entity.convert.FileConstant;
 import com.jlm.homework.service.IBucketService;
-import com.jlm.homework.util.BasicUtil;
 import io.minio.*;
 import io.minio.errors.*;
 import io.minio.messages.Item;
@@ -45,6 +45,9 @@ public class BucketServiceImpl implements IBucketService {
     @Resource
     private MinioClient minioClient;
 
+    @Resource
+    private MinioConfig minioConfig;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String upload(Object object, String contentType, Long studentId, Long groupId, String status, String objectName) throws IOException, ServerException,
@@ -77,7 +80,17 @@ public class BucketServiceImpl implements IBucketService {
             throw new RuntimeException( "文件上传失败，检查文件类型");
         }
 
-        return BasicUtil.buildFileDownloadUrl(download, studentId, groupId, status, objectName);
+        // 构建MinIO直接访问URL
+        String objectPath = studentId + "/" + groupId + "/" + status + "/" + objectName;
+        String minioUrl = minioConfig.getEndpoint() + "/" + bucketName + "/" + objectPath;
+        
+        // 将内网地址替换为外网地址
+        if (minioUrl.contains("172.31.100.8:80")) {
+            minioUrl = minioUrl.replaceAll("172.31.100.8:80", "124.165.206.34:20029");
+        }
+        
+        log.info("文件上传成功,访问地址: {}", minioUrl);
+        return minioUrl;
     }
 
     @Override

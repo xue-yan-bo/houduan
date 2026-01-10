@@ -1,5 +1,6 @@
 package com.jlm.homework.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -56,6 +57,7 @@ public class StudentFeedback {
      * 反馈时间
      */
     @Column(name = "feedback_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date feedbackTime;
     /**
      * 答复内容
@@ -77,10 +79,12 @@ public class StudentFeedback {
      * 答复时间
      */
     @Column(name = "reply_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date replyTime;
     /**
      * 创建时间
      */
     @Column(name = "create_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
 }

@@ -116,5 +116,15 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
         return wrongTitleStatisticsRepository.findAll(Example.of(wrongTitleBook),pageable);
     }
 
+    @Override
+    public void updateClassWrongBook(WrongTitleStatistics wrongTitleStatistics) {
+        wrongTitleStatisticsRepository.save(wrongTitleStatistics);
+    }
+
+    @Override
+    public void deleteClassWrong(Long id) {
+        wrongTitleStatisticsRepository.deleteById(id);
+    }
+
 
 }

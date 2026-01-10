@@ -13,6 +13,7 @@ import com.jlm.agent.domain.TopicReportEnt;
 import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
+import com.jlm.homework.feign.ClassFeignClient;
 import com.jlm.homework.feign.SchoolFeignClient;
 import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.*;
@@ -62,6 +63,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     private StudentFeignClient studentFeignClient;
     @Autowired
     private SchoolFeignClient schoolFeignClient;
+    @Autowired
+    private ClassFeignClient classFeignClient;
     @Autowired
     private ExerciseBookServer exerciseBookServer;
     @Autowired
@@ -2157,17 +2160,25 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     public void saveFeedbackRecords(Long studentId,String subject, List<StudentsWriteRecord> studentsFeedbackRecords) {
         StudentFeedback feedback = new StudentFeedback();
         Date now  = new Date();
+        if(studentsFeedbackRecords==null||studentsFeedbackRecords.isEmpty()){
+            return;
+        }
         feedback.setFeedbackContent(studentsFeedbackRecords);
         feedback.setFeedbackTime(now);
-        feedback.setSubject(subject);
         feedback.setStudentId(studentId);
+        //feedback.setSubject(subject);
         ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
-        if(resultDto!=null&&resultDto.getData()!=null){
-            Student student  = resultDto.getData();
+        if(resultDto!=null&&resultDto.getData()!=null) {
+            Student student = resultDto.getData();
             feedback.setStudentName(student.getStudentName());
             feedback.setClassId(student.getClassesId());
-            feedback.setClassName(student.getClassesName());
-            log.info("学生信息：id"+student.getStudentId()+"姓名："+student.getStudentName());
+            if (StringUtils.isEmpty(student.getClassesName()) && student.getClassesId() != null) {
+                Classes classes = classFeignClient.getClasses(student.getClassesId());
+                feedback.setClassName(classes.getName());
+            } else {
+                feedback.setClassName(student.getClassesName());
+            }
+            log.info("学生信息：id" + student.getStudentId() + "姓名：" + student.getStudentName());
         }
         feedback.setCreateTime(now);
         studentFeedbackService.save(feedback);

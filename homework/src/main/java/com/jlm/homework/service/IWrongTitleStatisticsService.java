@@ -13,4 +13,7 @@ public interface IWrongTitleStatisticsService {
 
     Page<WrongTitleStatistics> getPage(Integer pageNum, Integer pageSize, WrongTitleStatistics wrongTitleStatistics);
 
+    void updateClassWrongBook(WrongTitleStatistics wrongTitleStatistics);
+
+    void deleteClassWrong(Long id);
 }

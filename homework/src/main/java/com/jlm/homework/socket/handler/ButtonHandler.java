@@ -87,6 +87,7 @@ public class ButtonHandler implements MessageHandler {
         if (btn == 8) { // OK / Confirm
             handleOkButton(context, relation);
         } else if (btn == 1) { // Menu
+            resetContext(context);
             handleMenuButton(context);
         } else if (btn == 2) { // Back
             handleBackButton(context, relation);
@@ -468,11 +469,7 @@ public class ButtonHandler implements MessageHandler {
     
     private void buildFeedbackMenu(SessionContext context) throws IOException {
         List<MenuItemT> items = new ArrayList<>();
-        items.add(new MenuItemT(1, null, "语文", null));
-        items.add(new MenuItemT(2, null, "数学", null));
-        items.add(new MenuItemT(3,null,"英语", null));
-        items.add(new MenuItemT(4,null,"历史", null));
-        items.add(new MenuItemT(5,null,"政治", null));
+        items.add(new MenuItemT(1, null, "问题反馈", null));
         // ...
         context.setFeedbackMenu(new MenuT(null, items, 0, 0, items.size(), items.size()));
         context.setCurrentMenu(context.getFeedbackMenu());

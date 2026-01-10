@@ -1,14 +1,13 @@
 package com.jlm.homework.controller;
 
+import com.jlm.homework.entity.WrongTitleBook;
 import com.jlm.homework.entity.WrongTitleStatistics;
 import com.jlm.homework.service.IWrongTitleStatisticsService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "错题统计", description = "错题统计相关接口")
 @RestController
@@ -38,5 +37,16 @@ public class WrongTitleStatisticsController {
                                                             WrongTitleStatistics wrongTitleBook) {
         Page<WrongTitleStatistics> wrongTitleBookList=wrongTitleBookService.getPage(pageNum,pageSize,wrongTitleBook);
         return wrongTitleBookList;
+    }
+    @PostMapping("/updateClassWrongBook")
+    @Operation(summary = "修改班级错题本")
+    public void updateClassWrongBook(@RequestBody WrongTitleStatistics wrongTitleStatistics) {
+        wrongTitleBookService.updateClassWrongBook(wrongTitleStatistics);
+    }
+    @DeleteMapping("/deleteClassWrong/{id}")
+    @Operation(summary = "删除班级错题")
+    public void deleteById(@PathVariable Long id) {
+        wrongTitleBookService.deleteClassWrong(id);
+
     }
 }

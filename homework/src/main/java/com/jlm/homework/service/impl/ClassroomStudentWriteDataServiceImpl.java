@@ -17,7 +17,7 @@ import java.util.List;
 
 @Service
 public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWriteDataService {
-    private static Integer StudentWriteData_Size=500;
+    private static Integer StudentWriteData_Size=800;
     @Resource
     private ClassroomStudentWriteDataRepository classroomStudentWriteDataRepository;
     @Resource

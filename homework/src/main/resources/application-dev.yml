@@ -5,7 +5,7 @@ server:
 # Socket服务配置
 socket:
   server:
-    port: 80
+    port: 6000
     maxConnections: 10
 # 开发环境数据库配置覆盖
 spring:

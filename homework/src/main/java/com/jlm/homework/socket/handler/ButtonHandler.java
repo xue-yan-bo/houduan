@@ -3,6 +3,7 @@ package com.jlm.homework.socket.handler;
 import com.alibaba.cloud.commons.lang.StringUtils;
 import com.jlm.homework.dto.HomeWork2Board;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
+import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.socket.ButtonParseResult;
 import com.jlm.homework.socket.ClassroomResult;
@@ -24,13 +25,16 @@ public class ButtonHandler implements MessageHandler {
     private final SimpMessagingTemplate messagingTemplate;
     private final IStudentsHomeworkNewService studentsHomeworkNewService;
     private final ResponseSender responseSender;
+    private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
 
     public ButtonHandler(SimpMessagingTemplate messagingTemplate,
                          IStudentsHomeworkNewService studentsHomeworkNewService,
-                         ResponseSender responseSender) {
+                         ResponseSender responseSender,
+                         ISmartDeviceUserRelationService smartDeviceUserRelationService) {
         this.messagingTemplate = messagingTemplate;
         this.studentsHomeworkNewService = studentsHomeworkNewService;
         this.responseSender = responseSender;
+        this.smartDeviceUserRelationService = smartDeviceUserRelationService;
     }
 
     @Override
@@ -43,6 +47,9 @@ public class ButtonHandler implements MessageHandler {
         }
 
         SmartDeviceUserRelation relation = context.getRelation();
+        if(relation==null) {
+            relation = smartDeviceUserRelationService.selectByIpAddress(context.getClientIP());
+        }
         if (relation != null) {
             handleClassroomButtons(context, result, relation);
             try {

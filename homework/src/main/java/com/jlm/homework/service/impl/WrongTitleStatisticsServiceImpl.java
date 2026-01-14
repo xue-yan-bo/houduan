@@ -118,6 +118,16 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
 
     @Override
     public void updateClassWrongBook(WrongTitleStatistics wrongTitleStatistics) {
+        WrongTitleStatistics old=wrongTitleStatisticsRepository.findById(wrongTitleStatistics.getId()).orElse(null);
+        if(StringUtils.isNotEmpty(wrongTitleStatistics.getTitleContext())){
+            old.setTitleContext(wrongTitleStatistics.getTitleContext());
+        }
+        if(StringUtils.isNotEmpty(wrongTitleStatistics.getKnowledgePoint())){
+            old.setKnowledgePoint(wrongTitleStatistics.getKnowledgePoint());
+        }
+        if(StringUtils.isNotEmpty(wrongTitleStatistics.getParse())){
+            old.setParse(wrongTitleStatistics.getParse());
+        }
         wrongTitleStatisticsRepository.save(wrongTitleStatistics);
     }
 

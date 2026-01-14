@@ -140,24 +140,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             recordList = selectByClassroomExercisesIdAndClass(classroomExercisesId, classId);
         }
         List<StudentWriteDto> writeDtos = exerciseWriteData.getStudentWriteList();
-        for (ClassroomExercisesStudentRecord record : recordList) {
-            if (record.getEndFlag() == null || record.getEndFlag().equals("0")) {
-                record.setEndFlag(1);
-                record.setEndTime(now);
-            }
-            if (record.getStartTime() != null) {
-                record.setAnswerDuration(now.getTime() - record.getStartTime().getTime());
-            }
-            for (StudentWriteDto studentWriteDto : writeDtos) {
-                if (Long.compare(studentWriteDto.getStudentId(), record.getStudentId()) == 0) {
-                    record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordList());
 
-                    this.save(record);
-                }
-            }
-            //classroomExercisesStudentRecordRepository.save(record);
-
-        }
         if (exerciseWriteData.getTeacherWriteRecords() != null && exerciseWriteData.getTeacherWriteRecords().size() > 0) {
             Optional<ClassroomExercises> optional = classroomExercisesRepository.findById(exerciseWriteData.getClassroomExercisesId());
             if (optional != null && optional.isPresent()) {
@@ -175,7 +158,26 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             }
         }
         final Long exercisesId = classroomExercisesId;
+        List<ClassroomExercisesStudentRecord> finalRecordList = recordList;
         FutureTask<String> futureTask = new FutureTask<>(() -> {
+            for (ClassroomExercisesStudentRecord record : finalRecordList) {
+                if (record.getEndFlag() == null || record.getEndFlag().equals("0")) {
+                    record.setEndFlag(1);
+                    record.setEndTime(now);
+                }
+                if (record.getStartTime() != null) {
+                    record.setAnswerDuration(now.getTime() - record.getStartTime().getTime());
+                }
+                for (StudentWriteDto studentWriteDto : writeDtos) {
+                    if (Long.compare(studentWriteDto.getStudentId(), record.getStudentId()) == 0) {
+                        record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordList());
+
+                        this.save(record);
+                    }
+                }
+                classroomExercisesStudentRecordRepository.save(record);
+
+            }
             List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
             for (ClassroomExercisesStudentRecord record : studentRecordList) {
                 aiParseWriteStrucRecord(record.getId());

@@ -77,7 +77,12 @@ public class ExerciseBookController {
         }
 
         // 租户隔离：自动添加当前学校ID作为查询条件
-        Long currentSchoolId = userService.getCurrentSchoolIdSafely();
+        Long currentSchoolId = null;
+        if(request.getSchoolId()!=null){
+            currentSchoolId = request.getSchoolId();
+        }else {
+            currentSchoolId = userService.getCurrentSchoolIdSafely();
+        }
         ExerciseBookRequest requestWithSchoolId = request.copy();
         requestWithSchoolId.setSchoolId(currentSchoolId);
 
@@ -128,7 +133,12 @@ public class ExerciseBookController {
         Long currentUserId = userService.getCurrentUserIdSafely();
 
         // 租户隔离：获取当前学校ID
-        Long currentSchoolId = userService.getCurrentSchoolIdSafely();
+        Long currentSchoolId = null;
+        if(request.getSchoolId()!=null){
+            currentSchoolId = request.getSchoolId();
+        }else {
+            currentSchoolId = userService.getCurrentSchoolIdSafely();
+        }
 
         // 转换为实体并保存（toEntity方法已经处理了多班级ID的JSON存储）
         ExerciseBookEntity exerciseBook = request.toEntity(currentUserId, currentSchoolId);
@@ -136,9 +146,9 @@ public class ExerciseBookController {
 
         List<ExerciseBookChapter> exerciseBookChaprtList = request.getExerciseBookChaprtList();
         if (exerciseBookChaprtList != null) {
-            for (ExerciseBookChapter exerciseBookChaprt : exerciseBookChaprtList) {
+            exerciseBookChaprtList.forEach(exerciseBookChaprt->{
                 exerciseBookChaprt.setExerciseBookId(savedEntity.getId());
-            }
+            });
         }
         exerciseBookChapterServer.saveList(exerciseBookChaprtList);
         return ExerciseBookResponse.from(savedEntity);
@@ -159,7 +169,12 @@ public class ExerciseBookController {
         }
 
         // 租户隔离：检查练习册是否属于当前学校
-        Long currentSchoolId = userService.getCurrentSchoolIdSafely();
+        Long currentSchoolId = null;
+        if(request.getSchoolId()!=null){
+            currentSchoolId = request.getSchoolId();
+        }else {
+            currentSchoolId = userService.getCurrentSchoolIdSafely();
+        }
         if (!existing.getSchoolId().equals(currentSchoolId)) {
             throw new ResourceNotFoundNewException("练习册不存在，ID: " + id);
         }

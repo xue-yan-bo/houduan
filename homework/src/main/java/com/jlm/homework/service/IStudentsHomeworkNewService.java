@@ -83,7 +83,7 @@ public interface IStudentsHomeworkNewService {
 
     void updateSubmietNull(Long homeworkPublishId);
 
-    void saveStudentsCopybookRecords(long studentId,Long recordId, String name, List<StudentsWriteRecord> studentsCopybookRecords);
+    void saveStudentsCopybookRecords(Long studentId,Long recordId,Integer pageN, List<StudentsWriteRecord> studentsCopybookRecords,Boolean isFinish);
 
     List<Copybook2Board> getCopybookBoards(Long studentId);
 }

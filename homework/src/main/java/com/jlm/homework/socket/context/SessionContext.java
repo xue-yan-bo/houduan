@@ -30,6 +30,7 @@ public class SessionContext {
 
     // 业务状态
     private Long homeId = null;
+    private Long copybookId = null;
     private Integer pageNum = null;
     private MenuT currentMenu = null; // 当前菜单
     private Long buttonTimes = null;
@@ -68,8 +69,10 @@ public class SessionContext {
         this.studentsEmendRecords.clear();
         this.studentsFeedbackRecords.clear();
         this.uploadErrorTitleRecords.clear();
+        this.studentsCopybookRecords.clear();
         this.lastList.clear();
         this.homeId = null;
+        this.copybookId = null;
         this.pageNum = null;
         this.currentMenu = null;
         this.confirmCount = 0;
@@ -77,5 +80,6 @@ public class SessionContext {
         this.emendFlag = false;
         this.feedbackFlag = false;
         this.errorTitleFlag = false;
+        this.copybookFlag = false;
     }
 }

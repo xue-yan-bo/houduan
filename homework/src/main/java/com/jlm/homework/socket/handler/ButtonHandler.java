@@ -124,7 +124,7 @@ public class ButtonHandler implements MessageHandler {
         } else if (context.isErrorTitleFlag()) {
             handleErrorTitleOk(context, relation);
         }else if (context.isCopybookFlag()) {
-            handleCopybookFlagOk(context, relation);
+            handleCopybookOk(context, relation);
         }else if (context.isMenuFlag() &&context.getCurrentMenu() != null) {
             handleMenuSelection(context, relation, sdf);
         } else if (StringUtils.isNotEmpty(relation.getUserId())) {
@@ -343,7 +343,7 @@ public class ButtonHandler implements MessageHandler {
             handleMenuNavigation(context);
         }
     }
-    private void handleCopybookFlagOk(SessionContext context, SmartDeviceUserRelation relation) throws IOException {
+    private void handleCopybookOk(SessionContext context, SmartDeviceUserRelation relation) throws IOException {
         if (context.getCurrentMenu().equals(context.getCopybookMenu()) && context.getConfirmCount() == 1) {
             // Level 2: Select Homework
             String name = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem()).getDesc().trim();
@@ -359,9 +359,6 @@ public class ButtonHandler implements MessageHandler {
                 for (Copybook2Board board : context.getCopybookBoards()) {
 
                     String copybookName = board.getCopybookName();
-                    if (board.getCopybookId() != null) {
-                        studentsHomeworkNewService.saveStartTime(board.getCopybookId());
-                    }
                     int pages = (board.getPageSize() != null && board.getPageSize() > 0) ? board.getPageSize() : 1;
                     for (int i = 0; i < pages; i++) {
                         String desc = copybookName.length() > 12 ? copybookName.substring(0, 11) : copybookName + " " + (i + 1);
@@ -385,21 +382,21 @@ public class ButtonHandler implements MessageHandler {
         } else {
             MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
             String name = itemT.getDesc();
-            Long homeworkId = itemT.getObjectId();
+            Long copybookId = itemT.getObjectId();
             Integer pageN = 1;
-            String homeworkName;
+            String copybookName;
             if(name.contains(" ")) {
                 int num = name.lastIndexOf(" ");
-                homeworkName = name.substring(0, num);
+                copybookName = name.substring(0, num);
 
                 pageN = Integer.valueOf(name.substring(num+1, name.length()));
             }else{
-                homeworkName = name;
+                copybookName = name;
                 pageN = 1;
             }
-            context.setHomeId(homeworkId);
+            context.setHomeId(copybookId);
             context.setPageNum(pageN);
-            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId,"1", pageN, context.getStudentsWriteRecords(),true);
+            studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), copybookId, pageN, context.getStudentsWriteRecords(),true);
             resetContext(context);
             responseSender.sendMenuUpdate(context);
         }
@@ -633,7 +630,9 @@ public class ButtonHandler implements MessageHandler {
         if(context.isErrorTitleFlag()){
             saveErrorTitleRecord(context, relation);
         }
-
+        if (context.isCopybookFlag()) {
+            saveCopybookRecord(context, relation);
+        }
         
         if (context.getCurrentMenu() != null) {
             if (context.getCurrentMenu().getParentMenu() != null) {
@@ -648,6 +647,35 @@ public class ButtonHandler implements MessageHandler {
         } else {
             resetContext(context);
             responseSender.sendMenuUpdate(context);
+        }
+    }
+
+    private void saveCopybookRecord(SessionContext context, SmartDeviceUserRelation relation) throws IOException {
+        if (context.getLastList() != null && !context.getLastList().isEmpty() && context.getPageNum() > 1) {
+            studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), context.getCopybookId(), context.getPageNum() - 1, context.getLastList(), false);
+            context.setLastList(new ArrayList<>());
+        }
+
+        if (!context.getStudentsCopybookRecords().isEmpty() && context.getCopybookMenu()!= null) {
+            MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
+            String name = itemT.getDesc();
+            Long copybookId = itemT.getObjectId();
+            Integer pageN = 1;
+            if (name.contains(" ")) {
+                int num = name.lastIndexOf(" ");
+                pageN = Integer.valueOf(name.substring(num + 1));
+            }
+            context.setCopybookId(copybookId);
+            context.setPageNum(pageN);
+            studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), copybookId,  pageN, context.getStudentsWriteRecords(), true);
+
+            // Reset after save
+            resetContext(context);
+            responseSender.sendMenuUpdate(context);
+        } else {
+            context.setCurrentMenu(null); // Or handle navigation
+            // Check if we are just navigating
+            handleMenuNavigation(context);
         }
     }
 
@@ -706,11 +734,15 @@ public class ButtonHandler implements MessageHandler {
         if(context.isErrorTitleFlag()){
             saveErrorTitleRecord(context, relation);
         }
+        if (context.isCopybookFlag()) {
+            saveCopybookRecord(context, relation);
+        }
         resetContext(context);
         context.setHomeworkMenu(null);
         context.setEmendMenu(null);
         context.setFeedbackMenu(null);
         context.setErrorTitleMenu(null);
+        context.setCopybookMenu(null);
         responseSender.sendMenuUpdate(context);
     }
     private void handlePrePageButton(SessionContext context, SmartDeviceUserRelation relation,ButtonParseResult result) throws IOException {
@@ -787,6 +819,34 @@ public class ButtonHandler implements MessageHandler {
 
             }
             prePageSelect(context);
+        }else if(context.isCopybookFlag()){
+            //保存字帖数据
+            if(context.getLastList()!=null&&context.getLastList().size()>0&&context.getCopybookId()!=null&&context.getPageNum()!=null){
+                studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), context.getCopybookId(),context.getPageNum()+1, context.getLastList(),false);
+                context.setLastList(new ArrayList<>());
+            }
+            //保存作业记录
+            if(context.getStudentsCopybookRecords().size()>0&&context.getCurrentMenu()!=null&&relation!=null){
+                int index = context.getCurrentMenu().getSelectItem();
+                MenuItemT itemT = context.getCurrentMenu().getPItems().get(index);
+                String name = itemT.getDesc();
+                Long copybookId = itemT.getObjectId();
+                Integer pageN = 1;
+                String copybookName;
+                if(name.contains(" ")) {
+                    int num = name.lastIndexOf(" ");
+                    copybookName = name.substring(0, num);
+
+                    pageN = Integer.valueOf(name.substring(num+1, name.length()));
+                }else{
+                    copybookName = name;
+                    pageN = 1;
+                }
+                studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()),copybookId,pageN,context.getStudentsCopybookRecords(),false);
+                context.setStudentsCopybookRecords(new ArrayList<>());
+            }
+            //上一页
+            prePageSelect(context);
         }else if(context.isMenuFlag()){
             prePageSelect(context);
         }else{
@@ -846,6 +906,11 @@ public class ButtonHandler implements MessageHandler {
 
             }
             nextPageSelect(context);
+        }else if(context.isCopybookFlag()){
+            //下一页字帖数据保存
+            nextCopybookSave(context, relation);
+            //下一页选项
+            nextPageSelect(context);
         }else if(context.getCurrentMenu()!=null&&context.isMenuFlag()){
             nextPageSelect(context);
 
@@ -855,6 +920,32 @@ public class ButtonHandler implements MessageHandler {
         //获取当前选择菜单页数
         getCurrentPageNum(context);
 
+    }
+
+    private void nextCopybookSave(SessionContext context, SmartDeviceUserRelation relation) {
+        if(context.getLastList()!=null&& context.getLastList().size()>0&& context.getCopybookId()!=null&& context.getPageNum()!=null&& context.getPageNum()>1){
+            studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), context.getCopybookId(),context.getPageNum()-1, context.getLastList(),false);
+            context.setLastList(new ArrayList<>());
+        }
+        String name = null;
+        //保存作业记录
+        if(context.getStudentsCopybookRecords().size()>0&& context.getCurrentMenu()!=null&& relation !=null){
+            int index = context.getCurrentMenu().getSelectItem();
+
+            MenuItemT itemT = context.getCurrentMenu().getPItems().get(index);
+            name = itemT.getDesc();
+            Long copybookId = itemT.getObjectId();
+            Integer pageN = 1;
+            if(name.contains(" ")) {
+                int num = name.lastIndexOf(" ");
+
+                pageN = Integer.valueOf(name.substring(num+1, name.length()));
+            }else{
+                pageN = 1;
+            }
+            studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()),copybookId,pageN, context.getStudentsCopybookRecords(),false);
+            context.setStudentsCopybookRecords(new ArrayList<>());
+        }
     }
 
     private void getCurrentPageNum(SessionContext context) {

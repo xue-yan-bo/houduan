@@ -276,7 +276,12 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             }
             newWrongTitle.setParse(wrongTitleBook.getParse());
             newWrongTitle.setPageNo(wrongTitleBook.getPageNo());
-            newWrongTitle.setTitleContext(wrongTitleBook.getTitleContext());
+            if(StringUtils.isNotEmpty(wrongTitleBook.getTitleContext())&&
+                wrongTitleBook.getTitleContext().contains("\\")){
+                newWrongTitle.setTitleContext(wrongTitleBook.getTitleContext().replace("\\",""));
+            }else {
+                newWrongTitle.setTitleContext(wrongTitleBook.getTitleContext());
+            }
             newWrongTitle.setWrongStudentNum(1);
             if(studentNum!=0){
                 Double wrongRate = BigDecimal.valueOf(1).divide(BigDecimal.valueOf(studentNum),4,BigDecimal.ROUND_HALF_UP)

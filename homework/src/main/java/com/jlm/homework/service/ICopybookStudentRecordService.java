@@ -13,4 +13,7 @@ public interface ICopybookStudentRecordService {
     Page<CopybookStudentRecord> selectList(Integer pageNum, Integer pageSize, CopybookStudentRecord copybook);
 
     List<Copybook2Board> getCopybookBoards(Long studentId);
+
+    CopybookStudentRecord update(CopybookStudentRecord record);
+
 }

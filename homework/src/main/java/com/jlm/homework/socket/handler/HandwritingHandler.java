@@ -76,9 +76,32 @@ public class HandwritingHandler implements MessageHandler {
         } else if (context.isErrorTitleFlag() && context.getCurrentMenu() != null) {
             // 错题模式
             handleErrorTitleMode(context, result);
-        } else {
+        }  else if (context.isCopybookFlag() && context.getCopybookMenu() != null) {
+            // 字帖模式
+            handleCopybookMode(context, result, relation);
+        }else {
             // 课堂/自由模式
             handleClassroomMode(context, result, relation, sender);
+        }
+    }
+
+    private void handleCopybookMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation) {
+        StudentsWriteRecord writeRecord = createRecord(result);
+        if (context.getButtonTimes() != null && result.getTimestamp() < context.getButtonTimes()) {
+            context.getLastList().add(writeRecord);
+        } else {
+            context.getStudentsWriteRecords().add(writeRecord);
+        }
+        if (context.getStudentsWriteRecords().size() >= SessionContext.SAVE_SIZE
+                && context.getHomeId() != null && context.getPageNum() != null) {
+            studentsHomeworkNewService.saveStudentsCopybookRecords(
+                    Long.parseLong(relation.getUserId()),
+                    context.getCopybookId(),
+                    context.getPageNum(),
+                    context.getStudentsCopybookRecords(),
+                    false
+            );
+            context.setStudentsCopybookRecords(new ArrayList<>());
         }
     }
 

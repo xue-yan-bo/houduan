@@ -88,4 +88,9 @@ public class CopybookStudentRecordServiceImpl implements ICopybookStudentRecordS
         }
         return boardList;
     }
+
+    @Override
+    public CopybookStudentRecord update(CopybookStudentRecord record) {
+        return copybookStudentRecordRepository.save(record);
+    }
 }

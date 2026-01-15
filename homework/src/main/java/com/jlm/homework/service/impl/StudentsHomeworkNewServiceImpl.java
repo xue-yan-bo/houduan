@@ -184,13 +184,21 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public void saveStudentsCopybookRecords(long studentId,Long recordId, String name, List<StudentsWriteRecord> studentsCopybookRecords) {
+    public void saveStudentsCopybookRecords(Long studentId,Long recordId,Integer pageN, List<StudentsWriteRecord> studentsCopybookRecords,Boolean isFinish) {
+        CopybookStudentRecord record=copybookStudentRecordService.getById(recordId);
         CopybookStudentWriteData writeData = new CopybookStudentWriteData();
         writeData.setStudentId(studentId);
+        writeData.setStudentName(record.getStudentName());
         writeData.setStudentRecordId(recordId);
+        writeData.setPageNum(pageN);
         writeData.setStudentsWriteRecords(studentsCopybookRecords);
         writeData.setCreateTime(new Date());
         copybookStudentWriteDataService.save(writeData);
+        if(isFinish){
+            record.setSubmitStatus(1);
+            record.setSubmitTime(new Date());
+            copybookStudentRecordService.update(record);
+        }
     }
 
     @Override

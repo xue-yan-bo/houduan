@@ -1107,17 +1107,31 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         HomeworkRightRate totalRightRate = new HomeworkRightRate();
         if(totalRightRateMap!=null){
             // 安全地将Number转换为Integer
-            totalRightRate.setTotalNum(((Number) totalRightRateMap.get("totalNum")).intValue());
-            totalRightRate.setRightNum(((Number) totalRightRateMap.get("rightNum")).intValue());
-            totalRightRate.setErrorNum(((Number) totalRightRateMap.get("errorNum")).intValue());
+            if(totalRightRateMap.containsKey("totalNum")&&totalRightRateMap.get("totalNum")!=null){
+                totalRightRate.setTotalNum(((Number) totalRightRateMap.get("totalNum")).intValue());
+            }else{
+                totalRightRate.setTotalNum(0);
+            }
+            if(totalRightRateMap.containsKey("rightNum")&&totalRightRateMap.get("rightNum")!=null){
+                totalRightRate.setRightNum(((Number) totalRightRateMap.get("rightNum")).intValue());
+            }else{
+                totalRightRate.setRightNum(0);
+            }
+            if(totalRightRateMap.containsKey("errorNum")&&totalRightRateMap.get("errorNum")!=null){
+                totalRightRate.setErrorNum(((Number) totalRightRateMap.get("errorNum")).intValue());
+            }else{
+                totalRightRate.setErrorNum(0);
+            }
             Double rightRate = 0.0;
-            if(totalRightRate.getTotalNum()!=null&&totalRightRate.getRightNum()!=null){
+            if(totalRightRate.getTotalNum()!=null&&totalRightRate.getRightNum()!=null
+                    &&totalRightRate.getTotalNum()!=0){
                 rightRate =  BigDecimal.valueOf(totalRightRate.getRightNum()).divide(BigDecimal.valueOf(totalRightRate.getTotalNum()),4,BigDecimal.ROUND_HALF_UP)
                         .multiply(BigDecimal.valueOf(100)).doubleValue();
                 totalRightRate.setRightRate(rightRate);
             }
             Double erroRate =0.0;
-            if(totalRightRate.getTotalNum()!=null&&totalRightRate.getErrorNum()!=null){
+            if(totalRightRate.getTotalNum()!=null&&totalRightRate.getErrorNum()!=null
+                    &&totalRightRate.getTotalNum()!=0){
                 erroRate =  BigDecimal.valueOf(totalRightRate.getErrorNum()).divide(BigDecimal.valueOf(totalRightRate.getTotalNum()),4,BigDecimal.ROUND_HALF_UP)
                         .multiply(BigDecimal.valueOf(100)).doubleValue();
                 totalRightRate.setErrorRate(erroRate);
@@ -1138,17 +1152,31 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 }
                 homeworkRightRate.setGrade((String) rightRateMap.get("grade"));
                 // 安全地将Number转换为Integer
-                homeworkRightRate.setTotalNum(((Number) rightRateMap.get("totalNum")).intValue());
-                homeworkRightRate.setRightNum(((Number) rightRateMap.get("rightNum")).intValue());
-                homeworkRightRate.setErrorNum(((Number) rightRateMap.get("errorNum")).intValue());
+                if(rightRateMap.containsKey("totalNum")&&rightRateMap.get("totalNum")!=null){
+                    homeworkRightRate.setTotalNum(((Number) rightRateMap.get("totalNum")).intValue());
+                }else{
+                    homeworkRightRate.setTotalNum(0);
+                }
+                if(rightRateMap.containsKey("rightNum")&&rightRateMap.get("rightNum")!=null){
+                    homeworkRightRate.setRightNum(((Number) rightRateMap.get("rightNum")).intValue());
+                }else{
+                    homeworkRightRate.setRightNum(0);
+                }
+                if(rightRateMap.containsKey("errorNum")&&rightRateMap.get("errorNum")!=null){
+                    homeworkRightRate.setErrorNum(((Number) rightRateMap.get("errorNum")).intValue());
+                }else{
+                    homeworkRightRate.setErrorNum(0);
+                }
                 Double rightRate = 0.0;
-                if(homeworkRightRate.getTotalNum()!=null&&homeworkRightRate.getRightNum()!=null){
+                if(homeworkRightRate.getTotalNum()!=null&&homeworkRightRate.getRightNum()!=null
+                        &&homeworkRightRate.getTotalNum()!=0){
                     rightRate =  BigDecimal.valueOf(homeworkRightRate.getRightNum()).divide(BigDecimal.valueOf(homeworkRightRate.getTotalNum()),4,BigDecimal.ROUND_HALF_UP)
                             .multiply(BigDecimal.valueOf(100)).doubleValue();
                     homeworkRightRate.setRightRate(rightRate);
                 }
                 Double erroRate = 0.0;
-                if(homeworkRightRate.getTotalNum()!=null&&homeworkRightRate.getErrorNum()!=null){
+                if(homeworkRightRate.getTotalNum()!=null&&homeworkRightRate.getErrorNum()!=null
+                        &&homeworkRightRate.getTotalNum()!=0){
                     erroRate =  BigDecimal.valueOf(homeworkRightRate.getErrorNum()).divide(BigDecimal.valueOf(homeworkRightRate.getTotalNum()),4,BigDecimal.ROUND_HALF_UP)
                             .multiply(BigDecimal.valueOf(100)).doubleValue();
                     homeworkRightRate.setErrorRate(erroRate);
@@ -1165,15 +1193,15 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             gradeHomeworkSubmit.setGrade(grade);
             homeworkRightRate.setClassName(grade);
             Double gradeSubmitRate = 0.0d;
-            if (gradeTotalMap != null && gradeTotalMap.get(grade) != null
-                &&gradeSubmitMap !=null &&gradeSubmitMap.containsKey(grade) &&gradeSubmitMap.get(grade) != null){
+            if (gradeTotalMap != null && gradeTotalMap.get(grade) != null && gradeTotalMap.get(grade) != 0
+                    &&gradeSubmitMap !=null &&gradeSubmitMap.containsKey(grade) &&gradeSubmitMap.get(grade) != null){
                 gradeSubmitRate = BigDecimal.valueOf(gradeSubmitMap.get(grade)).divide(BigDecimal.valueOf(gradeTotalMap.get(grade)), 4, BigDecimal.ROUND_HALF_UP)
                         .multiply(BigDecimal.valueOf(100)).doubleValue();
             }
             gradeHomeworkSubmit.setSubmitRate(gradeSubmitRate);
             Double gradeUnsubmitRate = 0.0d;
-            if (gradeTotalMap != null && gradeTotalMap.containsKey(grade)
-                && gradeUnSubmitMap!=null &&gradeUnSubmitMap.containsKey(grade) && gradeUnSubmitMap.get(grade) != null) {
+            if (gradeTotalMap != null && gradeTotalMap.containsKey(grade) && gradeTotalMap.get(grade) != 0
+                    && gradeUnSubmitMap!=null &&gradeUnSubmitMap.containsKey(grade) && gradeUnSubmitMap.get(grade) != null) {
                 gradeUnsubmitRate = BigDecimal.valueOf(gradeUnSubmitMap.get(grade)).divide(BigDecimal.valueOf(gradeTotalMap.get(grade)), 4, BigDecimal.ROUND_HALF_UP)
                         .multiply(BigDecimal.valueOf(100)).doubleValue();
             }
@@ -1195,7 +1223,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 homeworkSubmit.setSubmitNum(0);
             }
             Double submitRate = 0.0d;
-            if(classSubmitMap!=null&&classSubmitMap.containsKey(className)&&classSubmitMap.get(className) != null){
+            if(classSubmitMap!=null&&classSubmitMap.containsKey(className)&&classSubmitMap.get(className) != null
+                    &&classTotalMap.get(className)!=0){
                 submitRate = BigDecimal.valueOf(classSubmitMap.get(className))
                     .divide(BigDecimal.valueOf(classTotalMap.get(className)),4,BigDecimal.ROUND_HALF_UP)
                     .multiply(BigDecimal.valueOf(100)).doubleValue();

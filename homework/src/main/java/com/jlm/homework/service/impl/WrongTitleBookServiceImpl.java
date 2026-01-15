@@ -388,7 +388,26 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         /*if(wrongTitleBook.getSource().contains("作业")){
             throw new RuntimeException("错题来源为作业的，不可以修改！");
         }*/
-        wrongTitleBookRepository.save(wrongTitleBook);
+        WrongTitleBook old=wrongTitleBookRepository.findById(wrongTitleBook.getId()).orElse(null);
+        if(StringUtils.isNotEmpty(wrongTitleBook.getTitleContext())){
+            old.setTitleContext(wrongTitleBook.getTitleContext());
+        }
+        if(StringUtils.isNotEmpty(wrongTitleBook.getKnowledgePoint())){
+            old.setKnowledgePoint(wrongTitleBook.getKnowledgePoint());
+        }
+        if(StringUtils.isNotEmpty(wrongTitleBook.getParse())){
+            old.setParse(wrongTitleBook.getParse());
+        }
+        if(StringUtils.isNotEmpty(wrongTitleBook.getTitleAnswer())){
+            old.setTitleAnswer(wrongTitleBook.getTitleAnswer());
+        }
+        if(StringUtils.isNotEmpty(wrongTitleBook.getStudentAnswer())){
+            old.setStudentAnswer(wrongTitleBook.getStudentAnswer());
+        }
+        if(StringUtils.isNotEmpty(wrongTitleBook.getStudentAnswer())){
+            old.setStudentAnswer(wrongTitleBook.getStudentAnswer());
+        }
+        wrongTitleBookRepository.save(old);
     }
 
     @Override

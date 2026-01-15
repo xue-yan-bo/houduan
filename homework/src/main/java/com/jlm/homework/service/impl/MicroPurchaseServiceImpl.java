@@ -5,11 +5,13 @@ import com.jlm.homework.entity.MicroPurchase;
 import com.jlm.homework.entity.QuestionBank;
 import com.jlm.homework.repository.MicroPurchaseRepository;
 import com.jlm.homework.service.IMicroPurchaseService;
+import com.jlm.homework.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -22,10 +24,14 @@ import java.util.List;
 public class MicroPurchaseServiceImpl implements IMicroPurchaseService {
     @Resource
     private MicroPurchaseRepository microPurchaseRepository;
-
+    @Autowired
+    private UserService userService;
     @Override
     public Long create(MicroPurchase microPurchase) {
         microPurchase.setCreateTime(new Date());
+        if(microPurchase.getSchoolId()==null){
+            microPurchase.setSchoolId(userService.getCurrentSchoolIdSafely());
+        }
         microPurchase=microPurchaseRepository.save(microPurchase);
         return microPurchase.getId();
     }
@@ -37,6 +43,9 @@ public class MicroPurchaseServiceImpl implements IMicroPurchaseService {
 
     @Override
     public MicroPurchase update(MicroPurchase microPurchase) {
+        if(microPurchase.getSchoolId()==null){
+            microPurchase.setSchoolId(userService.getCurrentSchoolIdSafely());
+        }
         return microPurchaseRepository.save(microPurchase);
     }
 

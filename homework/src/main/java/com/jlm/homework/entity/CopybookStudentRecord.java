@@ -5,33 +5,39 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * 字帖 实体类
  */
 @Data
 @Entity
-@Table(name = "copybook")
+@Table(name = "copybook_student_record")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class Copybook {
+public class CopybookStudentRecord {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     /**
+     * 字帖id
+     */
+    @Column(name = "copybook_id")
+    private Long copybookId;
+    /**
      * 字帖名称
      */
-    @Column(name = "name")
-    private String name;
+    @Column(name = "copybook_name")
+    private String copybookName;
     /**
-     * 老师id
+     * 学生id
      */
-    @Column(name = "teacher_id")
-    private Long teacherId;
+    @Column(name = "student_id")
+    private Long studentId;
     /**
-     * 老师姓名
+     * 学生姓名
      */
-    @Column(name = "teacher_name")
-    private String teacherName;
+    @Column(name = "student_name")
+    private String studentName;
     /**
      * 字帖内容
      */
@@ -50,7 +56,7 @@ public class Copybook {
     /**
      * 字体
      */
-    @Column(name = "font")
+    @Column(name = "name")
     private String font;
     /**
      * 格式，田字纹、三线纹
@@ -62,12 +68,6 @@ public class Copybook {
      */
     @Column(name = "type")
     private String type;
-
-    /**
-     * 状态，0未发布，1已发布
-     */
-    @Column(name = "status")
-    private Integer status;
     /**
      * 学校ID
      */
@@ -93,9 +93,26 @@ public class Copybook {
      */
     @Column(name = "grade_name")
     private String gradeName;
+
+    /**
+     * 提交状态，0未提交、1已提交
+     */
+    @Column(name = "submit_status")
+    private Integer submitStatus;
+    /**
+     * 提交时间
+     */
+    @Column(name = "submit_time")
+    private Date submitTime;
     /**
      * 创建时间
      */
     @Column(name = "create_time")
     private Date createTime;
+
+    /**
+     * 学生写作记录
+     */
+    @Transient
+    private List<CopybookStudentWriteData> studentWriteDataList;
 }

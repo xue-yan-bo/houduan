@@ -82,4 +82,8 @@ public interface IStudentsHomeworkNewService {
     public void updateByPublishId(Long homeworkPublishId,String homeworkName, String topicImagesStr, Date deadline, Long dailyPracticeld, String dailyPracticeName, String dailyPracticePreview, String chapter, String knowledgePoint,Integer submitStatus);
 
     void updateSubmietNull(Long homeworkPublishId);
+
+    void saveStudentsCopybookRecords(long studentId,Long recordId, String name, List<StudentsWriteRecord> studentsCopybookRecords);
+
+    List<Copybook2Board> getCopybookBoards(Long studentId);
 }

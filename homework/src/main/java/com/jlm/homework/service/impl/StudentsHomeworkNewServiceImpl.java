@@ -88,7 +88,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Autowired
     private IWrongTitleWriteDataService wrongTitleWriteDataService;
-
+    @Autowired
+    private ICopybookStudentWriteDataService copybookStudentWriteDataService;
+    @Autowired
+    private ICopybookStudentRecordService copybookStudentRecordService;
     @Autowired
     private ZhipuAIConfig zhipuAIConfig;
     @Autowired
@@ -178,6 +181,21 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Override
     public void updateSubmietNull(Long homeworkPublishId) {
         studentsHomeworkNewRepository.updateSubmietNull(homeworkPublishId);
+    }
+
+    @Override
+    public void saveStudentsCopybookRecords(long studentId,Long recordId, String name, List<StudentsWriteRecord> studentsCopybookRecords) {
+        CopybookStudentWriteData writeData = new CopybookStudentWriteData();
+        writeData.setStudentId(studentId);
+        writeData.setStudentRecordId(recordId);
+        writeData.setStudentsWriteRecords(studentsCopybookRecords);
+        writeData.setCreateTime(new Date());
+        copybookStudentWriteDataService.save(writeData);
+    }
+
+    @Override
+    public List<Copybook2Board> getCopybookBoards(Long studentId) {
+        return copybookStudentRecordService.getCopybookBoards(studentId);
     }
 
     @Override

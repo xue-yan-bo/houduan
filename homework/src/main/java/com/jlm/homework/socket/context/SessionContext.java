@@ -1,5 +1,6 @@
 package com.jlm.homework.socket.context;
 
+import com.jlm.homework.dto.Copybook2Board;
 import com.jlm.homework.dto.HomeWork2Board;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.entity.StudentsWriteRecord;
@@ -40,24 +41,25 @@ public class SessionContext {
     private boolean emendFlag = false;
     private boolean feedbackFlag = false;
     private boolean errorTitleFlag = false;
-
+    private boolean copybookFlag = false;
     // 菜单缓存
     private MenuT mainMenu = null;
     private MenuT homeworkMenu = null;
     private MenuT emendMenu = null;
     private MenuT feedbackMenu = null;
     private MenuT errorTitleMenu = null;
-
+    private MenuT copybookMenu = null;
     // 数据缓存
     private List<HomeWork2Board> work2Boards = new ArrayList<>();
     private List<HomeWork2Board> emendBoards = new ArrayList<>();
-    
+    private List<Copybook2Board> copybookBoards = new ArrayList<>();
     // 笔迹数据缓存
     private List<HandwritingParseResult> studentClassRecords = new ArrayList<>();
     private List<StudentsWriteRecord> studentsWriteRecords = new ArrayList<>();
     private List<StudentsWriteRecord> studentsEmendRecords = new ArrayList<>();
     private List<StudentsWriteRecord> studentsFeedbackRecords = new ArrayList<>();
     private List<StudentsWriteRecord> uploadErrorTitleRecords = new ArrayList<>();
+    private List<StudentsWriteRecord> studentsCopybookRecords = new ArrayList<>();
     private List<StudentsWriteRecord> lastList = new ArrayList<>();
 
     public void clearSession() {

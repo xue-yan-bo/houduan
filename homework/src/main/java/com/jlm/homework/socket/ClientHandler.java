@@ -60,7 +60,7 @@ public class ClientHandler implements Runnable {
     private void initHandlers() {
         // Dependencies for handlers
         HandwritingHandler handwritingHandler = new HandwritingHandler(messagingTemplate, studentsHomeworkNewService, smartDeviceUserRelationService);
-        ButtonHandler buttonHandler = new ButtonHandler(messagingTemplate, studentsHomeworkNewService, responseSender);
+        ButtonHandler buttonHandler = new ButtonHandler(messagingTemplate, studentsHomeworkNewService, responseSender,smartDeviceUserRelationService);
         SerialNumberHandler serialNumberHandler = new SerialNumberHandler(smartDeviceUserRelationService, messagingTemplate);
 
         handlers.put((byte) 0x01, handwritingHandler); // Handwriting

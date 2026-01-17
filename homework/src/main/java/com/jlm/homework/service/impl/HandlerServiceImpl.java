@@ -1,0 +1,208 @@
+package com.jlm.homework.service.impl;
+
+import com.alibaba.cloud.commons.lang.StringUtils;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.jlm.homework.dto.Copybook2Board;
+import com.jlm.homework.dto.HomeWork2Board;
+import com.jlm.homework.dto.HomeworkAIBigDto;
+import com.jlm.homework.dto.ResultDto;
+import com.jlm.homework.entity.*;
+import com.jlm.homework.feign.ClassFeignClient;
+import com.jlm.homework.feign.SchoolFeignClient;
+import com.jlm.homework.feign.StudentFeignClient;
+import com.jlm.homework.repository.HomeworkPublishRepository;
+import com.jlm.homework.repository.StudentsHomeworkNewRepository;
+import com.jlm.homework.service.*;
+import com.jlm.homework.util.*;
+import jakarta.annotation.Resource;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.concurrent.FutureTask;
+
+@Slf4j
+@Service
+public class HandlerServiceImpl implements IHandlerService {
+
+    @Autowired
+    private IStudentsHomeworkNewService studentsHomeworkNewService;
+    @Autowired
+    private IStudentFeedbackService studentFeedbackService;
+    @Autowired
+    private IWrongTitleBookService wrongTitleBookService;
+    @Autowired
+    private IWrongTitleWriteDataService wrongTitleWriteDataService;
+    @Autowired
+    private ICopybookStudentWriteDataService copybookStudentWriteDataService;
+    @Autowired
+    private ICopybookStudentRecordService copybookStudentRecordService;
+
+    @Autowired
+    private StudentFeignClient studentFeignClient;
+
+    @Autowired
+    private ClassFeignClient classFeignClient;
+    @Autowired
+    private AIUtil aiUtil;
+
+    @Override
+    public List<HomeWork2Board> getHomeWork2Board(String subject, String date, Long studentId) {
+        return studentsHomeworkNewService.getHomeWork2Board(subject,date,studentId);
+    }
+
+    @Override
+    public void saveWriteRecords(Long studentId, Long homeworkId, String type, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords, Boolean isFinish) {
+        studentsHomeworkNewService.saveWriteRecords(studentId,homeworkId,type,pageN,studentsWriteRecords,isFinish);
+
+    }
+
+    @Override
+    public void saveStartTime(Long homeworkId) {
+        studentsHomeworkNewService.saveStartTime(homeworkId);
+    }
+
+    @Override
+    public List<HomeWork2Board> getEmendHomeWork2Board(String subject, Long studentId) {
+        return studentsHomeworkNewService.getEmendHomeWork2Board(subject,studentId);
+    }
+
+    @Override
+    public void saveFeedbackRecords(Long studentId, String subject, List<StudentsWriteRecord> studentsFeedbackRecords) {
+        StudentFeedback feedback = new StudentFeedback();
+        Date now  = new Date();
+        if(studentsFeedbackRecords==null||studentsFeedbackRecords.isEmpty()){
+            return;
+        }
+        feedback.setFeedbackContent(studentsFeedbackRecords);
+        feedback.setFeedbackTime(now);
+        feedback.setStudentId(studentId);
+        //feedback.setSubject(subject);
+        ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
+        if(resultDto!=null&&resultDto.getData()!=null) {
+            Student student = resultDto.getData();
+            feedback.setStudentName(student.getStudentName());
+            feedback.setClassId(student.getClassesId());
+            if (StringUtils.isEmpty(student.getClassesName()) && student.getClassesId() != null) {
+                Classes classes = classFeignClient.getClasses(student.getClassesId());
+                feedback.setClassName(classes.getName());
+            } else {
+                feedback.setClassName(student.getClassesName());
+            }
+            log.info("学生信息：id" + student.getStudentId() + "姓名：" + student.getStudentName());
+        }
+        feedback.setCreateTime(now);
+        studentFeedbackService.save(feedback);
+        log.info("--------完成反馈信息保存-------");
+    }
+
+    @Override
+    public void saveErrorTitleRecords(Long studentId, String subject, List<StudentsWriteRecord> uploadErrorTitleRecords) {
+        WrongTitleWriteData wrongTitleWriteData = new WrongTitleWriteData();
+        wrongTitleWriteData.setStudentId(studentId);
+        wrongTitleWriteData.setSubject(subject);
+        wrongTitleWriteData.setStudentsWriteRecords(uploadErrorTitleRecords);
+        wrongTitleWriteData.setCreateTime(new Date());
+        wrongTitleWriteDataService.save(wrongTitleWriteData);
+
+        FutureTask<String> futureTask = new FutureTask<>(() -> {
+            String auditImages = "";
+            //异步处理AI智能审批
+            //ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
+            //QianWenAIUtil util = new QianWenAIUtil();
+            AIUtil util  = aiUtil.getAIUtil();
+            if("qianwen".equals(util.getAiName())){
+                util = (QianWenAIUtil)  util;
+            }else {
+                util = (ZhipuAIImageAnalysisUtil) util;
+            }
+            ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
+            BufferedImage image = WritingDataRenderer.drawWritingData(uploadErrorTitleRecords, 794, 1123);
+            String imageUrl = "错题上传-"+studentId+".png";
+            CoordinateImageGenerator.saveImage(image,imageUrl);
+            try {
+                String prompt = "解析图片笔记内容， 按每道题分割返回，每道题返回内容格式为 " +
+                        "错题分析：大题号： 小题号：  题内容： 学生答案：  解析：     \n";
+                String scoreAndAccuracy = util.analyzeImage(imageUrl,prompt);
+                String wrongTitleStr = scoreAndAccuracy.substring(scoreAndAccuracy.indexOf("错题分析："));
+                //System.out.println("错题分析: " + wrongTitleStr);
+                String[] wrongTitleList = wrongTitleStr.split("\n");
+                for(int i=0;i<wrongTitleList.length;i++) {
+                    String wrongTitle = wrongTitleList[i];
+                    if (StringUtils.isNotEmpty(wrongTitle.trim())&&wrongTitle.contains("大题号：")&&wrongTitle.contains("解析：")&&wrongTitle.contains("解析：")) {
+                        String titleBigNo = wrongTitle.substring(wrongTitle.indexOf("大题号：") + 4, wrongTitle.indexOf("小题号："));
+                        String titleSmallNo = wrongTitle.substring(wrongTitle.indexOf("小题号：") + 4, wrongTitle.indexOf("题内容："));
+                        String titleContext = wrongTitle.substring(wrongTitle.indexOf("题内容：") + 4, wrongTitle.indexOf("学生答案：")).trim();
+                        String studentAnswer = wrongTitle.substring(wrongTitle.indexOf("学生答案：") + 5, wrongTitle.indexOf("解析：")).trim();
+                        String parse = wrongTitle.substring(wrongTitle.indexOf("解析：") + 3).trim();
+                        WrongTitleBook wrongTitleBook = new WrongTitleBook();
+                        wrongTitleBook.setTitleBigNo(titleBigNo);
+                        wrongTitleBook.setTitleSmallNo(titleSmallNo);
+                        wrongTitleBook.setTitleContext(titleContext);
+                        wrongTitleBook.setStudentAnswer(studentAnswer);
+                        wrongTitleBook.setParse(parse);
+                        wrongTitleBook.setSource("学生智能手写板上传");
+                        wrongTitleBook.setWriteDataId(wrongTitleWriteData.getId());
+                        wrongTitleBook.setStudentId(studentId);
+                        if(resultDto!=null&&resultDto.getData()!=null) {
+                            Student student = resultDto.getData();
+                            wrongTitleBook.setStudentName(student.getStudentName());
+                            wrongTitleBook.setClassId(student.getClassesId());
+                            wrongTitleBook.setClassName(student.getClassesName());
+                        }
+                        wrongTitleBookService.addWrongBook(wrongTitleBook);
+                    }
+                }
+                File file = new File(imageUrl);
+                file.delete();
+            } catch (Exception e) {
+                //System.out.println("+++++解析分数错误++++++++++ "+e.getMessage() );
+            }
+
+
+
+            return "异步-OK";
+
+
+        });
+        Thread thread = new Thread(futureTask);
+        thread.start();
+    }
+
+    @Override
+    public void saveStudentsCopybookRecords(Long studentId, Long recordId, Integer pageN, List<StudentsWriteRecord> studentsCopybookRecords, Boolean isFinish) {
+        CopybookStudentRecord record=copybookStudentRecordService.getById(recordId);
+        CopybookStudentWriteData writeData = new CopybookStudentWriteData();
+        writeData.setStudentId(studentId);
+        writeData.setStudentName(record.getStudentName());
+        writeData.setStudentRecordId(recordId);
+        writeData.setPageNum(pageN);
+        writeData.setStudentsWriteRecords(studentsCopybookRecords);
+        writeData.setCreateTime(new Date());
+        copybookStudentWriteDataService.save(writeData);
+        if(isFinish){
+            record.setSubmitStatus(1);
+            record.setSubmitTime(new Date());
+            copybookStudentRecordService.update(record);
+        }
+    }
+
+    @Override
+    public List<Copybook2Board> getCopybookBoards(Long studentId) {
+        return copybookStudentRecordService.getCopybookBoards(studentId);
+    }
+}

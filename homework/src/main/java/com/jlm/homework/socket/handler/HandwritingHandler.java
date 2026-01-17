@@ -2,8 +2,8 @@ package com.jlm.homework.socket.handler;
 
 import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.entity.StudentsWriteRecord;
+import com.jlm.homework.service.IHandlerService;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
-import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.socket.HandwritingParseResult;
 import com.jlm.homework.socket.boardmenu.MenuItemT;
 import com.jlm.homework.socket.context.SessionContext;
@@ -20,14 +20,14 @@ import java.util.List;
 public class HandwritingHandler implements MessageHandler {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final IStudentsHomeworkNewService studentsHomeworkNewService;
+    private final IHandlerService handlerService;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
 
-    public HandwritingHandler(SimpMessagingTemplate messagingTemplate, 
-                              IStudentsHomeworkNewService studentsHomeworkNewService,
+    public HandwritingHandler(SimpMessagingTemplate messagingTemplate,
+                              IHandlerService handlerService,
                               ISmartDeviceUserRelationService smartDeviceUserRelationService) {
         this.messagingTemplate = messagingTemplate;
-        this.studentsHomeworkNewService = studentsHomeworkNewService;
+        this.handlerService = handlerService;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
     }
 
@@ -94,7 +94,7 @@ public class HandwritingHandler implements MessageHandler {
         }
         if (context.getStudentsWriteRecords().size() >= SessionContext.SAVE_SIZE
                 && context.getHomeId() != null && context.getPageNum() != null) {
-            studentsHomeworkNewService.saveStudentsCopybookRecords(
+            handlerService.saveStudentsCopybookRecords(
                     Long.parseLong(relation.getUserId()),
                     context.getCopybookId(),
                     context.getPageNum(),
@@ -115,7 +115,7 @@ public class HandwritingHandler implements MessageHandler {
         
         if (context.getStudentsWriteRecords().size() >= SessionContext.SAVE_SIZE 
                 && context.getHomeId() != null && context.getPageNum() != null) {
-            studentsHomeworkNewService.saveWriteRecords(
+            handlerService.saveWriteRecords(
                     Long.parseLong(relation.getUserId()), 
                     context.getHomeId(), 
                     "1", 
@@ -145,7 +145,7 @@ public class HandwritingHandler implements MessageHandler {
 
         if (context.getStudentsEmendRecords().size() >= SessionContext.SAVE_SIZE 
                 && context.getHomeId() != null && context.getPageNum() != null) {
-            studentsHomeworkNewService.saveWriteRecords(
+            handlerService.saveWriteRecords(
                     Long.parseLong(relation.getUserId()), 
                     context.getHomeId(), 
                     "2", 

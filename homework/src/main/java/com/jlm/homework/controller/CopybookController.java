@@ -68,7 +68,7 @@ public class CopybookController {
 
     }
 
-    @GetMapping("/publis")
+    @GetMapping("/publish")
     @Operation(summary = "发布")
     public Boolean publish(Long id) {
         Boolean publishFlag = copybookService.publish(id);

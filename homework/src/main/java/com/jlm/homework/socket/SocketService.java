@@ -1,5 +1,6 @@
 package com.jlm.homework.socket;
 
+import com.jlm.homework.service.IHandlerService;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,7 @@ public class SocketService implements SmartLifecycle {
     @Autowired
     private ISmartDeviceUserRelationService smartDeviceUserRelationService;
     @Autowired
-    private IStudentsHomeworkNewService studentsHomeworkNewService;
+    private IHandlerService handlerService;
 
     private ExecutorService threadPool;
     private ServerSocket serverSocket;
@@ -52,7 +53,7 @@ public class SocketService implements SmartLifecycle {
                     log.info("New client connected from: {}", clientAddress);
                     // 提交客户端连接到线程池处理
                     threadPool.submit(new ClientHandler(socket,messagingTemplate,
-                            smartDeviceUserRelationService,studentsHomeworkNewService));
+                            smartDeviceUserRelationService,handlerService));
                 }
             } catch (IOException e) {
                 System.err.println("Socket server error: " + e.getMessage());

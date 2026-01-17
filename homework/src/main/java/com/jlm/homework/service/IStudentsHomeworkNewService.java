@@ -55,7 +55,6 @@ public interface IStudentsHomeworkNewService {
 
     StudentHomeworkDto homeworkPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 
-    void saveFeedbackRecords(Long studentId,String subject ,List<StudentsWriteRecord> studentsFeedbackRecords);
 
     String aIaudit(Long studentsHomeworkId);
     /*AI�ṹ��*/
@@ -64,7 +63,6 @@ public interface IStudentsHomeworkNewService {
 
     Long getSubmitNumByHomeworkPublishId(Long id);
 
-    void saveErrorTitleRecords(Long studentId, String subject, List<StudentsWriteRecord> uploadErrorTitleRecords);
 
     StudentsHomeworkNew appSubmit(StudentsHomeworkNew studentsHomework);
 
@@ -83,7 +81,4 @@ public interface IStudentsHomeworkNewService {
 
     void updateSubmietNull(Long homeworkPublishId);
 
-    void saveStudentsCopybookRecords(Long studentId,Long recordId,Integer pageN, List<StudentsWriteRecord> studentsCopybookRecords,Boolean isFinish);
-
-    List<Copybook2Board> getCopybookBoards(Long studentId);
 }

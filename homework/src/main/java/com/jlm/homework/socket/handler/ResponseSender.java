@@ -39,11 +39,11 @@ public class ResponseSender {
                         buff[len + 1] = (byte) 0x21;
                         len += 2;
                     }
-                } else {
+                } /*else {
                     buff[0] = 0x00;
                     buff[1] = 0x30;
                     len += 2;
-                }
+                }*/
             }
         } else {
             buff[0] = 0x00;

@@ -2,6 +2,7 @@ package com.jlm.homework.socket;
 
 import com.alibaba.cloud.commons.lang.StringUtils;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
+import com.jlm.homework.service.IHandlerService;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.socket.context.SessionContext;
@@ -31,7 +32,7 @@ public class ClientHandler implements Runnable {
     private final Socket clientSocket;
     private final SimpMessagingTemplate messagingTemplate;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
-    private final IStudentsHomeworkNewService studentsHomeworkNewService;
+    private final IHandlerService handlerService;
 
     private final SessionContext sessionContext;
     private ResponseSender responseSender;
@@ -49,18 +50,18 @@ public class ClientHandler implements Runnable {
 
     public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
                          ISmartDeviceUserRelationService smartDeviceUserRelationService,
-                         IStudentsHomeworkNewService studentsHomeworkNewService) {
+                         IHandlerService handlerService) {
         this.clientSocket = socket;
         this.messagingTemplate = messagingTemplate;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
-        this.studentsHomeworkNewService = studentsHomeworkNewService;
+        this.handlerService = handlerService;
         this.sessionContext = new SessionContext();
     }
 
     private void initHandlers() {
         // Dependencies for handlers
-        HandwritingHandler handwritingHandler = new HandwritingHandler(messagingTemplate, studentsHomeworkNewService, smartDeviceUserRelationService);
-        ButtonHandler buttonHandler = new ButtonHandler(messagingTemplate, studentsHomeworkNewService, responseSender,smartDeviceUserRelationService);
+        HandwritingHandler handwritingHandler = new HandwritingHandler(messagingTemplate, handlerService, smartDeviceUserRelationService);
+        ButtonHandler buttonHandler = new ButtonHandler(messagingTemplate, handlerService, responseSender,smartDeviceUserRelationService);
         SerialNumberHandler serialNumberHandler = new SerialNumberHandler(smartDeviceUserRelationService, messagingTemplate);
 
         handlers.put((byte) 0x01, handwritingHandler); // Handwriting

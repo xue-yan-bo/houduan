@@ -4,8 +4,8 @@ import com.alibaba.cloud.commons.lang.StringUtils;
 import com.jlm.homework.dto.Copybook2Board;
 import com.jlm.homework.dto.HomeWork2Board;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
+import com.jlm.homework.service.IHandlerService;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
-import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.socket.ButtonParseResult;
 import com.jlm.homework.socket.ClassroomResult;
 import com.jlm.homework.socket.boardmenu.MenuItemT;
@@ -24,16 +24,16 @@ import java.util.*;
 public class ButtonHandler implements MessageHandler {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final IStudentsHomeworkNewService studentsHomeworkNewService;
+    private final IHandlerService handlerService;
     private final ResponseSender responseSender;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
 
     public ButtonHandler(SimpMessagingTemplate messagingTemplate,
-                         IStudentsHomeworkNewService studentsHomeworkNewService,
+                         IHandlerService handlerService,
                          ResponseSender responseSender,
                          ISmartDeviceUserRelationService smartDeviceUserRelationService) {
         this.messagingTemplate = messagingTemplate;
-        this.studentsHomeworkNewService = studentsHomeworkNewService;
+        this.handlerService = handlerService;
         this.responseSender = responseSender;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
     }
@@ -50,6 +50,7 @@ public class ButtonHandler implements MessageHandler {
         SmartDeviceUserRelation relation = context.getRelation();
         if(relation==null) {
             relation = smartDeviceUserRelationService.selectByIpAddress(context.getClientIP());
+            context.setRelation(relation);
         }
         if (relation != null) {
             handleClassroomButtons(context, result, relation);
@@ -138,7 +139,7 @@ public class ButtonHandler implements MessageHandler {
              String name = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem()).getDesc().trim();
              if (context.getWork2Boards() == null || context.getWork2Boards().isEmpty()) {
                  Long studentId = Long.parseLong(relation.getUserId());
-                 context.setWork2Boards(studentsHomeworkNewService.getHomeWork2Board(name, sdf.format(new Date()), studentId));
+                 context.setWork2Boards(handlerService.getHomeWork2Board(name, sdf.format(new Date()), studentId));
              }
              
              if (context.getWork2Boards() != null && !context.getWork2Boards().isEmpty()) {
@@ -149,7 +150,7 @@ public class ButtonHandler implements MessageHandler {
                      if (StringUtils.isNotEmpty(board.getSubject()) && board.getSubject().trim().equals(name)) {
                          String homeworkName = board.getHomeworkName();
                          if (board.getHomeworkId() != null) {
-                             studentsHomeworkNewService.saveStartTime(board.getHomeworkId());
+                             handlerService.saveStartTime(board.getHomeworkId());
                          }
                          int pages = (board.getPageSize() != null && board.getPageSize() > 0) ? board.getPageSize() : 1;
                          for (int i = 0; i < pages; i++) {
@@ -188,7 +189,7 @@ public class ButtonHandler implements MessageHandler {
              }
              context.setHomeId(homeworkId);
              context.setPageNum(pageN);
-             studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId,"1", pageN, context.getStudentsWriteRecords(),true);
+             handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId,"1", pageN, context.getStudentsWriteRecords(),true);
              resetContext(context);
              responseSender.sendMenuUpdate(context);
          }
@@ -212,7 +213,7 @@ public class ButtonHandler implements MessageHandler {
 
     private void saveHomeworkRecord(SessionContext context, SmartDeviceUserRelation relation) throws IOException {
          if (context.getLastList() != null && !context.getLastList().isEmpty() && context.getPageNum() > 1) {
-             studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(), "1", context.getPageNum() - 1, context.getLastList(), false);
+             handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(), "1", context.getPageNum() - 1, context.getLastList(), false);
              context.setLastList(new ArrayList<>());
          }
          
@@ -227,7 +228,7 @@ public class ButtonHandler implements MessageHandler {
              }
              context.setHomeId(homeworkId);
              context.setPageNum(pageN);
-             studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId, "1", pageN, context.getStudentsWriteRecords(), true);
+             handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId, "1", pageN, context.getStudentsWriteRecords(), true);
              
              // Reset after save
              resetContext(context);
@@ -288,7 +289,7 @@ public class ButtonHandler implements MessageHandler {
          } else {
              // Save emend records
               if (context.getLastList() != null && !context.getLastList().isEmpty() && context.getPageNum() > 1) {
-                 studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(), "2", context.getPageNum() - 1, context.getLastList(), false);
+                 handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(), "2", context.getPageNum() - 1, context.getLastList(), false);
                  context.setLastList(new ArrayList<>());
              }
              if (!context.getStudentsEmendRecords().isEmpty() && context.getCurrentMenu() != null && relation!=null) {
@@ -309,7 +310,7 @@ public class ButtonHandler implements MessageHandler {
                  context.setHomeId(homeworkId);
                  context.setPageNum(pageN);
                  // ... parse pageN
-                 studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId, "2", pageN, context.getStudentsEmendRecords(), true); // Simplified pageN
+                 handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId, "2", pageN, context.getStudentsEmendRecords(), true); // Simplified pageN
                  resetContext(context);
                  responseSender.sendMenuUpdate(context);
              } else {
@@ -322,7 +323,7 @@ public class ButtonHandler implements MessageHandler {
         if (!context.getStudentsFeedbackRecords().isEmpty() && context.getCurrentMenu() != null) {
              MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
              String name = itemT.getDesc();
-             studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
+             handlerService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
              context.setStudentsFeedbackRecords(new ArrayList<>());
              resetContext(context);
              responseSender.sendMenuUpdate(context);
@@ -335,7 +336,7 @@ public class ButtonHandler implements MessageHandler {
          if (!context.getUploadErrorTitleRecords().isEmpty() && context.getCurrentMenu() != null) {
              MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
              String name = itemT.getDesc();
-             studentsHomeworkNewService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name, context.getUploadErrorTitleRecords());
+             handlerService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name, context.getUploadErrorTitleRecords());
              context.setUploadErrorTitleRecords(new ArrayList<>());
              resetContext(context);
              responseSender.sendMenuUpdate(context);
@@ -344,62 +345,27 @@ public class ButtonHandler implements MessageHandler {
         }
     }
     private void handleCopybookOk(SessionContext context, SmartDeviceUserRelation relation) throws IOException {
-        if (context.getCurrentMenu().equals(context.getCopybookMenu()) && context.getConfirmCount() == 1) {
-            // Level 2: Select Homework
-            String name = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem()).getDesc().trim();
-            if (context.getCopybookBoards()== null || context.getCopybookBoards().isEmpty()) {
-                Long studentId = Long.parseLong(relation.getUserId());
-                context.setCopybookBoards(studentsHomeworkNewService.getCopybookBoards(studentId));
-            }
 
-            if (context.getCopybookBoards() != null && !context.getCopybookBoards().isEmpty()) {
-                context.setConfirmCount(2);
-                List<MenuItemT> itemTList = new ArrayList<>();
-                int nb = 1;
-                for (Copybook2Board board : context.getCopybookBoards()) {
+        MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
+        String name = itemT.getDesc();
+        Long copybookId = itemT.getObjectId();
+        Integer pageN = 1;
+        String copybookName;
+        if(name.contains(" ")) {
+            int num = name.lastIndexOf(" ");
+            copybookName = name.substring(0, num);
 
-                    String copybookName = board.getCopybookName();
-                    int pages = (board.getPageSize() != null && board.getPageSize() > 0) ? board.getPageSize() : 1;
-                    for (int i = 0; i < pages; i++) {
-                        String desc = copybookName.length() > 12 ? copybookName.substring(0, 11) : copybookName + " " + (i + 1);
-                        itemTList.add(new MenuItemT(nb++, board.getCopybookId(), desc, null));
-                    }
-
-                }
-
-                MenuT menuT = new MenuT(context.getCopybookMenu(), itemTList, 0, 0, Math.min(3, itemTList.size()), itemTList.size());
-                context.setCurrentMenu(menuT);
-                context.getCurrentMenu().setShowStartItem(0);
-                context.getCurrentMenu().setShowEndItem(itemTList.size(), context.getCurrentMenu());
-                context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
-                responseSender.sendMenuUpdate(context);
-
-                updatePageInfo(context);
-            } else {
-                resetContext(context);
-                responseSender.sendMenuUpdate(context);
-            }
-        } else {
-            MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
-            String name = itemT.getDesc();
-            Long copybookId = itemT.getObjectId();
-            Integer pageN = 1;
-            String copybookName;
-            if(name.contains(" ")) {
-                int num = name.lastIndexOf(" ");
-                copybookName = name.substring(0, num);
-
-                pageN = Integer.valueOf(name.substring(num+1, name.length()));
-            }else{
-                copybookName = name;
-                pageN = 1;
-            }
-            context.setHomeId(copybookId);
-            context.setPageNum(pageN);
-            studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), copybookId, pageN, context.getStudentsWriteRecords(),true);
-            resetContext(context);
-            responseSender.sendMenuUpdate(context);
+            pageN = Integer.valueOf(name.substring(num+1, name.length()));
+        }else{
+            copybookName = name;
+            pageN = 1;
         }
+        context.setCopybookId(copybookId);
+        context.setPageNum(pageN);
+        handlerService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), copybookId, pageN, context.getStudentsWriteRecords(),true);
+        resetContext(context);
+        responseSender.sendMenuUpdate(context);
+
     }
     
     private void handleMenuSelection(SessionContext context, SmartDeviceUserRelation relation, SimpleDateFormat sdf) throws IOException {
@@ -408,7 +374,7 @@ public class ButtonHandler implements MessageHandler {
             context.setHomeworkFlag(true);
             context.setConfirmCount(1);
             Long studentId = Long.parseLong(relation.getUserId());
-            context.setWork2Boards(studentsHomeworkNewService.getHomeWork2Board(null, sdf.format(new Date()), studentId));
+            context.setWork2Boards(handlerService.getHomeWork2Board(null, sdf.format(new Date()), studentId));
             
             // Build sub-menu
             buildHomeworkMenu(context);
@@ -416,7 +382,7 @@ public class ButtonHandler implements MessageHandler {
             context.setEmendFlag(true);
             context.setConfirmCount(1);
             Long studentId = Long.parseLong(relation.getUserId());
-            context.setEmendBoards(studentsHomeworkNewService.getEmendHomeWork2Board(null, studentId));
+            context.setEmendBoards(handlerService.getEmendHomeWork2Board(null, studentId));
             
             // Build sub-menu
             buildEmendMenu(context);
@@ -543,7 +509,7 @@ public class ButtonHandler implements MessageHandler {
         List<MenuItemT> items = new ArrayList<>();
         items.add(new MenuItemT(1, null, "问题反馈", null));
         // ...
-        context.setFeedbackMenu(new MenuT(null, items, 0, 0, items.size(), items.size()));
+        context.setFeedbackMenu(new MenuT(context.getMainMenu(), items, 0, 0, items.size(), items.size()));
         context.setCurrentMenu(context.getFeedbackMenu());
         context.getCurrentMenu().setShowStartItem(0);
         context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
@@ -559,22 +525,48 @@ public class ButtonHandler implements MessageHandler {
         items.add(new MenuItemT(4,null,"历史", null));
         items.add(new MenuItemT(5,null,"政治", null));
          // ...
-         context.setErrorTitleMenu(new MenuT(null, items, 0, 0, items.size(), items.size()));
+         context.setErrorTitleMenu(new MenuT(context.getMainMenu(), items, 0, 0, items.size(), items.size()));
          context.setCurrentMenu(context.getErrorTitleMenu());
          context.getCurrentMenu().setShowStartItem(0);
          context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
          responseSender.sendMenuUpdate(context);
     }
     private void buildCopybookMenu(SessionContext context) throws IOException {
-        List<MenuItemT> items = new ArrayList<>();
-        items.add(new MenuItemT(1, null, "字帖书写", null));
-        // ...
+        SmartDeviceUserRelation relation=context.getRelation();
+        if(relation==null) {
+            relation = smartDeviceUserRelationService.selectByIpAddress(context.getClientIP());
+            context.setRelation(relation);
+        }
+        Long studentId = Long.parseLong(relation.getUserId());
+        context.setCopybookBoards(handlerService.getCopybookBoards(studentId));
+        if (context.getCopybookBoards() != null && !context.getCopybookBoards().isEmpty()) {
+            context.setConfirmCount(2);
+            List<MenuItemT> itemTList = new ArrayList<>();
+            int nb = 1;
+            for (Copybook2Board board : context.getCopybookBoards()) {
 
-        context.setFeedbackMenu(new MenuT(null, items, 0, 0, items.size(), items.size()));
-        context.setCurrentMenu(context.getFeedbackMenu());
-        context.getCurrentMenu().setShowStartItem(0);
-        context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
-        responseSender.sendMenuUpdate(context);
+                String copybookName = board.getCopybookName();
+                int pages = (board.getPageSize() != null && board.getPageSize() > 0) ? board.getPageSize() : 1;
+                for (int i = 0; i < pages; i++) {
+                    String desc = copybookName.length() > 12 ? copybookName.substring(0, 11) : copybookName + " " + (i + 1);
+                    itemTList.add(new MenuItemT(nb++, board.getCopybookId(), desc, null));
+                }
+
+            }
+
+            MenuT menuT = new MenuT(context.getMainMenu(), itemTList, 0, 0, Math.min(3, itemTList.size()), itemTList.size());
+            context.setCopybookMenu(menuT);
+            context.setCurrentMenu(menuT);
+            context.getCurrentMenu().setShowStartItem(0);
+            context.getCurrentMenu().setShowEndItem(itemTList.size(), context.getCurrentMenu());
+            context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
+            responseSender.sendMenuUpdate(context);
+
+            updatePageInfo(context);
+        } else {
+            resetContext(context);
+            responseSender.sendMenuUpdate(context);
+        }
     }
     private void handleMenuNavigation(SessionContext context) throws IOException {
         MenuT menu = context.getCurrentMenu();
@@ -652,7 +644,7 @@ public class ButtonHandler implements MessageHandler {
 
     private void saveCopybookRecord(SessionContext context, SmartDeviceUserRelation relation) throws IOException {
         if (context.getLastList() != null && !context.getLastList().isEmpty() && context.getPageNum() > 1) {
-            studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), context.getCopybookId(), context.getPageNum() - 1, context.getLastList(), false);
+            handlerService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), context.getCopybookId(), context.getPageNum() - 1, context.getLastList(), false);
             context.setLastList(new ArrayList<>());
         }
 
@@ -667,7 +659,7 @@ public class ButtonHandler implements MessageHandler {
             }
             context.setCopybookId(copybookId);
             context.setPageNum(pageN);
-            studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), copybookId,  pageN, context.getStudentsWriteRecords(), true);
+            handlerService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), copybookId,  pageN, context.getStudentsWriteRecords(), true);
 
             // Reset after save
             resetContext(context);
@@ -681,7 +673,7 @@ public class ButtonHandler implements MessageHandler {
 
     private void saveEmendRecord(SessionContext context, SmartDeviceUserRelation relation) {
         if(context.getLastList()!=null&&context.getLastList().size()>0&&context.getHomeId()!=null&&context.getPageNum()!=null&&context.getPageNum()>1){
-            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(),"2", context.getPageNum()-1, context.getLastList(),false);
+            handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(),"2", context.getPageNum()-1, context.getLastList(),false);
             context.setLastList(new ArrayList<>());
         }
         //保存作业记录
@@ -696,7 +688,7 @@ public class ButtonHandler implements MessageHandler {
             }else{
                 pageN = 1;
             }
-            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"2",pageN,context.getStudentsEmendRecords(),false);
+            handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"2",pageN,context.getStudentsEmendRecords(),false);
             context.setStudentsEmendRecords(new ArrayList<>());
         }
     }
@@ -705,7 +697,7 @@ public class ButtonHandler implements MessageHandler {
             MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
             String name = itemT.getDesc();
             //System.out.println("=============保存反馈数据====科目："+name);
-            studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
+            handlerService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
             context.setStudentsFeedbackRecords(new ArrayList<>());
         }
     }
@@ -714,7 +706,7 @@ public class ButtonHandler implements MessageHandler {
             MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
             String name = itemT.getDesc();
             //System.out.println("=============保存反馈数据====科目："+name);
-            studentsHomeworkNewService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name, context.getUploadErrorTitleRecords());
+            handlerService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name, context.getUploadErrorTitleRecords());
             context.setUploadErrorTitleRecords(new ArrayList<>());
         }
     }
@@ -749,7 +741,7 @@ public class ButtonHandler implements MessageHandler {
         context.setButtonTimes(result.getTimestamp());
         if(context.isHomeworkFlag()) {
             if(context.getLastList()!=null&&context.getLastList().size()>0&&context.getHomeId()!=null&&context.getPageNum()!=null){
-                studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(),"1", context.getPageNum()+1, context.getLastList(),false);
+                handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(),"1", context.getPageNum()+1, context.getLastList(),false);
                 context.setLastList(new ArrayList<>());
             }
             //保存作业记录
@@ -769,7 +761,7 @@ public class ButtonHandler implements MessageHandler {
                     homeworkName = name;
                     pageN = 1;
                 }
-                studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"1",pageN,context.getStudentsWriteRecords(),false);
+                handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"1",pageN,context.getStudentsWriteRecords(),false);
                 context.setStudentsWriteRecords(new ArrayList<>());
             }
             //上一页
@@ -777,7 +769,7 @@ public class ButtonHandler implements MessageHandler {
 
         }else if(context.isEmendFlag()){
             if(context.getLastList()!=null&&context.getLastList().size()>0&&context.getHomeId()!=null&&context.getPageNum()!=null){
-                studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(),"2", context.getPageNum()+1, context.getLastList(),false);
+                handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(),"2", context.getPageNum()+1, context.getLastList(),false);
                 context.setLastList(new ArrayList<>());
             }
             //保存dindzhemg记录
@@ -792,7 +784,7 @@ public class ButtonHandler implements MessageHandler {
                 }else{
                     pageN = 1;
                 }
-                studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"2",pageN,context.getStudentsEmendRecords(),false);
+                handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"2",pageN,context.getStudentsEmendRecords(),false);
                 context.setStudentsEmendRecords(new ArrayList<>());
 
             }
@@ -802,7 +794,7 @@ public class ButtonHandler implements MessageHandler {
             if (context.getStudentsFeedbackRecords().size() > 0 && context.getCurrentMenu() != null  && relation != null) {
                 MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
                 String name = itemT.getDesc();
-                studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,context.getStudentsFeedbackRecords());
+                handlerService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,context.getStudentsFeedbackRecords());
                 context.setStudentsFeedbackRecords(new ArrayList<>());
 
             }
@@ -813,7 +805,7 @@ public class ButtonHandler implements MessageHandler {
                 MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
                 String name = itemT.getDesc();
                 //System.out.println("=============保存错题上传数据====科目："+name);
-                studentsHomeworkNewService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,context.getUploadErrorTitleRecords());
+                handlerService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,context.getUploadErrorTitleRecords());
                 context.setUploadErrorTitleRecords(new ArrayList<>());
                 //System.out.println("=============保存错题上传完成====");
 
@@ -822,7 +814,7 @@ public class ButtonHandler implements MessageHandler {
         }else if(context.isCopybookFlag()){
             //保存字帖数据
             if(context.getLastList()!=null&&context.getLastList().size()>0&&context.getCopybookId()!=null&&context.getPageNum()!=null){
-                studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), context.getCopybookId(),context.getPageNum()+1, context.getLastList(),false);
+                handlerService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), context.getCopybookId(),context.getPageNum()+1, context.getLastList(),false);
                 context.setLastList(new ArrayList<>());
             }
             //保存作业记录
@@ -842,7 +834,7 @@ public class ButtonHandler implements MessageHandler {
                     copybookName = name;
                     pageN = 1;
                 }
-                studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()),copybookId,pageN,context.getStudentsCopybookRecords(),false);
+                handlerService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()),copybookId,pageN,context.getStudentsCopybookRecords(),false);
                 context.setStudentsCopybookRecords(new ArrayList<>());
             }
             //上一页
@@ -890,7 +882,7 @@ public class ButtonHandler implements MessageHandler {
                 MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
                 String name = itemT.getDesc();
                 //System.out.println("=============保存反馈数据====科目："+name);
-                studentsHomeworkNewService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,context.getStudentsFeedbackRecords());
+                handlerService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,context.getStudentsFeedbackRecords());
                 //System.out.println("=============保存反馈数据完成====");
 
             }
@@ -901,7 +893,7 @@ public class ButtonHandler implements MessageHandler {
                 MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
                 String name = itemT.getDesc();
                 //System.out.println("=============保存错题上传数据====科目："+name);
-                studentsHomeworkNewService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,context.getUploadErrorTitleRecords());
+                handlerService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,context.getUploadErrorTitleRecords());
                 //System.out.println("=============保存错题上传数据完成====");
 
             }
@@ -924,7 +916,7 @@ public class ButtonHandler implements MessageHandler {
 
     private void nextCopybookSave(SessionContext context, SmartDeviceUserRelation relation) {
         if(context.getLastList()!=null&& context.getLastList().size()>0&& context.getCopybookId()!=null&& context.getPageNum()!=null&& context.getPageNum()>1){
-            studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), context.getCopybookId(),context.getPageNum()-1, context.getLastList(),false);
+            handlerService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()), context.getCopybookId(),context.getPageNum()-1, context.getLastList(),false);
             context.setLastList(new ArrayList<>());
         }
         String name = null;
@@ -943,7 +935,7 @@ public class ButtonHandler implements MessageHandler {
             }else{
                 pageN = 1;
             }
-            studentsHomeworkNewService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()),copybookId,pageN, context.getStudentsCopybookRecords(),false);
+            handlerService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()),copybookId,pageN, context.getStudentsCopybookRecords(),false);
             context.setStudentsCopybookRecords(new ArrayList<>());
         }
     }
@@ -966,7 +958,7 @@ public class ButtonHandler implements MessageHandler {
 
     private void nextEmendSave(SessionContext context, SmartDeviceUserRelation relation) {
         if(context.getLastList()!=null&& context.getLastList().size()>0&& context.getHomeId()!=null&& context.getPageNum()!=null&& context.getPageNum()>1){
-            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(),"2", context.getPageNum()-1, context.getLastList(),false);
+            handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(),"2", context.getPageNum()-1, context.getLastList(),false);
             context.setLastList(new ArrayList<>());
         }
         String name = null;
@@ -982,14 +974,14 @@ public class ButtonHandler implements MessageHandler {
             }else{
                 pageN = 1;
             }
-            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"2",pageN, context.getStudentsEmendRecords(),false);
+            handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"2",pageN, context.getStudentsEmendRecords(),false);
             context.setStudentsEmendRecords(new ArrayList<>());
         }
     }
 
     private void homeworkNextSave(SessionContext context, SmartDeviceUserRelation relation) {
         if(context.getLastList()!=null&& context.getLastList().size()>0&& context.getHomeId()!=null&& context.getPageNum()!=null&& context.getPageNum()>1){
-            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(),"1", context.getPageNum()-1, context.getLastList(),false);
+            handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()), context.getHomeId(),"1", context.getPageNum()-1, context.getLastList(),false);
             context.setLastList(new ArrayList<>());
         }
         String name = null;
@@ -1008,7 +1000,7 @@ public class ButtonHandler implements MessageHandler {
             }else{
                 pageN = 1;
             }
-            studentsHomeworkNewService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"1",pageN, context.getStudentsWriteRecords(),false);
+            handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()),homeworkId,"1",pageN, context.getStudentsWriteRecords(),false);
             context.setStudentsWriteRecords(new ArrayList<>());
         }
     }
@@ -1047,6 +1039,7 @@ public class ButtonHandler implements MessageHandler {
         context.setHomeId(null);
         context.setPageNum(null);
         context.setWork2Boards(new ArrayList<>());
+        context.setCopybookBoards(new ArrayList<>());
         context.setStudentsWriteRecords(new ArrayList<>());
         context.setStudentsEmendRecords(new ArrayList<>());
         context.setStudentsFeedbackRecords(new ArrayList<>());

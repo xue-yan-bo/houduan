@@ -18,6 +18,7 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -48,12 +49,65 @@ public class CopybookStudentRecordServiceImpl implements ICopybookStudentRecordS
         }
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable = PageRequest.of(pageNum - 1, pageSize, sort);
+        Specification<CopybookStudentRecord> specification = new Specification<CopybookStudentRecord>() {
+            @Override
+            public Predicate toPredicate(Root<CopybookStudentRecord> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                if(copybookStudentRecord.getSchoolId()!=null){
+                    Predicate con = criteriaBuilder.equal(root.get("schoolId"),copybookStudentRecord.getSchoolId());
+                    list.add(con);
+                }
+                if(StringUtils.isNotEmpty(copybookStudentRecord.getCopybookName())){
+                    Predicate con = criteriaBuilder.like(root.get("copybookName"),"%"+copybookStudentRecord.getCopybookName()+"%");
+                    list.add(con);
+                }
+                if(StringUtils.isNotEmpty(copybookStudentRecord.getFont())){
+                    Predicate con = criteriaBuilder.equal(root.get("font"),copybookStudentRecord.getFont());
+                    list.add(con);
+                }
+                if(StringUtils.isNotEmpty(copybookStudentRecord.getFormat())){
+                    Predicate con = criteriaBuilder.equal(root.get("format"),copybookStudentRecord.getFormat());
+                    list.add(con);
+                }
+                if(StringUtils.isNotEmpty(copybookStudentRecord.getSubject())){
+                    Predicate con = criteriaBuilder.equal(root.get("subject"),copybookStudentRecord.getSubject());
+                    list.add(con);
+                }
+                if(StringUtils.isNotEmpty(copybookStudentRecord.getContent())){
+                    Predicate con = criteriaBuilder.like(root.get("content"),"%"+copybookStudentRecord.getContent()+"%");
+                    list.add(con);
+                }
+                if(copybookStudentRecord.getStudentId()!=null){
+                    Predicate con = criteriaBuilder.equal(root.get("studentId"),copybookStudentRecord.getStudentId());
+                    list.add(con);
+                }
+                if(StringUtils.isNotEmpty(copybookStudentRecord.getStudentName())){
+                    Predicate con = criteriaBuilder.like(root.get("studentName"),"%"+copybookStudentRecord.getStudentName()+"%");
+                    list.add(con);
+                }
+                if(copybookStudentRecord.getSubmitStatus()!=null){
+                    Predicate con = criteriaBuilder.equal(root.get("submitStatus"),copybookStudentRecord.getSubmitStatus());
+                    list.add(con);
+                }
+                if(copybookStudentRecord.getCreateTime()!=null){
+                    Predicate con = criteriaBuilder.between(root.get("createTime").as(Date.class),copybookStudentRecord.getCreateTime(),new Date());
+                    list.add(con);
+                }
+                if(copybookStudentRecord.getSubmitTime()!=null){
+                    Predicate con = criteriaBuilder.between(root.get("submitTime").as(Date.class),copybookStudentRecord.getSubmitTime(),new Date());
+                    list.add(con);
+                }
+                Predicate[] p =  new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
         return copybookStudentRecordRepository.findAll(Example.of(copybookStudentRecord),pageable);
     }
 
     @Override
     public List<Copybook2Board> getCopybookBoards(Long studentId) {
         List<CopybookStudentRecord> studentRecords= new ArrayList<>();
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Specification<CopybookStudentRecord> specification = new Specification<CopybookStudentRecord>() {
             @Override
             public Predicate toPredicate(Root<CopybookStudentRecord> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
@@ -63,14 +117,16 @@ public class CopybookStudentRecordServiceImpl implements ICopybookStudentRecordS
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_MONTH, -1);
                 Date start = calendar.getTime();
-                Date end = new Date();
+                calendar.setTime(new Date());
+                calendar.add(Calendar.DAY_OF_MONTH, 1);
+                Date end = calendar.getTime();
                 Predicate condition1 = criteriaBuilder.between(root.<Date>get("createTime").as(Date.class),start,end);
                 list.add(condition1);
                 Predicate[] p =  new Predicate[list.size()];
                 return criteriaBuilder.and(list.toArray(p));
             }
         };
-        studentRecords =copybookStudentRecordRepository.findAll(specification);
+        studentRecords =copybookStudentRecordRepository.findAll(specification,sort);
         List<Copybook2Board> boardList = new ArrayList<>();
         if(!studentRecords.isEmpty()){
             for(CopybookStudentRecord record:studentRecords){

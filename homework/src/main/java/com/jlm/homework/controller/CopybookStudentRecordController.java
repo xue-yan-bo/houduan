@@ -21,7 +21,23 @@ public class CopybookStudentRecordController {
         CopybookStudentRecord record = copybookStudentRecordService.getById(id);
         return record;
     }
+    /**
+     * 根据字帖分页查询学生练字信息
+     * @param copybook
+     * @return
+     */
+    @GetMapping("/queryByCopybookId/{copybookId}")
+    @Operation(summary = "根据字帖分页查询学生练字信息")
+    public Page<CopybookStudentRecord> queryByCopybookId(
+            @PathVariable Long copybookId,
+            @RequestParam(defaultValue = "1")Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            CopybookStudentRecord copybook) {
 
+        Page<CopybookStudentRecord> list = copybookStudentRecordService.queryByCopybookId(copybookId,pageNum,pageSize, copybook);
+
+        return list;
+    }
     /**
      * 分页查询
      * @param copybook

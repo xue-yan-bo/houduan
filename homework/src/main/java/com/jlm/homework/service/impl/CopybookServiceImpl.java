@@ -21,6 +21,8 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -104,6 +106,22 @@ public class CopybookServiceImpl implements ICopybookService {
                     Predicate con = criteriaBuilder.like(root.get("teacherName"),"%"+copybook.getTeacherName()+"%");
                     list.add(con);
                 }
+                if(copybook.getGradeId()!=null){
+                    Predicate con = criteriaBuilder.equal(root.get("gradeId"),copybook.getGradeId());
+                    list.add(con);
+                }
+                if(StringUtils.isNotEmpty(copybook.getGradeName())){
+                    Predicate con = criteriaBuilder.like(root.get("gradeName"),"%"+copybook.getGradeName()+"%");
+                    list.add(con);
+                }
+                if(copybook.getClassId()!=null){
+                    Predicate con = criteriaBuilder.equal(root.get("classId"),copybook.getClassId());
+                    list.add(con);
+                }
+                if(StringUtils.isNotEmpty(copybook.getClassName())){
+                    Predicate con = criteriaBuilder.like(root.get("className"),"%"+copybook.getClassName()+"%");
+                    list.add(con);
+                }
                 if(copybook.getStatus()!=null){
                     Predicate con = criteriaBuilder.equal(root.get("status"),copybook.getStatus());
                     list.add(con);
@@ -111,6 +129,20 @@ public class CopybookServiceImpl implements ICopybookService {
                 if(copybook.getCreateTime()!=null){
                     Predicate con = criteriaBuilder.between(root.get("createTime").as(Date.class),copybook.getCreateTime(),new Date());
                     list.add(con);
+                }
+                if(StringUtils.isNotEmpty(copybook.getCreateTimeStr())){
+
+                    try {
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                        String startdate = copybook.getCreateTimeStr() + " 00:00:00";
+                        String enddate = copybook.getCreateTimeStr() + " 23:59:59";
+                        Date startdateDate = sdf.parse(startdate);
+                        Date enddateDate = sdf.parse(enddate);
+                        Predicate con = criteriaBuilder.between(root.get("createTime").as(Date.class),startdateDate,enddateDate);
+                        list.add(con);
+                    } catch (ParseException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
                 Predicate[] p =  new Predicate[list.size()];
                 return criteriaBuilder.and(list.toArray(p));

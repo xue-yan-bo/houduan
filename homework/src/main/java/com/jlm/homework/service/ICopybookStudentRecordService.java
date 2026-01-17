@@ -16,4 +16,5 @@ public interface ICopybookStudentRecordService {
 
     CopybookStudentRecord update(CopybookStudentRecord record);
 
+    Page<CopybookStudentRecord> queryByCopybookId(Long copybookId, Integer pageNum, Integer pageSize, CopybookStudentRecord copybook);
 }

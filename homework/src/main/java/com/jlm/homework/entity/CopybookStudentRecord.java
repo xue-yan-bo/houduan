@@ -1,5 +1,6 @@
 package com.jlm.homework.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -103,12 +104,17 @@ public class CopybookStudentRecord {
      * 提交时间
      */
     @Column(name = "submit_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date submitTime;
     /**
      * 创建时间
      */
     @Column(name = "create_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
+
+    @Transient
+    private String createTimeStr;
 
     /**
      * 学生写作记录

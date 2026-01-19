@@ -32,6 +32,11 @@ public class StudentFeedback {
     @Column(name = "student_name")
     private String studentName;
     /**
+     * 学校Id
+     */
+    @Column(name = "school_id")
+    private Long schoolId;
+    /**
      * 班级Id
      */
     @Column(name = "class_id")

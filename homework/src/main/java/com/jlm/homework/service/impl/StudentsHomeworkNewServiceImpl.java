@@ -2200,6 +2200,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         if(resultDto!=null&&resultDto.getData()!=null) {
             Student student = resultDto.getData();
             feedback.setStudentName(student.getStudentName());
+            feedback.setSchoolId(student.getSchoolId());
             feedback.setClassId(student.getClassesId());
             if (StringUtils.isEmpty(student.getClassesName()) && student.getClassesId() != null) {
                 Classes classes = classFeignClient.getClasses(student.getClassesId());

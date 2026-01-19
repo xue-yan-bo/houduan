@@ -67,6 +67,9 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             homeworkPublish.setPublishTime(new Date());
         }
         homeworkPublish.setDeleteFlag(0);
+        if(homeworkPublish.getSchoolId()==null){
+            homeworkPublish.setSchoolId(userService.getCurrentSchoolId());
+        }
         if (homeworkPublish.getClassId() != null && homeworkPublish.getClassId().size() > 0) {
             String classIds = homeworkPublish.getClassId().stream().map(Object::toString).collect(Collectors.joining(","));
             homeworkPublish.setClassIds(classIds);

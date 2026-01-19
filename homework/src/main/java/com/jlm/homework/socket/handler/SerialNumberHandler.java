@@ -43,10 +43,10 @@ public class SerialNumberHandler implements MessageHandler {
         }
         
         // Echo back
-        try {
+        /*try {
             sender.sendRaw(packet.getRawData());
         } catch (IOException e) {
             log.error("Error echoing serial number packet", e);
-        }
+        }*/
     }
 }

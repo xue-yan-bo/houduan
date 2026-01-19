@@ -95,6 +95,7 @@ public class HandlerServiceImpl implements IHandlerService {
         ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
         if(resultDto!=null&&resultDto.getData()!=null) {
             Student student = resultDto.getData();
+            feedback.setSchoolId(student.getSchoolId());
             feedback.setStudentName(student.getStudentName());
             feedback.setClassId(student.getClassesId());
             if (StringUtils.isEmpty(student.getClassesName()) && student.getClassesId() != null) {

@@ -2,8 +2,10 @@ package com.jlm.homework.controller;
 
 import com.jlm.homework.entity.ClassroomStudentWriteData;
 import com.jlm.homework.entity.ClassroomTeacherWriteData;
+import com.jlm.homework.entity.ClassroomTearcherApproveStu;
 import com.jlm.homework.service.IClassroomStudentWriteDataService;
 import com.jlm.homework.service.IClassroomTeacherWriteDataService;
+import com.jlm.homework.service.IClassroomTearcherApproveStuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +26,8 @@ public class ClassroomStudentWriteDataController {
     private IClassroomStudentWriteDataService classroomStudentWriteDataService;
     @Autowired
     private IClassroomTeacherWriteDataService classroomTeacherWriteDataService;
+    @Autowired
+    private IClassroomTearcherApproveStuService classroomTearcherApproveStuService;
     @PostMapping("/next")
     public void confirm(@RequestBody ClassroomStudentWriteData studentWriteData){
         classroomStudentWriteDataService.save(studentWriteData);
@@ -32,5 +36,11 @@ public class ClassroomStudentWriteDataController {
     @Operation(summary = "老师书写下一页或中间保存")
     public void teacherNext(@RequestBody ClassroomTeacherWriteData teacherWriteData){
         classroomTeacherWriteDataService.save(teacherWriteData);
+    }
+
+    @PostMapping("/teacherApproveNext")
+    @Operation(summary = "课堂老师批阅下一页或中间保存")
+    public void teacherNext(@RequestBody ClassroomTearcherApproveStu tearcherApproveStu){
+        classroomTearcherApproveStuService.save(tearcherApproveStu);
     }
 }

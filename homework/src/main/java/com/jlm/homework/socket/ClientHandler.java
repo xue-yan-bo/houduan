@@ -43,7 +43,7 @@ public class ClientHandler implements Runnable {
     // Heartbeat
     private ScheduledExecutorService heartbeatScheduler;
     private static final byte HEARTBEAT_TYPE = 0x05;
-    private static final long HEARTBEAT_INTERVAL = 9;
+    private static final long HEARTBEAT_INTERVAL = 6;
 
     private boolean headerParsed = false;
     private byte[] proxyHeaderReadBytes = null;

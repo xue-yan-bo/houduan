@@ -130,7 +130,7 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
         Long schoolId = userService.getCurrentSchoolIdSafely();
         ResultDto<SysSchool> schoolR = schoolFeignClient.getInfo(schoolId);
         boolean hxyFlag;
-        /*if(schoolR!=null&&schoolR.getData()!=null){
+        if(schoolR!=null&&schoolR.getData()!=null){
             SysSchool sysSchool = schoolR.getData();
             if("huaxiayuan".equals(sysSchool.getStyle())){
                 microPurchaseList = microPurchaseService.listByStudentId(studentId);
@@ -142,11 +142,11 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
         } else {
             hxyFlag = false;
             microPurchaseList = null;
-        }*/
+        }
         List<String> subjectList = new ArrayList<>();
         List<Long> gradeList = new ArrayList<>();
 
-        /*if(hxyFlag&&(microPurchaseList==null||microPurchaseList.isEmpty())){
+        if(hxyFlag&&(microPurchaseList==null||microPurchaseList.isEmpty())){
             return null;
         }else if(hxyFlag){
             Date now =new Date();
@@ -174,9 +174,9 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
             if(isOver){
                 return null;
             }
-        }*/
+        }
         //暂时华夏园不区分，m默认false
-        hxyFlag = false;
+        //hxyFlag = false;
         Long finalClassId = classId;
         boolean finalHxyFlag = hxyFlag;
         Specification<Microlecture> specification1 = new Specification<Microlecture>() {

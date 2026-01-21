@@ -200,7 +200,12 @@ public class ButtonHandler implements MessageHandler {
              MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
              if (itemT.getObjectId() != null) {
                  String name1 = itemT.getDesc();
-                 context.setHomeId(itemT.getObjectId());
+                 if(context.isHomeworkFlag()) {
+                     context.setHomeId(itemT.getObjectId());
+                 }
+                 if(context.isCopybookFlag()){
+                     context.setCopybookId(itemT.getObjectId());
+                 }
                  if (name1.contains(" ")) {
                      int num = name1.lastIndexOf(" ");
                      context.setPageNum(Integer.valueOf(name1.substring(num + 1)));
@@ -556,7 +561,7 @@ public class ButtonHandler implements MessageHandler {
 
             MenuT menuT = new MenuT(context.getMainMenu(), itemTList, 0, 0, Math.min(3, itemTList.size()), itemTList.size());
             context.setCopybookMenu(menuT);
-            context.setCurrentMenu(menuT);
+            context.setCurrentMenu(context.getCopybookMenu());
             context.getCurrentMenu().setShowStartItem(0);
             context.getCurrentMenu().setShowEndItem(itemTList.size(), context.getCurrentMenu());
             context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
@@ -834,6 +839,8 @@ public class ButtonHandler implements MessageHandler {
                     copybookName = name;
                     pageN = 1;
                 }
+                context.setCopybookId(copybookId);
+                context.setPageNum(pageN);
                 handlerService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()),copybookId,pageN,context.getStudentsCopybookRecords(),false);
                 context.setStudentsCopybookRecords(new ArrayList<>());
             }
@@ -935,6 +942,8 @@ public class ButtonHandler implements MessageHandler {
             }else{
                 pageN = 1;
             }
+            context.setCopybookId(copybookId);
+            context.setPageNum(pageN);
             handlerService.saveStudentsCopybookRecords(Long.parseLong(relation.getUserId()),copybookId,pageN, context.getStudentsCopybookRecords(),false);
             context.setStudentsCopybookRecords(new ArrayList<>());
         }

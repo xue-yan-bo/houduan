@@ -1,5 +1,6 @@
 package com.jlm.homework.dto;
 
+import com.jlm.homework.entity.ClassroomTearcherApproveStu;
 import com.jlm.homework.entity.TeacherWriteRecord;
 import lombok.Data;
 
@@ -22,6 +23,11 @@ public class ExerciseWriteData {
      * 老师黑板出题轨迹
      */
     private List<TeacherWriteRecord> teacherWriteRecords;
+
+    /**
+     * 老师审批学生作答笔记
+     */
+    private List<ClassroomTearcherApproveStu> tearcherApproveStuList;
 
     /**
      * 老师板子书写笔记

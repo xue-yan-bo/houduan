@@ -95,4 +95,7 @@ public class ClassroomExercisesStudentRecord {
      */
     @Transient
     private List<ClassroomStudentWriteData> studentWriteDataList;
+
+    @Transient
+    private List<ClassroomTearcherApproveStu> tearcherApproveStuList;
 }

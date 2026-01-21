@@ -90,10 +90,10 @@ public class HandwritingHandler implements MessageHandler {
         if (context.getButtonTimes() != null && result.getTimestamp() < context.getButtonTimes()) {
             context.getLastList().add(writeRecord);
         } else {
-            context.getStudentsWriteRecords().add(writeRecord);
+            context.getStudentsCopybookRecords().add(writeRecord);
         }
-        if (context.getStudentsWriteRecords().size() >= SessionContext.SAVE_SIZE
-                && context.getHomeId() != null && context.getPageNum() != null) {
+        if (context.getStudentsCopybookRecords().size() >= SessionContext.SAVE_SIZE
+                && context.getCopybookId() != null && context.getPageNum() != null) {
             handlerService.saveStudentsCopybookRecords(
                     Long.parseLong(relation.getUserId()),
                     context.getCopybookId(),

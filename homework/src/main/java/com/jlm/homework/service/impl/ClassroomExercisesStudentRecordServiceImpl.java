@@ -9,11 +9,7 @@ import com.jlm.homework.entity.*;
 import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentRecordRepository;
-import com.jlm.homework.service.IClassroomExercisesQuestionService;
-import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
-import com.jlm.homework.service.IClassroomStudentWriteDataService;
-import com.jlm.homework.service.IClassroomTeacherWriteDataService;
-import com.jlm.homework.service.IStudentAICallService;
+import com.jlm.homework.service.*;
 import com.jlm.homework.util.*;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -56,7 +52,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
     private IClassroomTeacherWriteDataService classroomTeacherWriteDataService;
     @Autowired
     private IClassroomExercisesQuestionService classroomExercisesQuestionService;
-
+    @Autowired
+    private IClassroomTearcherApproveStuService classroomTearcherApproveStuService;
     @Autowired
     private ZhipuAIConfig zhipuAIConfig;
     @Autowired
@@ -102,7 +99,11 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         for (ClassroomExercisesStudentRecord studentRecord : recordList) {
             List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
             studentRecord.setStudentWriteDataList(writeDataList);
+
+            List<ClassroomTearcherApproveStu> tearcherApproveStuList = classroomTearcherApproveStuService.findByStudentRecordId(studentRecord.getId());
+            studentRecord.setTearcherApproveStuList(tearcherApproveStuList);
         }
+
         return recordList;
     }
 
@@ -159,6 +160,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         }
         final Long exercisesId = classroomExercisesId;
         List<ClassroomExercisesStudentRecord> finalRecordList = recordList;
+        List<ClassroomTearcherApproveStu> tearcherApproveStuList = exerciseWriteData.getTearcherApproveStuList();
         FutureTask<String> futureTask = new FutureTask<>(() -> {
             for (ClassroomExercisesStudentRecord record : finalRecordList) {
                 if (record.getEndFlag() == null || record.getEndFlag().equals("0")) {
@@ -176,8 +178,17 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                     }
                 }
                 classroomExercisesStudentRecordRepository.save(record);
-
+                if(tearcherApproveStuList!=null&&tearcherApproveStuList.size()>0){
+                    for(ClassroomTearcherApproveStu approveStu:tearcherApproveStuList){
+                        if (Long.compare(approveStu.getStudentId(), record.getStudentId()) == 0) {
+                            approveStu.setStudentRecordId(record.getId());
+                            classroomTearcherApproveStuService.save(approveStu);
+                        }
+                    }
+                }
             }
+
+
             List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
             for (ClassroomExercisesStudentRecord record : studentRecordList) {
                 aiParseWriteStrucRecord(record.getId());
@@ -207,6 +218,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             studentWriteDto.setStudentName(studentRecord.getStudentName());
             List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
             studentWriteDto.setStudentWriteRecordList(writeDataList);
+            List<ClassroomTearcherApproveStu> tearcherApproveStuList = classroomTearcherApproveStuService.findByStudentRecordId(studentRecord.getId());
+            studentRecord.setTearcherApproveStuList(tearcherApproveStuList);
             studentWriteDtoList.add(studentWriteDto);
         }
         return studentWriteDtoList;
@@ -224,6 +237,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         for (ClassroomExercisesStudentRecord studentRecord : recordList) {
             List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
             studentRecord.setStudentWriteDataList(writeDataList);
+            List<ClassroomTearcherApproveStu> tearcherApproveStuList = classroomTearcherApproveStuService.findByStudentRecordId(studentRecord.getId());
+            studentRecord.setTearcherApproveStuList(tearcherApproveStuList);
         }
         return recordList;
     }

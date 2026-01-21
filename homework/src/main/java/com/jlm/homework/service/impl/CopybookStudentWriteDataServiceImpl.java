@@ -30,7 +30,7 @@ public class CopybookStudentWriteDataServiceImpl implements ICopybookStudentWrit
             Long studentId =copybookStudentWriteData.getStudentId();
             CopybookStudentRecord record = new CopybookStudentRecord();
             record.setStudentId(studentId);
-            Sort sort = Sort.by(Sort.Direction.DESC,"copybookExercisesId","startTime","createTime");
+            Sort sort = Sort.by(Sort.Direction.DESC,"copybookId","submitTime","createTime");
             List<CopybookStudentRecord> recordList=copybookStudentRecordRepository.findAll(Example.of(record),sort);
             if(recordList!=null&&recordList.size()>0){
                 copybookStudentWriteData.setStudentRecordId(recordList.get(0).getId());
@@ -42,10 +42,10 @@ public class CopybookStudentWriteDataServiceImpl implements ICopybookStudentWrit
         if(copybookStudentWriteData.getStudentsWriteRecords().size()<StudentWriteData_Size){
             copybookStudentWriteDataRepository.save(copybookStudentWriteData);
         }else {
-            CopybookStudentWriteData data=new CopybookStudentWriteData();
+            /*CopybookStudentWriteData data=new CopybookStudentWriteData();
             data.setStudentRecordId(copybookStudentWriteData.getStudentRecordId());
             data.setPageNum(copybookStudentWriteData.getPageNum());
-            copybookStudentWriteDataRepository.delete(data);
+            copybookStudentWriteDataRepository.delete(data);*/
             for(int i=0;i<=copybookStudentWriteData.getStudentsWriteRecords().size()/StudentWriteData_Size;i++){
                 CopybookStudentWriteData writeData=new CopybookStudentWriteData();
                 writeData.setStudentRecordId(copybookStudentWriteData.getStudentRecordId());

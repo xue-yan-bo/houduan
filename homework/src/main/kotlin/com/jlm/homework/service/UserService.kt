@@ -87,14 +87,14 @@ class UserService(
                 val userInfo = loginUserInfo.userInfo!!
 
                 // 尝试获取教师信息
-                val teacher = try {
+                /*val teacher = try {
                     userInfo.userUuid?.let { uuid ->
                         teacherFeignClient.getTeacherByUserUuid(uuid)
                     }
                 } catch (e: Exception) {
                     logger.debug("获取教师信息失败，用户可能不是教师: {}", userInfo.userUuid)
                     null
-                }
+                }*/
 
                 createCurrentUserInfo(
                     userId = userInfo.userId ?: 0L,
@@ -104,21 +104,21 @@ class UserService(
                     isAdmin = userInfo.admin ?: false,
                     roles = loginUserInfo?.roles ?: emptyList(),
                     currentRole = loginUserInfo?.currentRole ?: "",
-                    teacherName = teacher?.name
+                    //teacherName = teacher?.name
                 )
             } else {
                 val result=systemFeignClient.info(UserContext.getUsername());
                 if(result !=null&&result.data!=null) {
                     val userInfo = result?.data?.sysUser!!
                     // 尝试获取教师信息
-                    val teacher = try {
+                    /*val teacher = try {
                         userInfo.userUuid?.let { uuid ->
                             teacherFeignClient.getTeacherByUserUuid(uuid)
                         }
                     } catch (e: Exception) {
                         logger.debug("获取教师信息失败，用户可能不是教师: {}", userInfo.userUuid)
                         null
-                    }
+                    }*/
 
                     createCurrentUserInfo(
                         userId = userInfo.userId ?: 0L,
@@ -128,7 +128,7 @@ class UserService(
                         isAdmin = userInfo.admin ?: false,
                         roles = loginUserInfo?.roles ?: emptyList(),
                         currentRole = loginUserInfo?.currentRole ?: "",
-                        teacherName = teacher?.name
+                        //teacherName = teacher?.name
                     )
                 }else {
                     logger.warn("未获取到登录用户信息")

@@ -3,6 +3,7 @@ package com.jlm.homework.entity;
 import ai.z.openapi.service.image.ImageResult;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.jlm.homework.util.StringUtils;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -115,4 +116,18 @@ public class WrongTitleStatistics implements Serializable {
      */
     @Column(name = "question_type")
     private String questionType;
+
+    public String getTitleContext() {
+        if(StringUtils.isNotEmpty(titleContext)&&titleContext.contains("\\")){
+            return titleContext.replace("\\","");
+        }
+        return titleContext;
+    }
+
+    public String getParse() {
+        if(StringUtils.isNotEmpty(parse)&&parse.contains("\\")){
+            return parse.replace("\\","");
+        }
+        return parse;
+    }
 }

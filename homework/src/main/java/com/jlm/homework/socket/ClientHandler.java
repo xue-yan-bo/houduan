@@ -50,12 +50,12 @@ public class ClientHandler implements Runnable {
 
     public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
                          ISmartDeviceUserRelationService smartDeviceUserRelationService,
-                         IHandlerService handlerService) {
+                         IHandlerService handlerService,SessionContext sessionContext) {
         this.clientSocket = socket;
         this.messagingTemplate = messagingTemplate;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
         this.handlerService = handlerService;
-        this.sessionContext = new SessionContext();
+        this.sessionContext = sessionContext;
     }
 
     private void initHandlers() {
@@ -73,16 +73,25 @@ public class ClientHandler implements Runnable {
 
     @Override
     public void run() {
-        try (
-            InputStream in = clientSocket.getInputStream();
-            OutputStream out = clientSocket.getOutputStream();
-        ) {
+        InputStream in = null;
+        OutputStream out = null;
+        try {
+            // 获取输入输出流（不使用try-with-resources，避免自动关闭）
+            in = clientSocket.getInputStream();
+            out = clientSocket.getOutputStream();
+            
+            // 保持连接活跃，去掉超时限制
             clientSocket.setKeepAlive(true);
             this.responseSender = new ResponseSender(out);
             initHandlers();
 
             // 1. Proxy Protocol Handling
-            readProxyHeader();
+            try {
+                readProxyHeader();
+            } catch (IOException e) {
+                log.warn("Proxy header parsing failed, using default remote address: {}", e.getMessage());
+                sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
+            }
             InetSocketAddress realAddress = getRealRemoteAddress();
             
             sessionContext.setRemoteAddress(realAddress);
@@ -104,46 +113,65 @@ public class ClientHandler implements Runnable {
             // 3. Start Heartbeat
             initHeartbeatScheduler(out);
 
-            // 4. Main Loop
+            // 4. Main Loop - 保持运行，不自动关闭
             while (true) {
-                Packet packet = decoder.readNextPacket();
-                if (packet == null) {
-                    break; // End of stream
-                }
-
-                log.info("Received packet type: {}, length: {}", String.format("0x%02X", packet.getType()), packet.getLength());
-
-                // Pre-process Bluetooth packets for MAC binding
-                if (packet.isBluetooth()) {
-                    handleBluetoothPreProcess(packet);
-                } else {
-                    sessionContext.setBluetooth(false);
-                }
-
-                // Dispatch
-                MessageHandler handler = handlers.get(packet.getType());
-                if (handler != null) {
-                    try {
-                        handler.handle(sessionContext, packet, responseSender);
-                    } catch (Exception e) {
-                        log.error("Error handling packet type {}", packet.getType(), e);
-                        // responseSender.sendText("Error processing packet: " + e.getMessage());
+                try {
+                    Packet packet = decoder.readNextPacket();
+                    if (packet == null) {
+                        // 流结束，但是我们继续运行，不关闭连接
+                        // 这可能是因为客户端暂时没有数据发送，继续等待
+                        /*log.debug("No packet received, waiting...");
+                        Thread.sleep(100); // 短暂休眠，避免CPU占用过高
+                        continue;*/
+                        break;
                     }
-                } else {
-                    log.warn("Unknown packet type: {}", String.format("0x%02X", packet.getType()));
+
+                    log.info("Received packet type: {}, length: {}", String.format("0x%02X", packet.getType()), packet.getLength());
+
+                    // Pre-process Bluetooth packets for MAC binding
+                    if (packet.isBluetooth()) {
+                        handleBluetoothPreProcess(packet);
+                    } else {
+                        sessionContext.setBluetooth(false);
+                    }
+
+                    // Dispatch
+                    MessageHandler handler = handlers.get(packet.getType());
+                    if (handler != null) {
+                        try {
+                            handler.handle(sessionContext, packet, responseSender);
+                        } catch (Exception e) {
+                            log.error("Error handling packet type {}", packet.getType(), e);
+                            // responseSender.sendText("Error processing packet: " + e.getMessage());
+                        }
+                    } else {
+                        log.warn("Unknown packet type: {}", String.format("0x%02X", packet.getType()));
+                    }
+                    
+                    // Removed global echo to prevent bandwidth saturation.
+                    // Specific handlers (like SerialNumberHandler) should handle their own responses/echos if needed.
+                    // responseSender.sendRaw(packet.getRawData());
+                } catch (Exception e) {
+                    // 线程被中断，继续运行
+                    log.debug("ClientHandler thread interrupted, continuing...");
                 }
-                
-                // Removed global echo to prevent bandwidth saturation. 
-                // Specific handlers (like SerialNumberHandler) should handle their own responses/echos if needed.
-                // responseSender.sendRaw(packet.getRawData());
             }
 
         } catch (IOException e) {
             log.info("Client handler exception: {}", e.getMessage());
         } finally {
+            // 只有在出现异常时才关闭资源，正常情况下保持连接
             cancelHeartbeat();
             try {
-                clientSocket.close();
+                if (in != null) {
+                    in.close();
+                }
+                if (out != null) {
+                    out.close();
+                }
+                if (clientSocket != null && !clientSocket.isClosed()) {
+                    clientSocket.close();
+                }
             } catch (IOException e) {
                 log.info("Error closing socket: {}", e.getMessage());
             }
@@ -189,21 +217,44 @@ public class ClientHandler implements Runnable {
         if (headerParsed) return;
         PushbackInputStream pb = new PushbackInputStream(clientSocket.getInputStream(), 108);
         byte[] signature = new byte[5];
-        int bytesRead = pb.read(signature);
-        if (bytesRead != 5) throw new IOException("Read proxy signature failed");
-        pb.unread(signature);
 
-        if (new String(signature).equals("PROXY")) {
-            parseV1(pb);
-        } else if (isV2Signature(signature)) {
-            parseV2(pb);
-        } else {
+        int bytesRead = pb.read(signature);
+
+        // 更健壮的代理头处理
+        if (bytesRead == -1) {
+            // 流已关闭，使用默认远程地址
+            sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
+        } else if (bytesRead < 5) {
+            // 读取字节不足，但仍可继续处理
+            pb.unread(signature, 0, bytesRead);
             sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
             proxyHeaderReadBytes = Arrays.copyOf(signature, bytesRead);
+        } else {
+            // 正常情况，继续处理
+            pb.unread(signature);
+
+            if (new String(signature).equals("PROXY")) {
+                try {
+                    parseV1(pb);
+                } catch (IOException e) {
+                    log.warn("Failed to parse PROXY v1 header: {}", e.getMessage());
+                    sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
+                }
+            } else if (isV2Signature(signature)) {
+                try {
+                    parseV2(pb);
+                } catch (IOException e) {
+                    log.warn("Failed to parse PROXY v2 header: {}", e.getMessage());
+                    sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
+                }
+            } else {
+                sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
+                proxyHeaderReadBytes = Arrays.copyOf(signature, bytesRead);
+            }
         }
         headerParsed = true;
     }
-    
+
     private boolean isV2Signature(byte[] sig) {
         return sig[0] == 0x0D && sig[1] == 0x0A && sig[2] == 0x0D && sig[3] == 0x0A && sig[4] == 0x00;
     }
@@ -231,7 +282,7 @@ public class ClientHandler implements Runnable {
         if (!headerParsed) throw new IllegalStateException("Call readProxyHeader() first");
         return sessionContext.getRemoteAddress();
     }
-    
+
     private void logClientConnection() {
         Map<String, Object> data = new HashMap<>();
         data.put("clientIP", sessionContext.getClientIP());

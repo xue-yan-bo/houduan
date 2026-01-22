@@ -18,7 +18,7 @@ import java.util.List;
 @Data
 public class SessionContext {
     // 常量
-    public static final int SAVE_SIZE = 1500;
+    public static final int SAVE_SIZE = 1000;
 
     // 用户信息
     private SmartDeviceUserRelation relation;

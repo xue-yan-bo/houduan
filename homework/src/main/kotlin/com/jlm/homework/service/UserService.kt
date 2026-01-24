@@ -1,6 +1,7 @@
 package com.jlm.homework.service
 
 import com.jlm.homework.entity.CurrentUserInfo
+import com.jlm.homework.feign.School
 import com.jlm.homework.feign.SysFeignClient
 import com.jlm.homework.feign.SystemFeignClient
 import com.jlm.homework.feign.TeacherFeignClient
@@ -161,10 +162,19 @@ class UserService(
      */
     override fun getCurrentSchool(): com.jlm.homework.feign.School? {
         return try {
-            val school = sysFeignClient.currentSchool()
-            if (school != null) {
-                logger.info("获取当前学校信息: schoolId={}, schoolName={}", school.schoolId, school.schoolName)
-                school
+            val schoolInfo = sysFeignClient.getCurrentSchoolInfo()
+            if (schoolInfo != null) {
+                val schoolId = (schoolInfo["schoolId"] as? Number)?.toLong() ?: 0L
+                val schoolName = schoolInfo["schoolName"] as? String ?: ""
+                val style = schoolInfo["style"] as? String ?: ""
+                
+                if (schoolId > 0) {
+                    logger.info("获取当前学校信息: schoolId={}, schoolName={}", schoolId, schoolName)
+                    School(schoolId = schoolId, schoolName = schoolName, style = style)
+                } else {
+                    logger.warn("未获取到有效的学校信息")
+                    null
+                }
             } else {
                 logger.warn("未获取到当前学校信息")
                 null
@@ -186,7 +196,7 @@ class UserService(
         } catch (e: Exception) {
             logger.warn("获取当前学校ID失败，使用默认值: {}", e.message)
             getDefaultSchoolId()
-        } as Long
+        }
     }
 
     /**

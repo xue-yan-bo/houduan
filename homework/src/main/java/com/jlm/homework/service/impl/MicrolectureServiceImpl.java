@@ -3,7 +3,6 @@ package com.jlm.homework.service.impl;
 
 
 import com.jlm.homework.entity.Microlecture;
-import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.feign.School;
 import com.jlm.homework.repository.IMicrolectureRepository;
 import com.jlm.homework.service.IMicrolectureService;
@@ -156,9 +155,9 @@ public class MicrolectureServiceImpl implements IMicrolectureService {
 
     @Override
     public void save(Microlecture microlecture) {
-        School school=userService.getCurrentSchool();
-        if(school!=null&&StringUtils.isNotEmpty(school.getSchoolName())
-                &&StringUtils.isEmpty(microlecture.getSchoolName())){
+        School school = userService.getCurrentSchool();
+        if (school != null && StringUtils.isNotEmpty(school.getSchoolName())
+                && StringUtils.isEmpty(microlecture.getSchoolName())) {
             microlecture.setSchoolName(school.getSchoolName());
         }
         microlectureRepository.save(microlecture);

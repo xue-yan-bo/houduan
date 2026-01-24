@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping
 interface SysFeignClient {
 
     @GetMapping("/login-info/school")
-    fun currentSchool(): School?
+    fun getCurrentSchoolInfo(): Map<String, Any>?
 
 
 }

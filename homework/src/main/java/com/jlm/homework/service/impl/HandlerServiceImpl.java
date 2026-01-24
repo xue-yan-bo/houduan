@@ -1,38 +1,25 @@
 package com.jlm.homework.service.impl;
 
 import com.alibaba.cloud.commons.lang.StringUtils;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSONObject;
 import com.jlm.homework.dto.Copybook2Board;
 import com.jlm.homework.dto.HomeWork2Board;
-import com.jlm.homework.dto.HomeworkAIBigDto;
 import com.jlm.homework.dto.ResultDto;
 import com.jlm.homework.entity.*;
 import com.jlm.homework.feign.ClassFeignClient;
-import com.jlm.homework.feign.SchoolFeignClient;
 import com.jlm.homework.feign.StudentFeignClient;
-import com.jlm.homework.repository.HomeworkPublishRepository;
-import com.jlm.homework.repository.StudentsHomeworkNewRepository;
 import com.jlm.homework.service.*;
 import com.jlm.homework.util.*;
 import jakarta.annotation.Resource;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitMessagingTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
 import java.util.concurrent.FutureTask;
 
 @Slf4j
@@ -65,9 +52,21 @@ public class HandlerServiceImpl implements IHandlerService {
         return studentsHomeworkNewService.getHomeWork2Board(subject,date,studentId);
     }
 
+
+    @Resource
+    private RabbitMessagingTemplate mqTemplate;
+
     @Override
     public void saveWriteRecords(Long studentId, Long homeworkId, String type, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords, Boolean isFinish) {
         studentsHomeworkNewService.saveWriteRecords(studentId,homeworkId,type,pageN,studentsWriteRecords,isFinish);
+        if(isFinish){
+            // 发送消息到MQ
+            JSONObject json= new JSONObject();
+            json.put("studentId", studentId);
+            json.put("homeworkId", homeworkId);
+            json.put("type", type);
+            mqTemplate.convertAndSend("homework.correction.queue", json.toJSONString());
+        }
 
     }
 

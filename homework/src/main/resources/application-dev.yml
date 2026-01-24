@@ -18,6 +18,11 @@ spring:
       # 开发环境使用较小的连接池
       maximum-pool-size: 10
       minimum-idle: 2
+  rabbitmq:
+    host: 192.168.1.38
+    port: 5672
+    username: root
+    password: jlm@1234
 
   jpa:
     # 开发环境显示SQL

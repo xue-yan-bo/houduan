@@ -1709,7 +1709,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         List<HomeWork2Board> homeWork2Boards =  new ArrayList<>();
         for(StudentsHomeworkNew homework:homeworkList){
             HomeWork2Board homeWork2Board = new HomeWork2Board();
-            homeWork2Board.setHomeworkId(homework.getHomeworkPublishId());
+            homeWork2Board.setHomeworkId(homework.getId());
             homeWork2Board.setHomeworkName(homework.getHomeworkPublishName());
             homeWork2Board.setSubject(homework.getSubject());
             if(homework.getTopicImages()!=null&&homework.getTopicImages().size()>0){
@@ -1725,10 +1725,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Override
     public void saveWriteRecords(Long studentId,Long homeworkId, String type, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords,Boolean isFinish) {
-        StudentsHomeworkNew search = new StudentsHomeworkNew();
+        /*StudentsHomeworkNew search = new StudentsHomeworkNew();
         search.setStudentId(studentId);
-        search.setHomeworkPublishId(homeworkId);
-        Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findOne(Example.of(search));
+        search.setHomeworkPublishId(homeworkId);*/
+        Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findById(homeworkId);
         if(optional==null||optional.get()==null){
             return;
         }
@@ -1929,7 +1929,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         List<HomeWork2Board> homeWork2Boards =  new ArrayList<>();
         for(StudentsHomeworkNew homework:homeworkList){
             HomeWork2Board homeWork2Board = new HomeWork2Board();
-            homeWork2Board.setHomeworkId(homework.getHomeworkPublishId());
+            homeWork2Board.setHomeworkId(homework.getId());
             homeWork2Board.setHomeworkName(homework.getHomeworkPublishName());
             homeWork2Board.setSubject(homework.getSubject());
             if(homework.getTopicImages()!=null&&homework.getTopicImages().size()>0){

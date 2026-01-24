@@ -39,6 +39,7 @@ public class TeacherAttendanceRecordServiceImpl implements ITeacherAttendanceRec
             if(schoolId==null){
                 schoolId=userService.getCurrentSchoolIdSafely();
             }
+            record.setSchoolId(schoolId);
             record.setClassId(classId);
             if(userInfo!=null&&userService.isCurrentUserTeacher()){
                 record.setTeacherId(userInfo.getUserUuid());
@@ -102,6 +103,9 @@ public class TeacherAttendanceRecordServiceImpl implements ITeacherAttendanceRec
         Sort sort = Sort.by(Sort.Direction.DESC, "startTime");
         Pageable pageable;
         pageable = PageRequest.of(pageNum, pageSize, sort);
+        if(teacherAttendanceRecord.getSchoolId()==null){
+            teacherAttendanceRecord.setSchoolId(userService.getCurrentSchoolId());
+        }
         return teacherAttendanceRecordRepository.findAll(Example.of(teacherAttendanceRecord),pageable);
     }
 }

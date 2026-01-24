@@ -33,6 +33,11 @@ public class TeacherAttendanceRecord {
      */
     @Column(name = "teacher_name")
     private String teacherName;
+    /**
+     * 班级ID
+     */
+    @Column(name = "school_id")
+    private Long schoolId;
       /**
      * 班级ID
      */

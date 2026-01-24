@@ -1,5 +1,7 @@
 package com.jlm.homework.controller;
 
+import com.jlm.homework.dto.FeedbackDto;
+import com.jlm.homework.dto.StudentFeedbackReq;
 import com.jlm.homework.dto.StudentVo;
 import com.jlm.homework.entity.QuestionType;
 import com.jlm.homework.entity.Student;
@@ -11,12 +13,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Tag(name = "学生反馈", description = "学生反馈的查询等")
 @RestController
 @RequestMapping("/api/student-feedback")
 public class StudentFeedbackController {
     @Autowired
     private IStudentFeedbackService studentFeedbackService;
+    /**
+     * 学生反馈根据日期班级分类
+     * @param
+     * @return
+     */
+    @GetMapping("/getFeedbackDto")
+    @Operation(summary = "学生反馈根据日期班级分类")
+    public List<FeedbackDto> getFeedbackDto(Long schoolId,String feedbackTimeStart,String feedbackTimeEnd) {
+        return studentFeedbackService.getFeedbackDto(schoolId,feedbackTimeStart,feedbackTimeEnd);
+    }
     /**
      * 分页查询
      * @param studentFeedback
@@ -27,7 +41,7 @@ public class StudentFeedbackController {
     public Page<StudentFeedback> queryList(
             @RequestParam(defaultValue = "1")Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            StudentFeedback studentFeedback) {
+            StudentFeedbackReq studentFeedback) {
 
         Page<StudentFeedback> list = studentFeedbackService.findPage(pageNum,pageSize, studentFeedback);
 

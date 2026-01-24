@@ -62,6 +62,7 @@ public class SocketService implements SmartLifecycle {
                         sessionContext = clientAddressMap.get(clientAddress);
                     }else{
                         sessionContext = new  SessionContext();
+                        clientAddressMap.put(clientAddress,sessionContext);
                     }
                     // 提交客户端连接到线程池处理
                     ClientHandler clientHandler=new ClientHandler(socket,messagingTemplate,

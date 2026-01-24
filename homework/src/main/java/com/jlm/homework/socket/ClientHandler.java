@@ -34,7 +34,7 @@ public class ClientHandler implements Runnable {
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
     private final IHandlerService handlerService;
 
-    private final SessionContext sessionContext;
+    private static SessionContext sessionContext;
     private ResponseSender responseSender;
     
     // Handlers
@@ -47,7 +47,6 @@ public class ClientHandler implements Runnable {
 
     private boolean headerParsed = false;
     private byte[] proxyHeaderReadBytes = null;
-
     public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
                          ISmartDeviceUserRelationService smartDeviceUserRelationService,
                          IHandlerService handlerService,SessionContext sessionContext) {

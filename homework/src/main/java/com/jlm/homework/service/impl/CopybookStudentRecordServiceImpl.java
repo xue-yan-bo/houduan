@@ -7,6 +7,7 @@ import com.jlm.homework.entity.CopybookStudentWriteData;
 import com.jlm.homework.repository.CopybookStudentRecordRepository;
 import com.jlm.homework.service.ICopybookStudentRecordService;
 import com.jlm.homework.service.ICopybookStudentWriteDataService;
+import com.jlm.homework.service.UserService;
 import com.jlm.homework.util.StringUtils;
 import jakarta.annotation.Resource;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -31,6 +32,8 @@ public class CopybookStudentRecordServiceImpl implements ICopybookStudentRecordS
     private CopybookStudentRecordRepository copybookStudentRecordRepository;
     @Autowired
     private ICopybookStudentWriteDataService copybookStudentWriteDataService;
+    @Autowired
+    private UserService userService;
 
     @Override
     public CopybookStudentRecord getById(Long id) {
@@ -56,6 +59,9 @@ public class CopybookStudentRecordServiceImpl implements ICopybookStudentRecordS
                 List<Predicate> list = new ArrayList<>();
                 if(copybookStudentRecord.getSchoolId()!=null){
                     Predicate con = criteriaBuilder.equal(root.get("schoolId"),copybookStudentRecord.getSchoolId());
+                    list.add(con);
+                }else {
+                    Predicate con = criteriaBuilder.equal(root.get("schoolId"),userService.getCurrentSchoolId());
                     list.add(con);
                 }
                 if(StringUtils.isNotEmpty(copybookStudentRecord.getCopybookName())){
@@ -197,6 +203,9 @@ public class CopybookStudentRecordServiceImpl implements ICopybookStudentRecordS
                 list.add(condition);
                 if(copybookStudentRecord.getSchoolId()!=null){
                     Predicate con = criteriaBuilder.equal(root.get("schoolId"),copybookStudentRecord.getSchoolId());
+                    list.add(con);
+                }else {
+                    Predicate con = criteriaBuilder.equal(root.get("schoolId"),userService.getCurrentSchoolId());
                     list.add(con);
                 }
                 if(StringUtils.isNotEmpty(copybookStudentRecord.getCopybookName())){

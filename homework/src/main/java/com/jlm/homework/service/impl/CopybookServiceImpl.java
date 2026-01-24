@@ -77,6 +77,9 @@ public class CopybookServiceImpl implements ICopybookService {
                 if(copybook.getSchoolId()!=null){
                     Predicate con = criteriaBuilder.equal(root.get("schoolId"),copybook.getSchoolId());
                     list.add(con);
+                }else {
+                    Predicate con = criteriaBuilder.equal(root.get("schoolId"),userService.getCurrentSchoolId());
+                    list.add(con);
                 }
                 if(StringUtils.isNotEmpty(copybook.getName())){
                     Predicate con = criteriaBuilder.like(root.get("name"),"%"+copybook.getName()+"%");

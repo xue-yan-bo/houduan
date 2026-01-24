@@ -194,7 +194,7 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                         list.add(condition);
                     }
                     if(StringUtils.isNotEmpty(subject)) {
-                        Predicate condition = criteriaBuilder.equal(root.get("subject"), subject);
+                        Predicate condition = criteriaBuilder.like(root.get("subject"), "%"+subject+"%");
                         list.add(condition);
                     }
                     if(StringUtils.isNotEmpty(teacherName)) {

@@ -4,7 +4,6 @@ import com.alibaba.cloud.commons.lang.StringUtils;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.service.IHandlerService;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
-import com.jlm.homework.service.IStudentsHomeworkNewService;
 import com.jlm.homework.socket.context.SessionContext;
 import com.jlm.homework.socket.handler.*;
 import com.jlm.homework.socket.protocol.Packet;
@@ -34,7 +33,7 @@ public class ClientHandler implements Runnable {
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
     private final IHandlerService handlerService;
 
-    private static SessionContext sessionContext;
+    private SessionContext sessionContext;
     private ResponseSender responseSender;
     
     // Handlers
@@ -45,8 +44,6 @@ public class ClientHandler implements Runnable {
     private static final byte HEARTBEAT_TYPE = 0x05;
     private static final long HEARTBEAT_INTERVAL = 6;
 
-    private boolean headerParsed = false;
-    private byte[] proxyHeaderReadBytes = null;
     public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
                          ISmartDeviceUserRelationService smartDeviceUserRelationService,
                          IHandlerService handlerService,SessionContext sessionContext) {
@@ -84,19 +81,7 @@ public class ClientHandler implements Runnable {
             this.responseSender = new ResponseSender(out);
             initHandlers();
 
-            // 1. Proxy Protocol Handling
-            try {
-                readProxyHeader();
-            } catch (IOException e) {
-                log.warn("Proxy header parsing failed, using default remote address: {}", e.getMessage());
-                sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
-            }
-            InetSocketAddress realAddress = getRealRemoteAddress();
-            
-            sessionContext.setRemoteAddress(realAddress);
-            sessionContext.setClientIP(realAddress.getHostString());
-            sessionContext.setClientPort(realAddress.getPort());
-
+            // 1. Already got real address from SocketService, use it directly
             logClientConnection();
 
             // Load initial relation
@@ -105,9 +90,6 @@ public class ClientHandler implements Runnable {
 
             // 2. Setup Packet Decoder
             PacketDecoder decoder = new PacketDecoder(in);
-            if (proxyHeaderReadBytes != null) {
-                decoder.pushPreReadBytes(proxyHeaderReadBytes);
-            }
 
             // 3. Start Heartbeat
             initHeartbeatScheduler(out);
@@ -209,77 +191,6 @@ public class ClientHandler implements Runnable {
                  sessionContext.setRelation(relation);
              }
         }
-    }
-
-    // ... Proxy Protocol methods (readProxyHeader, etc.) - copying from original ...
-    public void readProxyHeader() throws IOException {
-        if (headerParsed) return;
-        PushbackInputStream pb = new PushbackInputStream(clientSocket.getInputStream(), 108);
-        byte[] signature = new byte[5];
-
-        int bytesRead = pb.read(signature);
-
-        // 更健壮的代理头处理
-        if (bytesRead == -1) {
-            // 流已关闭，使用默认远程地址
-            sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
-        } else if (bytesRead < 5) {
-            // 读取字节不足，但仍可继续处理
-            pb.unread(signature, 0, bytesRead);
-            sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
-            proxyHeaderReadBytes = Arrays.copyOf(signature, bytesRead);
-        } else {
-            // 正常情况，继续处理
-            pb.unread(signature);
-
-            if (new String(signature).equals("PROXY")) {
-                try {
-                    parseV1(pb);
-                } catch (IOException e) {
-                    log.warn("Failed to parse PROXY v1 header: {}", e.getMessage());
-                    sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
-                }
-            } else if (isV2Signature(signature)) {
-                try {
-                    parseV2(pb);
-                } catch (IOException e) {
-                    log.warn("Failed to parse PROXY v2 header: {}", e.getMessage());
-                    sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
-                }
-            } else {
-                sessionContext.setRemoteAddress((InetSocketAddress) clientSocket.getRemoteSocketAddress());
-                proxyHeaderReadBytes = Arrays.copyOf(signature, bytesRead);
-            }
-        }
-        headerParsed = true;
-    }
-
-    private boolean isV2Signature(byte[] sig) {
-        return sig[0] == 0x0D && sig[1] == 0x0A && sig[2] == 0x0D && sig[3] == 0x0A && sig[4] == 0x00;
-    }
-
-    private void parseV1(PushbackInputStream pb) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(pb));
-        String line = reader.readLine();
-        if (line == null || !line.startsWith("PROXY")) throw new IOException("Invalid PROXY v1 header");
-        String[] parts = line.split(" ");
-        if (parts.length < 6) throw new IOException("Invalid PROXY v1 format");
-        sessionContext.setRemoteAddress(new InetSocketAddress(parts[2], Integer.parseInt(parts[4])));
-    }
-
-    private void parseV2(PushbackInputStream pb) throws IOException {
-        DataInputStream in = new DataInputStream(pb);
-        in.skipBytes(12);
-        byte[] addressBytes = new byte[4];
-        in.readFully(addressBytes);
-        int port = in.readUnsignedShort();
-        String ip = String.format("%d.%d.%d.%d", addressBytes[0] & 0xff, addressBytes[1] & 0xff, addressBytes[2] & 0xff, addressBytes[3] & 0xff);
-        sessionContext.setRemoteAddress(new InetSocketAddress(ip, port));
-    }
-
-    public InetSocketAddress getRealRemoteAddress() {
-        if (!headerParsed) throw new IllegalStateException("Call readProxyHeader() first");
-        return sessionContext.getRemoteAddress();
     }
 
     private void logClientConnection() {

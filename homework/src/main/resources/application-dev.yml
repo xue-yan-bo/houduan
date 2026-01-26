@@ -23,6 +23,7 @@ spring:
     port: 5672
     username: root
     password: jlm@1234
+  
 
   jpa:
     # 开发环境显示SQL
@@ -56,6 +57,13 @@ spring:
         options:
           model: ${}
     # 千问配置
+  # Redis配置
+  data:
+    redis:
+      host: 192.168.1.38
+      port: 6379
+      database: 0
+
 #    dashscope:
 #      # 需要替换为你自己的 key
 #      api-key: ${TONGYI_API_KEY}

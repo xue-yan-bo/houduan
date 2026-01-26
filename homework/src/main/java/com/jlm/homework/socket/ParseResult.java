@@ -2,8 +2,11 @@ package com.jlm.homework.socket;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class ParseResult {
+public class ParseResult implements Serializable {
+    private static final long serialVersionUID = 1L;
     private byte[] header;      // 包头（[0x55, 0x56]）
     private int length;         // 数据长度（Type+Packet长度）
     private byte type;          // 数据类型（0x01=手写数据）

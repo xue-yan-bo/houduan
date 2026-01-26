@@ -11,5 +11,8 @@ public class TeacherApprWriteRecord {
     private Boolean isStartOfStroke;
     private Boolean isEndOfStroke;
     private Integer strokeInde;
+    private String color;
+    private Integer width;
+    private Boolean isEraser;
 
 }

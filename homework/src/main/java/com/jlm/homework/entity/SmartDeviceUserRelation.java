@@ -1,6 +1,7 @@
 package com.jlm.homework.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.io.Serializable;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -11,7 +12,8 @@ import lombok.Data;
 @Entity
 @Table(name = "smart_device_user_relation")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class SmartDeviceUserRelation {
+public class SmartDeviceUserRelation implements Serializable {
+    private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

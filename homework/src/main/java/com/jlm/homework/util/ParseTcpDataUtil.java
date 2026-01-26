@@ -35,9 +35,9 @@ public class ParseTcpDataUtil {
             throw new IllegalArgumentException("数据类型异常，当前为0x" + Integer.toHexString(type & 0xFF) + ", 需为0x01、0x02或0x03");
         }
 
-        // 解析Checksum（校验和）：前面所有字节的累加和
+        // 解析Checksum（校验和）：前面所有字节的累加和，不包括校验和字节本身
         byte checksum = data[data.length - 1];
-        int calculatedChecksum = calculateChecksum(data, 0, data.length - 1);
+        int calculatedChecksum = calculateChecksum(data, 0, data.length - 2);
         boolean checksumValid = (calculatedChecksum & 0xFF) == (checksum & 0xFF);
 
         // 封装解析结果
@@ -83,7 +83,7 @@ public class ParseTcpDataUtil {
 
         // 解析Checksum
         byte checksum = data[data.length - 1];
-        int calculatedChecksum = calculateChecksum(data, 0, data.length - 1);
+        int calculatedChecksum = calculateChecksum(data, 0, data.length - 2);
         boolean checksumValid = (calculatedChecksum & 0xFF) == (checksum & 0xFF);
 
         // 提取Packet数据
@@ -158,7 +158,7 @@ public class ParseTcpDataUtil {
 
         // 解析Checksum
         byte checksum = data[data.length - 1];
-        int calculatedChecksum = calculateChecksum(data, 0, data.length - 1);
+        int calculatedChecksum = calculateChecksum(data, 0, data.length - 2);
         boolean checksumValid = (calculatedChecksum & 0xFF) == (checksum & 0xFF);
 
         // 提取Packet数据
@@ -226,7 +226,7 @@ public class ParseTcpDataUtil {
 
         // 解析Checksum
         byte checksum = data[data.length - 1];
-        int calculatedChecksum = calculateChecksum(data, 0, data.length - 1);
+        int calculatedChecksum = calculateChecksum(data, 0, data.length - 2);
         boolean checksumValid = (calculatedChecksum & 0xFF) == (checksum & 0xFF);
 
         // 提取Packet数据（序列号）
@@ -281,7 +281,7 @@ public class ParseTcpDataUtil {
 
         // 解析Checksum
         byte checksum = data[data.length - 1];
-        int calculatedChecksum = calculateChecksum(data, 0, data.length - 1);
+        int calculatedChecksum = calculateChecksum(data, 0, data.length - 2);
         boolean checksumValid = (calculatedChecksum & 0xFF) == (checksum & 0xFF);
 
         // 提取Packet数据（显示字符串）
@@ -460,7 +460,7 @@ public class ParseTcpDataUtil {
 
         // 解析Checksum
         byte checksum = data[data.length - 1];
-        int calculatedChecksum = calculateChecksum(data, 0, data.length - 1);
+        int calculatedChecksum = calculateChecksum(data, 0, data.length - 2);
         boolean checksumValid = (calculatedChecksum & 0xFF) == (checksum & 0xFF);
 
         // 提取Packet数据
@@ -529,7 +529,7 @@ public class ParseTcpDataUtil {
 
         // 解析Checksum
         byte checksum = data[data.length - 1];
-        int calculatedChecksum = calculateChecksum(data, 0, data.length - 1);
+        int calculatedChecksum = calculateChecksum(data, 0, data.length - 2);
         boolean checksumValid = (calculatedChecksum & 0xFF) == (checksum & 0xFF);
 
         // 提取Packet数据

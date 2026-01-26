@@ -2,10 +2,12 @@ package com.jlm.homework.socket.boardmenu;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 
 @Data
-public class MenuItemT {
+public class MenuItemT implements Serializable {
+    private static final long serialVersionUID = 1L;
     private Integer id;
     private Long objectId;
     private String desc;

@@ -1,9 +1,11 @@
 package com.jlm.homework.entity;
 
+import java.io.Serializable;
 import lombok.Data;
 
 @Data
-public class StudentsWriteRecord {
+public class StudentsWriteRecord implements Serializable {
+    private static final long serialVersionUID = 1L;
     private Integer x;              // X坐标
     private Integer y;              // Y坐标
     private Integer pressure;       // 压力值

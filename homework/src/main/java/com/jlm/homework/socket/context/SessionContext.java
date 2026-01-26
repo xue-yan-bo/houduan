@@ -8,6 +8,7 @@ import com.jlm.homework.socket.HandwritingParseResult;
 import com.jlm.homework.socket.boardmenu.MenuT;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +17,8 @@ import java.util.List;
  * 会话上下文，保存每个客户端连接的状态信息
  */
 @Data
-public class SessionContext {
+public class SessionContext implements Serializable {
+    private static final long serialVersionUID = 1L;
     // 常量
     public static final int SAVE_SIZE = 1000;
 

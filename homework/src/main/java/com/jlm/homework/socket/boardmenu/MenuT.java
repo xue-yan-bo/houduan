@@ -2,9 +2,11 @@ package com.jlm.homework.socket.boardmenu;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.List;
 @Data
-public class MenuT {
+public class MenuT implements Serializable {
+    private static final long serialVersionUID = 1L;
     //父菜单
     public MenuT  parentMenu;
     //菜单内容列表

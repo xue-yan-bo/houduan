@@ -3,7 +3,6 @@ package com.jlm.homework.service.impl;
 import com.jlm.homework.dto.Result;
 import com.jlm.homework.dto.ResultDto;
 import com.jlm.homework.entity.*;
-import com.jlm.homework.feign.School;
 import com.jlm.homework.feign.SchoolFeignClient;
 import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.repository.IMicrolectureRepository;
@@ -29,7 +28,7 @@ import java.util.*;
 
 
 @Service
-public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureService {
+public class StudentMicrolectureServiceImpl implements IStudentMicrolectureService {
     @Resource
     private IStudentMicrolectureRepository studentMicrolectureRepository;
     @Autowired
@@ -96,8 +95,8 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
         StudentMicrolecture search = new StudentMicrolecture();
         search.setMicrolectureId(microlectureId);
         search.setStudentId(studentId);
-        Optional<StudentMicrolecture> optional =studentMicrolectureRepository.findOne(Example.of(search));
-        if(optional!=null&&optional.isPresent()){
+        Optional<StudentMicrolecture> optional = studentMicrolectureRepository.findOne(Example.of(search));
+        if (optional != null && optional.isPresent()) {
             return optional.get();
         }
         return null;
@@ -109,19 +108,19 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
     }
 
     @Override
-    public Page<StudentMicrolecture> page(Integer pageNum, Integer pageSize, Long microlectureId, String microlectureName, Long studentId ,String subject,String teacherName, String chapter,String knowledgePoint,Integer searchType) {
-        pageNum = pageNum == null ? 0 : pageNum-1;
+    public Page<StudentMicrolecture> page(Integer pageNum, Integer pageSize, Long microlectureId, String microlectureName, Long studentId, String subject, String teacherName, String chapter, String knowledgePoint, Integer searchType) {
+        pageNum = pageNum == null ? 0 : pageNum - 1;
         pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
         Pageable pageable;
         pageable = PageRequest.of(pageNum, pageSize, sort);
         Long classId = null;
-        if(searchType!=0){
-            if(studentId==null) {
+        if (searchType != 0) {
+            if (studentId == null) {
                 studentId = userService.getCurrentUserId();
             }
-            ResultDto<Student> studentResultDto=studentFeignClient.getStudentInfo(studentId);
-            if(studentResultDto!=null&&studentResultDto.getData()!=null){
+            ResultDto<Student> studentResultDto = studentFeignClient.getStudentInfo(studentId);
+            if (studentResultDto != null && studentResultDto.getData() != null) {
                 Student student = studentResultDto.getData();
                 classId = student.getClassesId();
             }
@@ -130,9 +129,9 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
         Long schoolId = userService.getCurrentSchoolIdSafely();
         ResultDto<SysSchool> schoolR = schoolFeignClient.getInfo(schoolId);
         boolean hxyFlag;
-        if(schoolR!=null&&schoolR.getData()!=null){
+        if (schoolR != null && schoolR.getData() != null) {
             SysSchool sysSchool = schoolR.getData();
-            if("huaxiayuan".equals(sysSchool.getStyle())){
+            if ("huaxiayuan".equals(sysSchool.getStyle())) {
                 microPurchaseList = microPurchaseService.listByStudentId(studentId);
                 hxyFlag = true;
             } else {
@@ -146,32 +145,31 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
         List<String> subjectList = new ArrayList<>();
         List<Long> gradeList = new ArrayList<>();
 
-        if(hxyFlag&&(microPurchaseList==null||microPurchaseList.isEmpty())){
+        if (hxyFlag && (microPurchaseList == null || microPurchaseList.isEmpty())) {
             return null;
-        }else if(hxyFlag){
-            Date now =new Date();
+        } else if (hxyFlag) {
+            Date now = new Date();
             boolean isOver = true;
-            for(MicroPurchase micro:microPurchaseList) {
-                if(micro.getStartDate()==null&&micro.getEndDate()==null){
-                    if(micro.getSubject().contains(",")){
+            for (MicroPurchase micro : microPurchaseList) {
+                if (micro.getStartDate() == null && micro.getEndDate() == null) {
+                    if (micro.getSubject().contains(",")) {
                         subjectList.addAll(Arrays.asList(micro.getSubject().split(",")));
-                    }else {
+                    } else {
                         subjectList.add(micro.getSubject());
                     }
                     gradeList.add(micro.getMicroGradeId());
                     isOver = false;
-                }else if(micro.getStartDate()!=null&&micro.getEndDate()!=null&&
-                        micro.getStartDate().before(now)&&micro.getEndDate().after(now)){
-                    if(micro.getSubject().contains(",")){
+                } else if (micro.getStartDate() != null && micro.getEndDate() != null && micro.getStartDate().before(now) && micro.getEndDate().after(now)) {
+                    if (micro.getSubject().contains(",")) {
                         subjectList.addAll(Arrays.asList(micro.getSubject().split(",")));
-                    }else {
+                    } else {
                         subjectList.add(micro.getSubject());
                     }
                     gradeList.add(micro.getMicroGradeId());
                     isOver = false;
                 }
             }
-            if(isOver){
+            if (isOver) {
                 return null;
             }
         }
@@ -185,78 +183,78 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
             public Predicate toPredicate(Root<Microlecture> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 List<Predicate> list = new ArrayList<>();
                 try {
-                    if(finalClassId != null){
+                    if (finalClassId != null) {
                         Predicate condition = criteriaBuilder.equal(root.get("classId"), finalClassId);
                         list.add(condition);
                     }
-                    if(StringUtils.isNotEmpty(microlectureName)) {
-                        Predicate condition = criteriaBuilder.like(root.get("name"), "%"+microlectureName+"%");
+                    if (StringUtils.isNotEmpty(microlectureName)) {
+                        Predicate condition = criteriaBuilder.like(root.get("name"), "%" + microlectureName + "%");
                         list.add(condition);
                     }
-                    if(StringUtils.isNotEmpty(subject)) {
-                        Predicate condition = criteriaBuilder.like(root.get("subject"), "%"+subject+"%");
+                    if (StringUtils.isNotEmpty(subject)) {
+                        Predicate condition = criteriaBuilder.like(root.get("subject"), "%" + subject + "%");
                         list.add(condition);
                     }
-                    if(StringUtils.isNotEmpty(teacherName)) {
-                        Predicate condition = criteriaBuilder.like(root.get("teacherName"), "%"+teacherName+"%");
+                    if (StringUtils.isNotEmpty(teacherName)) {
+                        Predicate condition = criteriaBuilder.like(root.get("teacherName"), "%" + teacherName + "%");
                         list.add(condition);
                     }
-                    if(StringUtils.isEmpty(chapter)&&StringUtils.isNotEmpty(knowledgePoint)) {
+                    if (StringUtils.isEmpty(chapter) && StringUtils.isNotEmpty(knowledgePoint)) {
                         List<Predicate> list1 = new ArrayList<>();
-                        Predicate condition = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
+                        Predicate condition = criteriaBuilder.like(root.get("knowledgePoint"), "%" + knowledgePoint + "%");
                         list1.add(condition);
-                        if(knowledgePoint.length()>2) {
+                        if (knowledgePoint.length() > 2) {
                             Predicate condition1 = criteriaBuilder.like(root.get("knowledgePoint"), "%" + knowledgePoint.substring(2) + "%");
                             list1.add(condition1);
                         }
-                        if(knowledgePoint.length()>4) {
+                        if (knowledgePoint.length() > 4) {
                             Predicate condition1 = criteriaBuilder.like(root.get("knowledgePoint"), "%" + knowledgePoint.substring(4) + "%");
                             list1.add(condition1);
                         }
                         Predicate condit = criteriaBuilder.or(list1.toArray(new Predicate[0]));
                         list.add(condit);
-                    }else if(StringUtils.isNotEmpty(chapter)&&StringUtils.isNotEmpty(knowledgePoint)) {
+                    } else if (StringUtils.isNotEmpty(chapter) && StringUtils.isNotEmpty(knowledgePoint)) {
                         List<Predicate> list1 = new ArrayList<>();
-                        Predicate cond1 = criteriaBuilder.like(root.get("knowledgePoint"), "%"+knowledgePoint+"%");
+                        Predicate cond1 = criteriaBuilder.like(root.get("knowledgePoint"), "%" + knowledgePoint + "%");
                         list1.add(cond1);
-                        if(knowledgePoint.length()>2) {
+                        if (knowledgePoint.length() > 2) {
                             Predicate condition1 = criteriaBuilder.like(root.get("knowledgePoint"), "%" + knowledgePoint.substring(2) + "%");
                             list1.add(condition1);
                         }
-                        Predicate cond2= criteriaBuilder.like(root.get("chapter"), "%"+chapter+"%");
+                        Predicate cond2 = criteriaBuilder.like(root.get("chapter"), "%" + chapter + "%");
                         list1.add(cond2);
-                        if(chapter.contains("/")){
-                            String chapterSub = chapter.substring(chapter.lastIndexOf("/")+1);
-                            Predicate cond3= criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
+                        if (chapter.contains("/")) {
+                            String chapterSub = chapter.substring(chapter.lastIndexOf("/") + 1);
+                            Predicate cond3 = criteriaBuilder.like(root.get("chapter"), "%" + chapterSub + "%");
                             list1.add(cond3);
-                            if(chapterSub.length()>4){
+                            if (chapterSub.length() > 4) {
                                 String chapterSub1 = chapterSub.substring(4);
-                                Predicate cond4= criteriaBuilder.like(root.get("chapter"), "%"+chapterSub1+"%");
+                                Predicate cond4 = criteriaBuilder.like(root.get("chapter"), "%" + chapterSub1 + "%");
                                 list1.add(cond4);
                             }
 
                         }
                         Predicate condition = criteriaBuilder.or(list1.toArray(new Predicate[0]));
                         list.add(condition);
-                    }else if(StringUtils.isNotEmpty(chapter)) {
+                    } else if (StringUtils.isNotEmpty(chapter)) {
                         List<Predicate> list1 = new ArrayList<>();
-                        String chapterSub = chapter.substring(chapter.lastIndexOf("/")+1).trim();
-                        Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%"+chapterSub+"%");
+                        String chapterSub = chapter.substring(chapter.lastIndexOf("/") + 1).trim();
+                        Predicate condition1 = criteriaBuilder.like(root.get("chapter"), "%" + chapterSub + "%");
                         list1.add(condition1);
-                        if(chapterSub.length()>4){
+                        if (chapterSub.length() > 4) {
                             String chapterSub1 = chapterSub.substring(4);
-                            Predicate cond4= criteriaBuilder.like(root.get("chapter"), "%"+chapterSub1+"%");
+                            Predicate cond4 = criteriaBuilder.like(root.get("chapter"), "%" + chapterSub1 + "%");
                             list1.add(cond4);
                         }
                         Predicate condit = criteriaBuilder.or(list1.toArray(new Predicate[0]));
                         list.add(condit);
                     }
-                    if(finalHxyFlag){
-                        if(subjectList.size()>0){
+                    if (finalHxyFlag) {
+                        if (subjectList.size() > 0) {
                             Predicate condition = criteriaBuilder.in(root.get("subject")).value(subjectList);
                             list.add(condition);
                         }
-                        if(gradeList.size()>0){
+                        if (gradeList.size() > 0) {
                             Predicate condition = criteriaBuilder.in(root.get("gradeId")).value(gradeList);
                             list.add(condition);
                         }
@@ -268,37 +266,37 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                     throw new RuntimeException(e);
                 }
 
-                Predicate[] p =  new Predicate[list.size()];
+                Predicate[] p = new Predicate[list.size()];
                 return criteriaBuilder.and(list.toArray(p));
             }
 
         };
-        Page<Microlecture> microlecturePage = microlectureRepository.findAll(specification1,pageable);
+        Page<Microlecture> microlecturePage = microlectureRepository.findAll(specification1, pageable);
         List<Microlecture> microlectures = microlecturePage.getContent();
         List<StudentMicrolecture> studentMicrolectureList = new ArrayList<>();
-        for(int i=0;i<microlectures.size()&&i<pageSize;i++){
+        for (int i = 0; i < microlectures.size() && i < pageSize; i++) {
             Microlecture microlecture = microlectures.get(i);
             StudentMicrolecture studentMicrolecture = new StudentMicrolecture();
-            BeanUtils.copyProperties(microlecture,studentMicrolecture);
+            BeanUtils.copyProperties(microlecture, studentMicrolecture);
             studentMicrolecture.setId(null);
             studentMicrolecture.setMicrolectureId(microlecture.getId());
             studentMicrolecture.setStudentId(studentId);
             studentMicrolecture.setMicrolectureName(microlecture.getName());
             studentMicrolectureList.add(studentMicrolecture);
         }
-        Page<StudentMicrolecture> page2 = new PageImpl<>(studentMicrolectureList,pageable,microlecturePage.getTotalElements());
+        Page<StudentMicrolecture> page2 = new PageImpl<>(studentMicrolectureList, pageable, microlecturePage.getTotalElements());
         return page2;
 
     }
 
     @Override
-    public Page<StudentMicrolecture> recordPage(Integer pageNum, Integer pageSize, Long microlectureId,Long studentId) {
-        pageNum = pageNum == null ? 0 : pageNum-1;
+    public Page<StudentMicrolecture> recordPage(Integer pageNum, Integer pageSize, Long microlectureId, Long studentId) {
+        pageNum = pageNum == null ? 0 : pageNum - 1;
         pageSize = pageSize == null ? 10 : pageSize;
-        Sort sort = Sort.by(Sort.Direction.DESC, "updateTime","createTime");
+        Sort sort = Sort.by(Sort.Direction.DESC, "updateTime", "createTime");
         Pageable pageable;
         pageable = PageRequest.of(pageNum, pageSize, sort);
-        if(studentId==null){
+        if (studentId == null) {
             studentId = userService.getCurrentUserId();
         }
 
@@ -309,12 +307,12 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
             public Predicate toPredicate(Root<StudentMicrolecture> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 List<Predicate> list = new ArrayList<>();
                 try {
-                    if(microlectureId!=null) {
+                    if (microlectureId != null) {
                         Predicate condition = criteriaBuilder.equal(root.get("microlectureId"), microlectureId);
                         list.add(condition);
                     }
 
-                    if(finalStudentId !=null) {
+                    if (finalStudentId != null) {
                         Predicate condition1 = criteriaBuilder.equal(root.get("studentId"), finalStudentId);
                         list.add(condition1);
                     }
@@ -328,24 +326,24 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
                     throw new RuntimeException(e);
                 }
 
-                Predicate[] p =  new Predicate[list.size()];
+                Predicate[] p = new Predicate[list.size()];
                 return criteriaBuilder.and(list.toArray(p));
             }
 
         };
-        return studentMicrolectureRepository.findAll(specification,pageable);
+        return studentMicrolectureRepository.findAll(specification, pageable);
     }
 
     @Override
     public void deleteByMicrolectureId(Long microlectureId) {
-        StudentMicrolecture deleteM = new  StudentMicrolecture();
+        StudentMicrolecture deleteM = new StudentMicrolecture();
         deleteM.setMicrolectureId(microlectureId);
         studentMicrolectureRepository.delete(deleteM);
     }
 
     @Override
     public List<StudentMicrolecture> findByMicrolectureId(Long microlectureId) {
-        StudentMicrolecture search = new  StudentMicrolecture();
+        StudentMicrolecture search = new StudentMicrolecture();
         search.setMicrolectureId(microlectureId);
         return studentMicrolectureRepository.findAll(Example.of(search));
 
@@ -362,13 +360,13 @@ public class StudentMicrolectureServiceImpl  implements IStudentMicrolectureServ
         search.setMicrolectureId(microlecture.getId());
         search.setStudentId(studentId);
         StudentMicrolecture studMicro = studentMicrolectureRepository.findOne(Example.of(search)).orElse(null);
-        if(studMicro!=null){
+        if (studMicro != null) {
             return studMicro;
         }
-        ResultDto<Student> resultDto= studentFeignClient.getStudentInfo(studentId);
-        if(resultDto!=null&&resultDto.getData()!=null){
+        ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
+        if (resultDto != null && resultDto.getData() != null) {
             Student student = resultDto.getData();
-            StudentMicrolecture studentMicrolecture=new StudentMicrolecture();
+            StudentMicrolecture studentMicrolecture = new StudentMicrolecture();
             studentMicrolecture.setSchoolName(student.getSchoolName());
             studentMicrolecture.setStudentId(student.getStudentId());
             studentMicrolecture.setStudentName(student.getStudentName());

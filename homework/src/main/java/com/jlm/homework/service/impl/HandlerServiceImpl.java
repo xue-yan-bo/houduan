@@ -59,14 +59,14 @@ public class HandlerServiceImpl implements IHandlerService {
     @Override
     public void saveWriteRecords(Long studentId, Long homeworkId, String type, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords, Boolean isFinish) {
         studentsHomeworkNewService.saveWriteRecords(studentId,homeworkId,type,pageN,studentsWriteRecords,isFinish);
-        /*if(isFinish){
+        if(isFinish){
             // 发送消息到MQ
             JSONObject json= new JSONObject();
             json.put("studentId", studentId);
             json.put("homeworkId", homeworkId);
             json.put("type", type);
             mqTemplate.convertAndSend("homework.correction.queue", json.toJSONString());
-        }*/
+        }
 
     }
 

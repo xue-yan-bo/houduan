@@ -978,7 +978,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
                             // 提取数字部分
                             scoreStr = scoreStr.replaceAll("\\D+", "");
                             if (!scoreStr.isEmpty()) {
-                                currentQuestion.setScore(Integer.parseInt(scoreStr));
+                                currentQuestion.setScore(Double.parseDouble(scoreStr));
                             }
                         } catch (NumberFormatException e) {
                             // 忽略解析错误
@@ -1018,7 +1018,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
                             // 提取数字部分
                             obtainedScoreStr = obtainedScoreStr.replaceAll("\\D+", "");
                             if (!obtainedScoreStr.isEmpty()) {
-                                currentQuestion.setObtainedScore(Integer.parseInt(obtainedScoreStr));
+                                currentQuestion.setObtainedScore(Double.parseDouble(obtainedScoreStr));
                             }
                         } catch (NumberFormatException e) {
                             // 忽略解析错误

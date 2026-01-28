@@ -37,7 +37,7 @@ public class SerialNumberHandler implements MessageHandler {
             log.warn("{} Device not bound to student!", result.getMac());
             deviceUserRelation = new SmartDeviceUserRelation();
             deviceUserRelation.setIpAddress(context.getClientIP());
-            deviceUserRelation.setDeviceCode(result.getMac().toString());
+            deviceUserRelation.setDeviceCode(result.getMac());
             log.info("Sending bind student request /topic/bindStudent, Device Code: {}", deviceUserRelation.getDeviceCode());
             messagingTemplate.convertAndSend("/topic/bindStudent", deviceUserRelation);
         }

@@ -35,13 +35,13 @@ public class QuestionAnalysis implements Serializable {
     @Column(name = "content")
     private String content;            // 题目内容
     @Column(name = "score")
-    private Integer score;                 // 分值
+    private Double score;                 // 分值
     @Column(name = "student_answer")
     private String studentAnswer;      // 学生答案
     @Column(name = "reference_answer")
     private String referenceAnswer;    // 参考答案
     @Column(name = "obtained_score")
-    private Integer obtainedScore;         // 得分
+    private Double obtainedScore;         // 得分
     @Column(name = "analysis")
     private String analysis;           // 分析
     @Column(name = "knowledge_points")

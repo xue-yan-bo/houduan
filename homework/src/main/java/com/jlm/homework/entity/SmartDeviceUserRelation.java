@@ -42,4 +42,5 @@ public class SmartDeviceUserRelation implements Serializable {
      */
     @Column(name = "ip_address")
     private String ipAddress;
+
 }

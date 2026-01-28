@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -231,8 +232,10 @@ public class ParseTcpDataUtil {
 
         // 提取Packet数据（序列号）
         byte[] packet = Arrays.copyOfRange(data, 4, data.length - 1);
-        Integer serialNumber = byteArrayToInt(packet);
-
+        // 将原始字节转换为十六进制字符串，确保所有字节都被正确保存
+        String serialNumber = bytesToHexString(packet);
+        // 使用Base64 + Hex编码序列号
+        //String byteStr = encodeSerialNumber(packet);
         // 封装结果
         MacParseResult result = new MacParseResult();
         result.setHeader(new byte[]{header0, header1});
@@ -318,7 +321,7 @@ public class ParseTcpDataUtil {
     // 测试方法
     public static void main(String[] args) {
         // 测试手写数据解析
-        byte[] handwritingData = {0x55, 0x56, 0x0B, 0x01, 0x27, 0x24, 0x58, 0x19, (byte)0xE8, 0x1C, 0x62, 0x00, 0x00, 0x00, (byte)0xD9};
+        /*byte[] handwritingData = {0x55, 0x56, 0x0B, 0x01, 0x27, 0x24, 0x58, 0x19, (byte)0xE8, 0x1C, 0x62, 0x00, 0x00, 0x00, (byte)0xD9};
         try {
             List<HandwritingParseResult> handwritingResults = parseHandwritingTcpPackets(handwritingData);
             //System.out.println("手写数据解析结果:");
@@ -340,9 +343,20 @@ public class ParseTcpDataUtil {
 
         } catch (IllegalArgumentException e) {
             System.err.println("按键数据解析失败：" + e.getMessage());
-        }
+        }*/
 
+        // 输入的十六进制字节数组：8B 10 3B 84 20 00 B0 4E 37 39 39 37
+        byte[] byteArray = {
+                (byte) 0x8B, (byte) 0x10, (byte) 0x3B, (byte) 0x84,
+                (byte) 0x20, (byte) 0x00, (byte) 0xB0, (byte) 0x4E,
+                (byte) 0x37, (byte) 0x39, (byte) 0x39, (byte) 0x37
+        };
 
+        // 使用ParseTcpDataUtil的byteArrayToInt方法转换
+        int result = ParseTcpDataUtil.byteArrayToInt(byteArray);
+
+        System.out.println("转换结果: " + result);
+        System.out.println("十六进制表示: 0x" + Integer.toHexString(result));
     }
     /**
      * 将byte数组转换为int
@@ -372,6 +386,39 @@ public class ParseTcpDataUtil {
         byteArray[4] = 0;
         byteArray[5] = 0;
         return byteArray;
+    }
+    
+    /**
+     * 对序列号进行编码，生成不重复的数字串
+     * @param serialNumberBytes 序列号字节数组
+     * @return 编码后的序列号数字串
+     */
+    public static String encodeSerialNumber(byte[] serialNumberBytes) {
+        // 将字节数组转换为十六进制字符串
+        String hexString = bytesToHexString(serialNumberBytes);
+        
+        // 将十六进制字符串转换为数字串
+        // 每个十六进制字符对应一个或两个数字
+        StringBuilder numberBuilder = new StringBuilder();
+        for (char c : hexString.toCharArray()) {
+            int value = Character.digit(c, 16);
+            numberBuilder.append(value);
+        }
+        
+        return numberBuilder.toString();
+    }
+    
+    /**
+     * 将字节数组转换为十六进制字符串
+     * @param bytes 字节数组
+     * @return 十六进制字符串
+     */
+    public static String bytesToHexString(byte[] bytes) {
+        StringBuilder hexBuilder = new StringBuilder();
+        for (byte b : bytes) {
+            hexBuilder.append(String.format("%02X", b & 0xFF));
+        }
+        return hexBuilder.toString();
     }
     /**
      * 发送LCD显示数据到设备（C++函数void tep send(SOCKET s, char* p_data, uint8_t length)的Java翻译版本）

@@ -2,6 +2,7 @@ package com.jlm.homework.service.impl;
 
 import com.alibaba.cloud.commons.lang.StringUtils;
 import com.alibaba.fastjson2.JSONObject;
+import com.jlm.homework.config.RabbitMQConfig;
 import com.jlm.homework.dto.Copybook2Board;
 import com.jlm.homework.dto.HomeWork2Board;
 import com.jlm.homework.dto.ResultDto;
@@ -65,7 +66,7 @@ public class HandlerServiceImpl implements IHandlerService {
             json.put("studentId", studentId);
             json.put("homeworkId", homeworkId);
             json.put("type", type);
-            mqTemplate.convertAndSend("homework.correction.queue", json.toJSONString());
+            mqTemplate.convertAndSend(RabbitMQConfig.HOMEWORK_CORRECTION_QUEUE, json.toJSONString());
         }
 
     }

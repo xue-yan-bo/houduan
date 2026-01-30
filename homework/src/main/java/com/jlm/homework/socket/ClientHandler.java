@@ -99,15 +99,10 @@ public class ClientHandler implements Runnable {
                 try {
                     Packet packet = decoder.readNextPacket();
                     if (packet == null) {
-                        // 流结束，但是我们继续运行，不关闭连接
-                        // 这可能是因为客户端暂时没有数据发送，继续等待
-                        /*log.debug("No packet received, waiting...");
-                        Thread.sleep(100); // 短暂休眠，避免CPU占用过高
-                        continue;*/
                         break;
                     }
 
-                    log.info("Received packet type: {}, length: {}", String.format("0x%02X", packet.getType()), packet.getLength());
+                    //log.info("Received packet type: {}, length: {}", String.format("0x%02X", packet.getType()), packet.getLength());
 
                     // Pre-process Bluetooth packets for MAC binding
                     if (packet.isBluetooth()) {

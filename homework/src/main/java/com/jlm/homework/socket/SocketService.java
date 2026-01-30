@@ -56,7 +56,7 @@ public class SocketService implements SmartLifecycle {
 
                 while (running) {
                     Socket socket = serverSocket.accept();
-                    log.info("New client connected, raw address: {}", socket.getRemoteSocketAddress());
+                    //log.info("New client connected, raw address: {}", socket.getRemoteSocketAddress());
                     
                     // 解析代理头，获取真实客户端地址
                     ProxyHeaderResult proxyResult;
@@ -85,13 +85,13 @@ public class SocketService implements SmartLifecycle {
                     Object sessionObj = redisTemplate.opsForValue().get(redisKey);
                     if (sessionObj instanceof SessionContext) {
                         sessionContext = (SessionContext) sessionObj;
-                        log.info("Found existing session context in Redis for client: {}", clientAddress);
+                        //log.info("Found existing session context in Redis for client: {}", clientAddress);
                     } else {
                         // 创建新的SessionContext
                         sessionContext = new SessionContext();
                         // 保存到Redis，设置过期时间为24小时
                         redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
-                        log.info("Created new session context and saved to Redis for client: {}", clientAddress);
+                        //log.info("Created new session context and saved to Redis for client: {}", clientAddress);
                     }
                     
                     // 设置真实客户端地址到SessionContext

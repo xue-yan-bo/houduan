@@ -456,7 +456,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 for (ZhiPuAIAgent.SubJudgeQuestions temp : answers) {
                     ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
                     answer.setTitleNumber(Integer.valueOf(temp.question_id()));
-                    answer.setStudentAnswer(temp.answer_text().toArray().toString());
+                    answer.setStudentAnswer(String.join("  ", temp.answer_text()));
                     String correct = temp.is_correct();
 
                     if ("true".equalsIgnoreCase(correct)) {

@@ -40,7 +40,7 @@ public class HandwritingHandler implements MessageHandler {
             results = ParseTcpDataUtil.parseHandwritingTcpPacketsBluetooth(packet.getRawData());
         }
 
-        log.debug("Handwriting data parsed, count: {}", results.size());
+        //log.debug("Handwriting data parsed, count: {}", results.size());
 
         for (HandwritingParseResult result : results) {
             SmartDeviceUserRelation relation = context.getRelation();

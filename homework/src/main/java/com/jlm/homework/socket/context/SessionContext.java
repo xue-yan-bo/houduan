@@ -28,7 +28,7 @@ public class SessionContext implements Serializable {
     private String clientIP;
     private int clientPort;
     private boolean isBluetooth = false;
-    private Integer mac = null;
+    private String mac = null;
 
     // 业务状态
     private Long homeId = null;

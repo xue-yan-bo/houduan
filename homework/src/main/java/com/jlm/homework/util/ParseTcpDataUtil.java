@@ -357,6 +357,18 @@ public class ParseTcpDataUtil {
 
         System.out.println("转换结果: " + result);
         System.out.println("十六进制表示: 0x" + Integer.toHexString(result));
+        
+        // 测试 hexStringToByteArray 方法
+        String hexString = "8B103B842000B04E37393937";
+        byte[] convertedArray = ParseTcpDataUtil.hexStringToByteArray(hexString);
+        System.out.println("\n测试 hexStringToByteArray 方法:");
+        System.out.println("输入十六进制字符串: " + hexString);
+        System.out.println("转换后的字节数组: " + Arrays.toString(convertedArray));
+        
+        // 验证转换是否正确（反向转换）
+        String reversedHexString = ParseTcpDataUtil.bytesToHexString(convertedArray);
+        System.out.println("反向转换回十六进制字符串: " + reversedHexString);
+        System.out.println("转换是否正确: " + hexString.equalsIgnoreCase(reversedHexString));
     }
     /**
      * 将byte数组转换为int
@@ -421,6 +433,21 @@ public class ParseTcpDataUtil {
         return hexBuilder.toString();
     }
     /**
+     * 将十六进制字符串转换为字节数组
+     * @param hexString 十六进制字符串
+     * @return 字节数组
+     */
+    public static byte[] hexStringToByteArray(String hexString) {
+        if (hexString == null || hexString.length() % 2 != 0) {
+            throw new IllegalArgumentException("十六进制字符串长度必须为偶数");
+        }
+        byte[] byteArray = new byte[hexString.length() / 2];
+        for (int i = 0; i < hexString.length(); i += 2) {
+            byteArray[i / 2] = (byte) Integer.parseInt(hexString.substring(i, i + 2), 16);
+        }
+        return byteArray;
+    }
+    /**
      * 发送LCD显示数据到设备（C++函数void tep send(SOCKET s, char* p_data, uint8_t length)的Java翻译版本）
      * @param outputStream 输出流，用于发送数据
      * @param data 要发送的数据
@@ -456,7 +483,7 @@ public class ParseTcpDataUtil {
      * @param length 数据长度
      * @throws IOException 发送异常
      */
-    public static void sendLcdDisplayDataBluetooth(OutputStream outputStream, byte[] data, int length,Integer mac) throws IOException {
+    public static void sendLcdDisplayDataBluetooth(OutputStream outputStream, byte[] data, int length,String mac) throws IOException {
         // 创建缓冲区，最大259字节
         byte[] buff = new byte[259];
         // 设置包头
@@ -466,7 +493,7 @@ public class ParseTcpDataUtil {
         buff[2] = (byte)(length + 1);
         // 设置数据类型为0x04（LCD显示字符串）
         buff[3] = 0x04;
-        byte[] macByte=intToByteArray(mac);
+        byte[] macByte=hexStringToByteArray(mac);
         // 复制数据到缓冲区
         System.arraycopy(macByte, 0, buff, 4, 6);
         System.arraycopy(data, 0, buff, 10, length);

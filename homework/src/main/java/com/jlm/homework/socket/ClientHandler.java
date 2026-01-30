@@ -86,6 +86,9 @@ public class ClientHandler implements Runnable {
 
             // Load initial relation
             SmartDeviceUserRelation relation = smartDeviceUserRelationService.selectByIpAddress(sessionContext.getClientIP());
+            if(relation==null&&StringUtils.isNotBlank(sessionContext.getMac())){
+                relation = smartDeviceUserRelationService.selectByDeviceCode(sessionContext.getMac());
+            }
             sessionContext.setRelation(relation);
 
             // 2. Setup Packet Decoder
@@ -160,7 +163,7 @@ public class ClientHandler implements Runnable {
         // But Packet.mac is byte array.
         // Logic:
         byte[] macBytes = Arrays.copyOfRange(packet.getRawData(), 4, 10);
-        Integer mac = ParseTcpDataUtil.byteArrayToInt(macBytes);
+        String mac = ParseTcpDataUtil.bytesToHexString(macBytes);
         sessionContext.setMac(mac);
         
         // Optimization: Skip DB query if relation is already cached and matches MAC
@@ -246,7 +249,7 @@ public class ClientHandler implements Runnable {
             fullPacket[2] = 0x02; // Length
             fullPacket[3] = HEARTBEAT_TYPE;
             
-            byte[] macByte = ParseTcpDataUtil.intToByteArray(sessionContext.getMac());
+            byte[] macByte = ParseTcpDataUtil.hexStringToByteArray(sessionContext.getMac());
             System.arraycopy(macByte, 0, fullPacket, 4, 6);
             
             fullPacket[10] = heartbeatData;

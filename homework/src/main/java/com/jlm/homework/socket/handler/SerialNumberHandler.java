@@ -28,7 +28,7 @@ public class SerialNumberHandler implements MessageHandler {
     public void handle(SessionContext context, Packet packet, ResponseSender sender) {
         MacParseResult result = ParseTcpDataUtil.parseSerialNumberTcpPacket(packet.getRawData());
         log.info("Serial Number Data Parsed: {}", result);
-
+        context.setMac(result.getMac());
         SmartDeviceUserRelation deviceUserRelation = smartDeviceUserRelationService.selectByDeviceCode(result.getMac().toString());
         if (deviceUserRelation != null) {
             deviceUserRelation.setIpAddress(context.getClientIP());

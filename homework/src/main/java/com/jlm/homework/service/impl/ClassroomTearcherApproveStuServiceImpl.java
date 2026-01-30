@@ -37,6 +37,8 @@ public class ClassroomTearcherApproveStuServiceImpl implements IClassroomTearche
             return;
         }
         if(classroomTearcherApproveStu.getTearcherApprStuData().size()<StudentWriteData_Size){
+            classroomTearcherApproveStu.setIndexN(0);
+            classroomTearcherApproveStu.setCreateTime(new Date());
             classroomTearcherApproveStuRepository.save(classroomTearcherApproveStu);
         }else {
             ClassroomTearcherApproveStu data=new ClassroomTearcherApproveStu();
@@ -62,7 +64,7 @@ public class ClassroomTearcherApproveStuServiceImpl implements IClassroomTearche
     public List<ClassroomTearcherApproveStu> findByStudentRecordId(Long studentRecordId) {
         ClassroomTearcherApproveStu data=new ClassroomTearcherApproveStu();
         data.setStudentRecordId(studentRecordId);
-        Sort sort = Sort.by(Sort.Direction.ASC,"pageNum","indexN");
+        Sort sort = Sort.by(Sort.Direction.ASC,"pageNum","indexN","createTime");
         List<ClassroomTearcherApproveStu> list=classroomTearcherApproveStuRepository.findAll(Example.of(data),sort);
         List<ClassroomTearcherApproveStu> dataList=new ArrayList<>();
         int pageNum=1;
@@ -84,20 +86,22 @@ public class ClassroomTearcherApproveStuServiceImpl implements IClassroomTearche
                     studentWriteData.setId(writeData.getId());
                     studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
                     studentWriteData.setStudentId(writeData.getStudentId());
-                    studentWriteData.setPageNum(pageNum);
+                    studentWriteData.setPageNum(writeData.getPageNum());
                     studentsWriteRecords.addAll(writeData.getTearcherApprStuData());
+                    pageNum=writeData.getPageNum();
+                }else {
+                    studentWriteData.setTearcherApprStuData(studentsWriteRecords);
+                    dataList.add(studentWriteData);
+                    pageNum++;
+                    studentWriteData = new ClassroomTearcherApproveStu();
+                    studentWriteData.setId(writeData.getId());
+                    studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
+                    studentWriteData.setStudentId(writeData.getStudentId());
+                    studentWriteData.setPageNum(writeData.getPageNum());
+                    studentsWriteRecords = new ArrayList<>();
+                    studentsWriteRecords.addAll(writeData.getTearcherApprStuData());
+                    studentWriteData.setTearcherApprStuData(studentsWriteRecords);
                 }
-                studentWriteData.setTearcherApprStuData(studentsWriteRecords);
-                dataList.add(studentWriteData);
-                pageNum++;
-                studentWriteData= new ClassroomTearcherApproveStu();
-                studentWriteData.setId(writeData.getId());
-                studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
-                studentWriteData.setStudentId(writeData.getStudentId());
-                studentWriteData.setPageNum(pageNum);
-                studentsWriteRecords = new ArrayList<>();
-                studentsWriteRecords.addAll(writeData.getTearcherApprStuData());
-                studentWriteData.setTearcherApprStuData(studentsWriteRecords);
             }
             //最后一个元素，list增加
             if(list.indexOf(writeData)==list.size()-1){

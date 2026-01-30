@@ -85,20 +85,22 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
                     studentWriteData.setId(writeData.getId());
                     studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
                     studentWriteData.setStudentId(writeData.getStudentId());
-                    studentWriteData.setPageNum(pageNum);
+                    studentWriteData.setPageNum(writeData.getPageNum());
                     studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
+                    pageNum = writeData.getPageNum();
+                }else {
+                    studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
+                    dataList.add(studentWriteData);
+                    pageNum++;
+                    studentWriteData = new ClassroomStudentWriteData();
+                    studentWriteData.setId(writeData.getId());
+                    studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
+                    studentWriteData.setStudentId(writeData.getStudentId());
+                    studentWriteData.setPageNum(writeData.getPageNum());
+                    studentsWriteRecords = new ArrayList<>();
+                    studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
+                    studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
                 }
-                studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
-                dataList.add(studentWriteData);
-                pageNum++;
-                studentWriteData= new ClassroomStudentWriteData();
-                studentWriteData.setId(writeData.getId());
-                studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
-                studentWriteData.setStudentId(writeData.getStudentId());
-                studentWriteData.setPageNum(pageNum);
-                studentsWriteRecords = new ArrayList<>();
-                studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
-                studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
             }
             //最后一个元素，list增加
             if(list.indexOf(writeData)==list.size()-1){

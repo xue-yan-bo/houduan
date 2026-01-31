@@ -113,4 +113,26 @@ public class ClassroomTearcherApproveStuServiceImpl implements IClassroomTearche
         }
         return dataList;
     }
+
+    @Override
+    public void clearTeacherApprove(Long classroomExercisesId, Long studentId, Integer pageNum) {
+        ClassroomExercisesStudentRecord search = new ClassroomExercisesStudentRecord();
+        search.setClassroomExercisesId(classroomExercisesId);
+        search.setStudentId(studentId);
+        ClassroomExercisesStudentRecord record=classroomExercisesStudentRecordRepository.findOne(Example.of(search)).orElse(null);
+        if(record==null){
+            return;
+        }
+        ClassroomTearcherApproveStu data=new ClassroomTearcherApproveStu();
+        data.setStudentRecordId(record.getId());
+        data.setStudentId(studentId);
+        data.setPageNum(pageNum);
+        Sort sort = Sort.by(Sort.Direction.ASC,"pageNum","indexN","createTime");
+        List<ClassroomTearcherApproveStu> list=classroomTearcherApproveStuRepository.findAll(Example.of(data),sort);
+        if(list!=null&&list.size()>0){
+            for(ClassroomTearcherApproveStu approveStu:list){
+                classroomTearcherApproveStuRepository.deleteById(approveStu.getId());
+            }
+        }
+    }
 }

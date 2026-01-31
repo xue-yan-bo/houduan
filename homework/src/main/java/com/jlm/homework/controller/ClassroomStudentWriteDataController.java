@@ -9,10 +9,7 @@ import com.jlm.homework.service.IClassroomTearcherApproveStuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 课堂学生手写控制器
@@ -42,5 +39,11 @@ public class ClassroomStudentWriteDataController {
     @Operation(summary = "课堂老师批阅下一页或中间保存")
     public void teacherNext(@RequestBody ClassroomTearcherApproveStu tearcherApproveStu){
         classroomTearcherApproveStuService.save(tearcherApproveStu);
+    }
+
+    @GetMapping("/clearTeacherApprove")
+    @Operation(summary = "清除课堂老师批阅")
+    public void clearTeacherApprove(Long classroomExercisesId,Long studentId,Integer pageNum){
+        classroomTearcherApproveStuService.clearTeacherApprove(classroomExercisesId,studentId,pageNum);
     }
 }

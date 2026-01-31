@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -164,6 +165,7 @@ public class CopybookServiceImpl implements ICopybookService {
     }
 
     @Override
+    @Transactional
     public Boolean publish(Long id) {
         Boolean flag = false;
         Copybook copybook = copybookRepository.findById(id).orElse(null);
@@ -174,21 +176,20 @@ public class CopybookServiceImpl implements ICopybookService {
                     throw new RuntimeException(result.getMsg());
                 }
                 List<Student> studentList=result.getRows();
-                if(studentList.size()==0){
-                    throw new RuntimeException("该班级还没有学生呢，请检查！");
-                }
-                for(Student student:studentList){
-                    CopybookStudentRecord record = new CopybookStudentRecord();
-                    BeanUtils.copyProperties(copybook,record);
-                    record.setId(null);
-                    record.setCopybookId(id);
-                    record.setFont(copybook.getFont());
-                    record.setCopybookName(copybook.getName());
-                    record.setStudentId(student.getStudentId());
-                    record.setStudentName(student.getStudentName());
-                    record.setSubmitStatus(0);
-                    record.setCreateTime(new Date());
-                    copybookStudentRecordRepository.save(record);
+                if(studentList!=null&&studentList.size()>0) {
+                    for (Student student : studentList) {
+                        CopybookStudentRecord record = new CopybookStudentRecord();
+                        BeanUtils.copyProperties(copybook, record);
+                        record.setId(null);
+                        record.setCopybookId(id);
+                        record.setFont(copybook.getFont());
+                        record.setCopybookName(copybook.getName());
+                        record.setStudentId(student.getStudentId());
+                        record.setStudentName(student.getStudentName());
+                        record.setSubmitStatus(0);
+                        record.setCreateTime(new Date());
+                        copybookStudentRecordRepository.save(record);
+                    }
                 }
             }
             copybook.setStatus(1);

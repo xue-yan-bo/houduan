@@ -10,4 +10,6 @@ public interface IClassroomTearcherApproveStuService {
     void save(ClassroomTearcherApproveStu classroomTearcherApproveStu);
 
     List<ClassroomTearcherApproveStu> findByStudentRecordId(Long studentRecordId);
+
+    void clearTeacherApprove(Long studentRecordId, Long studentId, Integer pageNum);
 }

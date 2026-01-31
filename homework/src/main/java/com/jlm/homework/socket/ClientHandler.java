@@ -35,6 +35,7 @@ public class ClientHandler implements Runnable {
 
     private SessionContext sessionContext;
     private ResponseSender responseSender;
+    private byte[] preReadBytes;
     
     // Handlers
     private final Map<Byte, MessageHandler> handlers = new HashMap<>();
@@ -46,12 +47,19 @@ public class ClientHandler implements Runnable {
 
     public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
                          ISmartDeviceUserRelationService smartDeviceUserRelationService,
-                         IHandlerService handlerService,SessionContext sessionContext) {
+                         IHandlerService handlerService, SessionContext sessionContext) {
+        this(socket, messagingTemplate, smartDeviceUserRelationService, handlerService, sessionContext, null);
+    }
+
+    public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
+                         ISmartDeviceUserRelationService smartDeviceUserRelationService,
+                         IHandlerService handlerService, SessionContext sessionContext, byte[] preReadBytes) {
         this.clientSocket = socket;
         this.messagingTemplate = messagingTemplate;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
         this.handlerService = handlerService;
         this.sessionContext = sessionContext;
+        this.preReadBytes = preReadBytes;
     }
 
     private void initHandlers() {
@@ -93,6 +101,10 @@ public class ClientHandler implements Runnable {
 
             // 2. Setup Packet Decoder
             PacketDecoder decoder = new PacketDecoder(in);
+            // 处理预读取的字节
+            if (preReadBytes != null && preReadBytes.length > 0) {
+                decoder.pushPreReadBytes(preReadBytes);
+            }
 
             // 3. Start Heartbeat
             initHeartbeatScheduler(out);
@@ -104,10 +116,6 @@ public class ClientHandler implements Runnable {
                     if (packet == null) {
                         break;
                     }
-
-                    //log.info("Received packet type: {}, length: {}", String.format("0x%02X", packet.getType()), packet.getLength());
-
-                    // Pre-process Bluetooth packets for MAC binding
                     if (packet.isBluetooth()) {
                         handleBluetoothPreProcess(packet);
                     } else {
@@ -126,13 +134,11 @@ public class ClientHandler implements Runnable {
                     } else {
                         log.warn("Unknown packet type: {}", String.format("0x%02X", packet.getType()));
                     }
-                    
-                    // Removed global echo to prevent bandwidth saturation.
-                    // Specific handlers (like SerialNumberHandler) should handle their own responses/echos if needed.
-                    // responseSender.sendRaw(packet.getRawData());
+
                 } catch (Exception e) {
+                    break;
                     // 线程被中断，继续运行
-                    log.debug("ClientHandler thread interrupted, continuing...");
+                    //log.debug("ClientHandler thread interrupted, continuing...");
                 }
             }
 
@@ -165,29 +171,35 @@ public class ClientHandler implements Runnable {
         byte[] macBytes = Arrays.copyOfRange(packet.getRawData(), 4, 10);
         String mac = ParseTcpDataUtil.bytesToHexString(macBytes);
         sessionContext.setMac(mac);
-        
+
         // Optimization: Skip DB query if relation is already cached and matches MAC
-        if (sessionContext.getRelation() != null && 
-            String.valueOf(mac).equals(sessionContext.getRelation().getDeviceCode())) {
+        if (sessionContext.getRelation() != null &&
+                String.valueOf(mac).equals(sessionContext.getRelation().getDeviceCode())) {
             return;
         }
-        
+
         SmartDeviceUserRelation relation = smartDeviceUserRelationService.selectByDeviceCode(mac.toString());
         if (relation == null) {
             //System.out.println(mac + "设备还未绑定学生，请检查！");
             SmartDeviceUserRelation newRelation = new SmartDeviceUserRelation();
             newRelation.setIpAddress(sessionContext.getClientIP());
             newRelation.setDeviceCode(mac.toString());
-            messagingTemplate.convertAndSend("/topic/bindStudent", newRelation);
+            // 包装消息发送操作，处理会话关闭的情况
+            try {
+                messagingTemplate.convertAndSend("/topic/bindStudent", newRelation);
+            } catch (IllegalStateException e) {
+                log.warn("Failed to send bind student request: {}", e.getMessage());
+                // 会话已关闭，跳过发送
+            }
         } else if (StringUtils.isEmpty(relation.getIpAddress())) {
             relation.setIpAddress(sessionContext.getClientIP());
             smartDeviceUserRelationService.update(relation);
             sessionContext.setRelation(relation); // Update context relation
         } else {
-             // Ensure context has relation
-             if (sessionContext.getRelation() == null) {
-                 sessionContext.setRelation(relation);
-             }
+            // Ensure context has relation
+            if (sessionContext.getRelation() == null) {
+                sessionContext.setRelation(relation);
+            }
         }
     }
 

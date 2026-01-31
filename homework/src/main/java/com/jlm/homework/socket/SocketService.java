@@ -101,7 +101,7 @@ public class SocketService implements SmartLifecycle {
                     
                     // 提交客户端连接到线程池处理
                     ClientHandler clientHandler = new ClientHandler(socket, messagingTemplate,
-                            smartDeviceUserRelationService, handlerService, sessionContext);
+                            smartDeviceUserRelationService, handlerService, sessionContext, proxyResult.getPreReadBytes());
 
                     threadPool.submit(clientHandler);
                 }
@@ -152,26 +152,31 @@ public class SocketService implements SmartLifecycle {
      */
     private ProxyHeaderResult parseProxyHeader(Socket socket) throws IOException {
         InputStream inputStream = socket.getInputStream();
-        
-        // 检查是否支持标记（mark）操作
-        if (!inputStream.markSupported()) {
-            inputStream = new BufferedInputStream(inputStream);
-        }
-        
-        // 设置标记，以便重置
-        inputStream.mark(108);
-        
+
+        // 直接使用原始输入流，不包装为 BufferedInputStream
         // 读取前5个字节用于检测代理头
         byte[] signature = new byte[5];
-        int bytesRead = inputStream.read(signature);
-        
-        // 重置输入流，以便后续读取
-        inputStream.reset();
-        
+        int bytesRead = 0;
+
+        // 使用临时缓冲区保存读取的数据
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        try {
+            bytesRead = inputStream.read(signature);
+            // 将读取的字节保存到临时缓冲区
+            baos.write(signature, 0, bytesRead);
+        } catch (Exception e) {
+            log.warn("Failed to read proxy header signature: {}", e.getMessage());
+            return new ProxyHeaderResult(
+                    (InetSocketAddress) socket.getRemoteSocketAddress(),
+                    baos.toByteArray()
+            );
+        }
+
         // 默认使用Socket远程地址
         InetSocketAddress realAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
-        byte[] preReadBytes = null;
-        
+        byte[] preReadBytes = baos.toByteArray();
+
         // 更健壮的代理头处理
         if (bytesRead == -1) {
             // 流已关闭，返回默认地址
@@ -184,10 +189,10 @@ public class SocketService implements SmartLifecycle {
             String sigStr = new String(signature);
             if (sigStr.equals("PROXY")) {
                 // PROXY v1 协议
-                return parseProxyV1(socket, inputStream);
+                return parseProxyV1(socket, inputStream, preReadBytes);
             } else if (isProxyV2Signature(signature)) {
                 // PROXY v2 协议
-                return parseProxyV2(socket, inputStream);
+                return parseProxyV2(socket, inputStream, preReadBytes);
             } else {
                 // 不是代理协议，返回默认地址
                 return new ProxyHeaderResult(realAddress, preReadBytes);
@@ -210,37 +215,47 @@ public class SocketService implements SmartLifecycle {
      * 解析PROXY v1协议
      * @param socket 客户端Socket
      * @param inputStream 输入流
+     * @param preReadBytes 预读取的字节
      * @return 解析结果
      * @throws IOException 解析异常
      */
-    private ProxyHeaderResult parseProxyV1(Socket socket, InputStream inputStream) throws IOException {
-        // 设置标记，以便重置
-        inputStream.mark(108); // 代理头最大长度
-
+    private ProxyHeaderResult parseProxyV1(Socket socket, InputStream inputStream, byte[] preReadBytes) throws IOException {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
             String line = reader.readLine();
 
             if (line == null || !line.startsWith("PROXY")) {
                 // 无效的PROXY v1头，使用默认地址
-                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null);
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), preReadBytes);
             }
 
             String[] parts = line.split(" ");
             if (parts.length < 6) {
                 // 无效的PROXY v1格式，使用默认地址
-                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null);
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), preReadBytes);
             }
-            inputStream.reset();
             // 获取真实客户端地址
             String clientIp = parts[2];
             int clientPort = Integer.parseInt(parts[4]);
             InetSocketAddress realAddress = new InetSocketAddress(clientIp, clientPort);
 
-            return new ProxyHeaderResult(realAddress, null);
-        } finally {
-            // 重置输入流，以便后续读取
-            inputStream.reset();
+            // 读取剩余的代理头数据
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            if (preReadBytes != null) {
+                baos.write(preReadBytes);
+            }
+            // 读取
+
+            byte[] crlf = new byte[2];
+            int crlfRead = inputStream.read(crlf);
+            if (crlfRead > 0) {
+                baos.write(crlf, 0, crlfRead);
+            }
+
+            return new ProxyHeaderResult(realAddress, baos.toByteArray());
+        } catch (Exception e) {
+            log.warn("Failed to parse PROXY v1 header: {}", e.getMessage());
+            return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), preReadBytes);
         }
     }
     
@@ -248,13 +263,11 @@ public class SocketService implements SmartLifecycle {
      * 解析PROXY v2协议
      * @param socket 客户端Socket
      * @param inputStream 输入流
+     * @param preReadBytes 预读取的字节
      * @return 解析结果
      * @throws IOException 解析异常
      */
-    private ProxyHeaderResult parseProxyV2(Socket socket, InputStream inputStream) throws IOException {
-        // 设置标记，以便重置
-        inputStream.mark(108); // 代理头最大长度
-
+    private ProxyHeaderResult parseProxyV2(Socket socket, InputStream inputStream, byte[] preReadBytes) throws IOException {
         try {
             DataInputStream dataInputStream = new DataInputStream(inputStream);
 
@@ -277,11 +290,23 @@ public class SocketService implements SmartLifecycle {
 
             // 构建真实地址
             InetSocketAddress realAddress = new InetSocketAddress(ip, port);
-            inputStream.reset();
-            return new ProxyHeaderResult(realAddress, null);
-        } finally {
-            // 重置输入流，以便后续读取
-            inputStream.reset();
+            
+            // 读取剩余的代理头数据
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            if (preReadBytes != null) {
+                baos.write(preReadBytes);
+            }
+            // 读取剩余的代理头字节
+            byte[] remaining = new byte[108 - 20]; // 假设代理头最大长度为108字节
+            int remainingRead = dataInputStream.read(remaining);
+            if (remainingRead > 0) {
+                baos.write(remaining, 0, remainingRead);
+            }
+
+            return new ProxyHeaderResult(realAddress, baos.toByteArray());
+        } catch (Exception e) {
+            log.warn("Failed to parse PROXY v2 header: {}", e.getMessage());
+            return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), preReadBytes);
         }
     }
 }

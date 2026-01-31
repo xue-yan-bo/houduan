@@ -39,7 +39,13 @@ public class SerialNumberHandler implements MessageHandler {
             deviceUserRelation.setIpAddress(context.getClientIP());
             deviceUserRelation.setDeviceCode(result.getMac());
             log.info("Sending bind student request /topic/bindStudent, Device Code: {}", deviceUserRelation.getDeviceCode());
-            messagingTemplate.convertAndSend("/topic/bindStudent", deviceUserRelation);
+            // 包装消息发送操作，处理会话关闭的情况
+            try {
+                messagingTemplate.convertAndSend("/topic/bindStudent", deviceUserRelation);
+            } catch (IllegalStateException e) {
+                log.warn("Failed to send bind student request: {}", e.getMessage());
+                // 会话已关闭，跳过发送
+            }
         }
         
         // Echo back

@@ -7,7 +7,6 @@ import lombok.Data;
 @Data
 public class MacParseResult extends ParseResult{
     private String mac;
-    private String byteStr;
 
     @Override
     public String toString() {
@@ -16,7 +15,6 @@ public class MacParseResult extends ParseResult{
                 "2. 数据长度：" + super.getLength() + "字节（Type1字节 + Packet" + (super.getLength()-1) + "字节）\n" +
                 "3. 数据类型：0x" + Integer.toHexString(super.getType() & 0xFF)  + "（序列号）\n" +
                 "4. 序列号：mac=" + mac + "\n" +
-                "5. 原编号：byteStr=" + byteStr + "\n" +
-                "6. 校验和：0x" + Integer.toHexString(super.getChecksum() & 0xFF) + "（" + (super.isChecksumValid() ? "验证通过" : "验证失败") + "）";
+                "5. 校验和：0x" + Integer.toHexString(super.getChecksum() & 0xFF) + "（" + (super.isChecksumValid() ? "验证通过" : "验证失败") + "）";
     }
 }

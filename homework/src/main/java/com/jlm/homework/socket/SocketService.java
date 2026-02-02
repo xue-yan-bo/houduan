@@ -75,7 +75,7 @@ public class SocketService implements SmartLifecycle {
                     String clientAddress = realAddress.getHostString();
                     int clientPort = realAddress.getPort();
                     
-                    //log.info("Client connected with real address: {}", realAddress);
+                    //log.info("Client connected with real address: {}", clientAddress);
                     
                     // 使用Redis获取或创建SessionContext
                     SessionContext sessionContext = null;
@@ -98,10 +98,13 @@ public class SocketService implements SmartLifecycle {
                     sessionContext.setRemoteAddress(realAddress);
                     sessionContext.setClientIP(clientAddress);
                     sessionContext.setClientPort(clientPort);
+                    // 保存修改后的SessionContext回Redis
+                    redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                    log.info("Saved session context to Redis for client: {}", clientAddress);
                     
                     // 提交客户端连接到线程池处理
                     ClientHandler clientHandler = new ClientHandler(socket, messagingTemplate,
-                            smartDeviceUserRelationService, handlerService, sessionContext, proxyResult.getPreReadBytes());
+                            smartDeviceUserRelationService, handlerService, sessionContext, proxyResult.getPreReadBytes(), redisTemplate, redisKey);
 
                     threadPool.submit(clientHandler);
                 }
@@ -152,8 +155,10 @@ public class SocketService implements SmartLifecycle {
      */
     private ProxyHeaderResult parseProxyHeader(Socket socket) throws IOException {
         InputStream inputStream = socket.getInputStream();
-
-        // 直接使用原始输入流，不包装为 BufferedInputStream
+        // 使用BufferedInputStream包装输入流，以便支持标记操作
+        java.io.BufferedInputStream bufferedInputStream = new java.io.BufferedInputStream(inputStream, 1024);
+        // 设置标记，以便重置
+        bufferedInputStream.mark(1024);
         // 读取前5个字节用于检测代理头
         byte[] signature = new byte[5];
         int bytesRead = 0;
@@ -162,14 +167,20 @@ public class SocketService implements SmartLifecycle {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
         try {
-            bytesRead = inputStream.read(signature);
+            bytesRead = bufferedInputStream.read(signature);
             // 将读取的字节保存到临时缓冲区
             baos.write(signature, 0, bytesRead);
         } catch (Exception e) {
             log.warn("Failed to read proxy header signature: {}", e.getMessage());
+            // 重置输入流
+            try {
+                bufferedInputStream.reset();
+            } catch (Exception ex) {
+                // 忽略重置异常
+            }
             return new ProxyHeaderResult(
                     (InetSocketAddress) socket.getRemoteSocketAddress(),
-                    baos.toByteArray()
+                    null
             );
         }
 
@@ -180,22 +191,28 @@ public class SocketService implements SmartLifecycle {
         // 更健壮的代理头处理
         if (bytesRead == -1) {
             // 流已关闭，返回默认地址
-            return new ProxyHeaderResult(realAddress, preReadBytes);
+            return new ProxyHeaderResult(realAddress, null);
         } else if (bytesRead < 5) {
             // 读取字节不足，返回默认地址
-            return new ProxyHeaderResult(realAddress, preReadBytes);
+            return new ProxyHeaderResult(realAddress, null);
         } else {
             // 检测代理协议类型
             String sigStr = new String(signature);
             if (sigStr.equals("PROXY")) {
                 // PROXY v1 协议
-                return parseProxyV1(socket, inputStream, preReadBytes);
+                return parseProxyV1(socket, bufferedInputStream, preReadBytes);
             } else if (isProxyV2Signature(signature)) {
                 // PROXY v2 协议
-                return parseProxyV2(socket, inputStream, preReadBytes);
+                return parseProxyV2(socket, bufferedInputStream, preReadBytes);
             } else {
-                // 不是代理协议，返回默认地址
-                return new ProxyHeaderResult(realAddress, preReadBytes);
+                // 不是代理协议，重置输入流
+                try {
+                    bufferedInputStream.reset();
+                } catch (Exception ex) {
+                    // 忽略重置异常
+                }
+                // 返回默认地址，预读取字节为空，因为我们已经重置了输入流
+                return new ProxyHeaderResult(realAddress, null);
             }
         }
     }
@@ -221,41 +238,59 @@ public class SocketService implements SmartLifecycle {
      */
     private ProxyHeaderResult parseProxyV1(Socket socket, InputStream inputStream, byte[] preReadBytes) throws IOException {
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-            String line = reader.readLine();
+            // 尝试将输入流转换为BufferedInputStream，以便支持标记操作
+            java.io.BufferedInputStream bufferedInputStream = null;
+            if (inputStream instanceof java.io.BufferedInputStream) {
+                bufferedInputStream = (java.io.BufferedInputStream) inputStream;
+            } else {
+                bufferedInputStream = new java.io.BufferedInputStream(inputStream, 1024);
+                bufferedInputStream.mark(1024);
+            }
+            // 重置输入流到标记位置
+            try {
+                bufferedInputStream.reset();
+            } catch (Exception ex) {
+                // 忽略重置异常
+            }
+            // 重新读取并解析PROXY v1头
+            StringBuilder lineBuilder = new StringBuilder();
+            int c;
+            while ((c = bufferedInputStream.read()) != -1) {
+                if (c == '\n') {
+                    break;
+                }
+                if (c != '\r') {
+                    lineBuilder.append((char) c);
+                }
+            }
+            String line = lineBuilder.toString();
 
-            if (line == null || !line.startsWith("PROXY")) {
+            if (line.isEmpty() || !line.startsWith("PROXY")) {
                 // 无效的PROXY v1头，使用默认地址
-                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), preReadBytes);
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null);
             }
 
             String[] parts = line.split(" ");
             if (parts.length < 6) {
                 // 无效的PROXY v1格式，使用默认地址
-                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), preReadBytes);
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null);
             }
             // 获取真实客户端地址
             String clientIp = parts[2];
             int clientPort = Integer.parseInt(parts[4]);
             InetSocketAddress realAddress = new InetSocketAddress(clientIp, clientPort);
 
-            // 读取剩余的代理头数据
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            if (preReadBytes != null) {
-                baos.write(preReadBytes);
-            }
-            // 读取
-
-            byte[] crlf = new byte[2];
-            int crlfRead = inputStream.read(crlf);
-            if (crlfRead > 0) {
-                baos.write(crlf, 0, crlfRead);
+            // 再次重置输入流，以便后续的PacketDecoder能够正确读取数据
+            try {
+                bufferedInputStream.reset();
+            } catch (Exception ex) {
+                // 忽略重置异常
             }
 
-            return new ProxyHeaderResult(realAddress, baos.toByteArray());
+            return new ProxyHeaderResult(realAddress, null);
         } catch (Exception e) {
             log.warn("Failed to parse PROXY v1 header: {}", e.getMessage());
-            return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), preReadBytes);
+            return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null);
         }
     }
     
@@ -269,7 +304,22 @@ public class SocketService implements SmartLifecycle {
      */
     private ProxyHeaderResult parseProxyV2(Socket socket, InputStream inputStream, byte[] preReadBytes) throws IOException {
         try {
-            DataInputStream dataInputStream = new DataInputStream(inputStream);
+            // 尝试将输入流转换为BufferedInputStream，以便支持标记操作
+            java.io.BufferedInputStream bufferedInputStream = null;
+            if (inputStream instanceof java.io.BufferedInputStream) {
+                bufferedInputStream = (java.io.BufferedInputStream) inputStream;
+            } else {
+                bufferedInputStream = new java.io.BufferedInputStream(inputStream, 1024);
+                bufferedInputStream.mark(1024);
+            }
+            // 重置输入流到标记位置
+            try {
+                bufferedInputStream.reset();
+            } catch (Exception ex) {
+                // 忽略重置异常
+            }
+            // 使用DataInputStream包装BufferedInputStream
+            DataInputStream dataInputStream = new DataInputStream(bufferedInputStream);
 
             // 跳过PROXY v2头的前12个字节
             dataInputStream.skipBytes(12);
@@ -291,22 +341,17 @@ public class SocketService implements SmartLifecycle {
             // 构建真实地址
             InetSocketAddress realAddress = new InetSocketAddress(ip, port);
             
-            // 读取剩余的代理头数据
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            if (preReadBytes != null) {
-                baos.write(preReadBytes);
-            }
-            // 读取剩余的代理头字节
-            byte[] remaining = new byte[108 - 20]; // 假设代理头最大长度为108字节
-            int remainingRead = dataInputStream.read(remaining);
-            if (remainingRead > 0) {
-                baos.write(remaining, 0, remainingRead);
+            // 再次重置输入流，以便后续的PacketDecoder能够正确读取数据
+            try {
+                bufferedInputStream.reset();
+            } catch (Exception ex) {
+                // 忽略重置异常
             }
 
-            return new ProxyHeaderResult(realAddress, baos.toByteArray());
+            return new ProxyHeaderResult(realAddress, null);
         } catch (Exception e) {
             log.warn("Failed to parse PROXY v2 header: {}", e.getMessage());
-            return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), preReadBytes);
+            return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null);
         }
     }
 }

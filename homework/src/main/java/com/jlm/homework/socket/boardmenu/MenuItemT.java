@@ -2,6 +2,7 @@ package com.jlm.homework.socket.boardmenu;
 
 import lombok.Data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 
@@ -11,7 +12,12 @@ public class MenuItemT implements Serializable {
     private Integer id;
     private Long objectId;
     private String desc;
+    @JsonIgnore
     private MenuT  pSubMenu;
+
+    // 默认构造函数，用于Redis反序列化
+    public MenuItemT() {
+    }
 
     public MenuItemT(Integer id,Long objectId ,String desc, MenuT pSubMenu) {
         this.id = id;
@@ -30,6 +36,7 @@ public class MenuItemT implements Serializable {
         return sb.toString();
     }*/
 
+    @JsonIgnore
     public byte[] getDesc2Byte() {
         String name = " "+desc + " \n\0";
         //System.out.println("_______"+name);

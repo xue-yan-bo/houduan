@@ -36,6 +36,8 @@ public class ClientHandler implements Runnable {
     private SessionContext sessionContext;
     private ResponseSender responseSender;
     private byte[] preReadBytes;
+    private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
+    private String redisKey;
     
     // Handlers
     private final Map<Byte, MessageHandler> handlers = new HashMap<>();
@@ -48,7 +50,12 @@ public class ClientHandler implements Runnable {
     public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
                          ISmartDeviceUserRelationService smartDeviceUserRelationService,
                          IHandlerService handlerService, SessionContext sessionContext) {
-        this(socket, messagingTemplate, smartDeviceUserRelationService, handlerService, sessionContext, null);
+        this.clientSocket = socket;
+        this.messagingTemplate = messagingTemplate;
+        this.smartDeviceUserRelationService = smartDeviceUserRelationService;
+        this.handlerService = handlerService;
+        this.sessionContext = sessionContext;
+        this.preReadBytes = null;
     }
 
     public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
@@ -62,10 +69,24 @@ public class ClientHandler implements Runnable {
         this.preReadBytes = preReadBytes;
     }
 
+    public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
+                         ISmartDeviceUserRelationService smartDeviceUserRelationService,
+                         IHandlerService handlerService, SessionContext sessionContext, byte[] preReadBytes,
+                         org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate, String redisKey) {
+        this.clientSocket = socket;
+        this.messagingTemplate = messagingTemplate;
+        this.smartDeviceUserRelationService = smartDeviceUserRelationService;
+        this.handlerService = handlerService;
+        this.sessionContext = sessionContext;
+        this.preReadBytes = preReadBytes;
+        this.redisTemplate = redisTemplate;
+        this.redisKey = redisKey;
+    }
+
     private void initHandlers() {
         // Dependencies for handlers
         HandwritingHandler handwritingHandler = new HandwritingHandler(messagingTemplate, handlerService, smartDeviceUserRelationService);
-        ButtonHandler buttonHandler = new ButtonHandler(messagingTemplate, handlerService, responseSender,smartDeviceUserRelationService);
+        ButtonHandler buttonHandler = new ButtonHandler(messagingTemplate, handlerService, responseSender, smartDeviceUserRelationService, this);
         SerialNumberHandler serialNumberHandler = new SerialNumberHandler(smartDeviceUserRelationService, messagingTemplate);
 
         handlers.put((byte) 0x01, handwritingHandler); // Handwriting
@@ -101,7 +122,7 @@ public class ClientHandler implements Runnable {
 
             // 2. Setup Packet Decoder
             PacketDecoder decoder = new PacketDecoder(in);
-            // 处理预读取的字节
+            // Push pre-read bytes if any
             if (preReadBytes != null && preReadBytes.length > 0) {
                 decoder.pushPreReadBytes(preReadBytes);
             }
@@ -170,6 +191,8 @@ public class ClientHandler implements Runnable {
         byte[] macBytes = Arrays.copyOfRange(packet.getRawData(), 4, 10);
         String mac = ParseTcpDataUtil.bytesToHexString(macBytes);
         sessionContext.setMac(mac);
+        // 保存修改后的SessionContext回Redis
+        saveSessionContextToRedis();
 
         // Optimization: Skip DB query if relation is already cached and matches MAC
         if (sessionContext.getRelation() != null &&
@@ -194,10 +217,28 @@ public class ClientHandler implements Runnable {
             relation.setIpAddress(sessionContext.getClientIP());
             smartDeviceUserRelationService.update(relation);
             sessionContext.setRelation(relation); // Update context relation
+            // 保存修改后的SessionContext回Redis
+            saveSessionContextToRedis();
         } else {
             // Ensure context has relation
             if (sessionContext.getRelation() == null) {
                 sessionContext.setRelation(relation);
+                // 保存修改后的SessionContext回Redis
+                saveSessionContextToRedis();
+            }
+        }
+    }
+
+    /**
+     * 保存SessionContext到Redis
+     */
+    public void saveSessionContextToRedis() {
+        if (redisTemplate != null && redisKey != null) {
+            try {
+                redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                log.info("Saved session context to Redis for client: {}", sessionContext.getClientIP());
+            } catch (Exception e) {
+                log.warn("Failed to save session context to Redis: {}", e.getMessage());
             }
         }
     }

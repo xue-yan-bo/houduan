@@ -27,15 +27,18 @@ public class ButtonHandler implements MessageHandler {
     private final IHandlerService handlerService;
     private final ResponseSender responseSender;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
+    private final com.jlm.homework.socket.ClientHandler clientHandler;
 
     public ButtonHandler(SimpMessagingTemplate messagingTemplate,
                          IHandlerService handlerService,
                          ResponseSender responseSender,
-                         ISmartDeviceUserRelationService smartDeviceUserRelationService) {
+                         ISmartDeviceUserRelationService smartDeviceUserRelationService,
+                         com.jlm.homework.socket.ClientHandler clientHandler) {
         this.messagingTemplate = messagingTemplate;
         this.handlerService = handlerService;
         this.responseSender = responseSender;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
+        this.clientHandler = clientHandler;
     }
 
     @Override
@@ -51,11 +54,19 @@ public class ButtonHandler implements MessageHandler {
         if(relation==null) {
             relation = smartDeviceUserRelationService.selectByIpAddress(context.getClientIP());
             context.setRelation(relation);
+            // 保存SessionContext到Redis
+            if (clientHandler != null) {
+                clientHandler.saveSessionContextToRedis();
+            }
         }
         if (relation != null) {
             handleClassroomButtons(context, result, relation);
             try {
                 handleNavigationButtons(context, result, relation, sender);
+                // 保存SessionContext到Redis
+                if (clientHandler != null) {
+                    clientHandler.saveSessionContextToRedis();
+                }
             } catch (IOException e) {
                 log.error("Error handling navigation buttons", e);
             }

@@ -13,6 +13,7 @@ import com.jlm.homework.repository.HomeworkPublishQuestionRepository;
 import com.jlm.homework.service.IHomeworkResultService;
 import com.jlm.homework.service.IQuestionAnalysisService;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
+import com.jlm.homework.util.StringUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -62,18 +63,29 @@ public class HomeworkResultServiceImpl implements IHomeworkResultService {
                 questionAnalysis.setGrade(studentsHomework.getGrade());
                 questionAnalysis.setClassesId(studentsHomework.getClassesId());
                 questionAnalysis.setStudentAnswer(questionResult.getStudentAnswer());
-                questionAnalysis.setIsCorrect(questionResult.getIsCorrect());
+                if(questionResult.getIsCorrect()!=null) {
+                    questionAnalysis.setIsCorrect(questionResult.getIsCorrect());
+                }else{
+                    if(StringUtils.isNotEmpty(questionResult.getStudentAnswer())
+                            &&questionResult.getStudentAnswer().equals(questionResult.getStandardAnswer())){
+                        questionAnalysis.setIsCorrect(true);
+                    }else if(StringUtils.isNotEmpty(questionResult.getStudentAnswer())){
+                        questionAnalysis.setIsCorrect(false);
+                    }else{
+                        questionAnalysis.setIsCorrect(null);
+                    }
+                }
                 String key = questionAnalysis.getBigNumber()+":"+questionAnalysis.getQuestionType()+":"+questionAnalysis.getSmallNumber();
                 map.put(key,questionResult.getIsCorrect());
                 String bigKey  = questionAnalysis.getBigNumber()+":"+questionAnalysis.getQuestionType();
                 HomeworkAISmallDto smallDto = new HomeworkAISmallDto();
                 smallDto.setSmallNumber(questionAnalysis.getSmallNumber());
-                if(questionResult==null){
-                    smallDto.setCorrectFlag("未作答");
-                }else if(questionResult.getIsCorrect()){
+                if(questionAnalysis.getIsCorrect()!=null&&questionAnalysis.getIsCorrect()){
                     smallDto.setCorrectFlag("正确");
-                }else{
+                }else if(questionAnalysis.getIsCorrect()!=null&&!questionAnalysis.getIsCorrect()){
                     smallDto.setCorrectFlag("错误");
+                }else{
+                    smallDto.setCorrectFlag("未作答");
                 }
 
                 if(bigMap.containsKey(bigKey)){

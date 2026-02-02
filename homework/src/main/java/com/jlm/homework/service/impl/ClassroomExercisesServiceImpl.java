@@ -282,8 +282,8 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
                 }
             }
             classroomExercises.setUseStatus(1);
-            classroomExercises.setCreateTime(new Date());
             if(saveflag) {
+                classroomExercises.setCreateTime(new Date());
                 classroomExercises = classroomExercisesRepository.save(classroomExercises);
                 classroomExercisesId = classroomExercises.getId();
             }

@@ -75,7 +75,7 @@ public class SocketService implements SmartLifecycle {
                     String clientAddress = realAddress.getHostString();
                     int clientPort = realAddress.getPort();
                     
-                    log.info("Client connected with real address: {}", realAddress);
+                    //log.info("Client connected with real address: {}", realAddress);
                     
                     // 使用Redis获取或创建SessionContext
                     SessionContext sessionContext = null;

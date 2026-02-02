@@ -76,7 +76,7 @@ public class HandwritingHandler implements MessageHandler {
         } else if (context.isErrorTitleFlag() && context.getCurrentMenu() != null) {
             // 错题模式
             handleErrorTitleMode(context, result);
-        }  else if (context.isCopybookFlag() && context.getCopybookMenu() != null) {
+        }  else if (context.isCopybookFlag()) {
             // 字帖模式
             handleCopybookMode(context, result, relation);
         }else {

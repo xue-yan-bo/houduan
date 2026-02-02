@@ -136,7 +136,6 @@ public class ClientHandler implements Runnable {
                     }
 
                 } catch (Exception e) {
-                    break;
                     // 线程被中断，继续运行
                     //log.debug("ClientHandler thread interrupted, continuing...");
                 }

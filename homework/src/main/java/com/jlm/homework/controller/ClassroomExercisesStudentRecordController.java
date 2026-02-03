@@ -113,4 +113,15 @@ public class ClassroomExercisesStudentRecordController {
 //        classroomExercisesStudentRecordService.aiParseWriteRecord(studentRecordId);
         classroomExercisesStudentRecordService.aiParseWriteStrucRecord(studentRecordId);
     }
+
+
+    /**
+     * 获取学生课堂记录详情
+     */
+    @GetMapping("/getStudentRecordDetail")
+    @Operation(summary = "获取学生课堂记录详情")
+    public ClassroomExercisesStudentRecord getStudentRecordDetail(Long studentRecordId){
+        ClassroomExercisesStudentRecord record= classroomExercisesStudentRecordService.getStudentRecordDetail(studentRecordId);
+        return record;
+    }
 }

@@ -56,6 +56,11 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
                 classroomStudentWriteDataRepository.save(writeData);
             }
         }
+        ClassroomExercisesStudentRecord studentRecord=classroomExercisesStudentRecordRepository.findById(classroomStudentWriteData.getStudentRecordId()).orElse(null);
+        if(studentRecord!=null&&(studentRecord.getHavaWrite()==null||studentRecord.getHavaWrite()!=1)){
+            studentRecord.setHavaWrite(1);
+            classroomExercisesStudentRecordRepository.save(studentRecord);
+        }
 
     }
 

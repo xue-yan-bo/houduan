@@ -91,6 +91,12 @@ public class ClassroomExercisesStudentRecord {
     private Date createTime;
 
     /**
+     * 是否有书写，1已书写
+     */
+    @Column(name = "hava_write")
+    private Integer havaWrite;
+
+    /**
      * 学生写作记录
      */
     @Transient

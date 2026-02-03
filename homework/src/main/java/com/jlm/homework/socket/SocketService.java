@@ -100,7 +100,7 @@ public class SocketService implements SmartLifecycle {
                     sessionContext.setClientPort(clientPort);
                     // 保存修改后的SessionContext回Redis
                     redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
-                    log.info("Saved session context to Redis for client: {}", clientAddress);
+                    //log.info("Saved session context to Redis for client: {}", clientAddress);
                     
                     // 提交客户端连接到线程池处理
                     ClientHandler clientHandler = new ClientHandler(socket, messagingTemplate,

@@ -29,4 +29,6 @@ public interface IClassroomExercisesStudentRecordService {
     void aiParseWriteStrucRecord(Long studentRecordId);
 
     TeacherWriteDto getLiveStreamtRecordTeacher(Long classroomExercisesId);
+
+    ClassroomExercisesStudentRecord getStudentRecordDetail(Long studentRecordId);
 }

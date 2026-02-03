@@ -84,7 +84,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 studentWriteData.setStudentRecordId(studentRecord.getId());
                 classroomStudentWriteDataService.save(studentWriteData);
             }
-
+            exercisesStudentRecord.setHavaWrite(1);
         }
         return exercisesStudentRecord;
     }
@@ -96,13 +96,13 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         record.setClassId(classId);
         Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration", "createTime");
         List<ClassroomExercisesStudentRecord> recordList = classroomExercisesStudentRecordRepository.findAll(Example.of(record), sort);
-        for (ClassroomExercisesStudentRecord studentRecord : recordList) {
+        /*for (ClassroomExercisesStudentRecord studentRecord : recordList) {
             List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
             studentRecord.setStudentWriteDataList(writeDataList);
 
             List<ClassroomTearcherApproveStu> tearcherApproveStuList = classroomTearcherApproveStuService.findByStudentRecordId(studentRecord.getId());
             studentRecord.setTearcherApproveStuList(tearcherApproveStuList);
-        }
+        }*/
 
         return recordList;
     }
@@ -173,7 +173,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 for (StudentWriteDto studentWriteDto : writeDtos) {
                     if (Long.compare(studentWriteDto.getStudentId(), record.getStudentId()) == 0) {
                         record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordList());
-
+                        record.setHavaWrite(1);
                         this.save(record);
                     }
                 }
@@ -508,6 +508,18 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             teacherWriteDto.setTeacherName(writeDataList.get(0).getTeacherName());
         }
         return teacherWriteDto;
+    }
+
+    @Override
+    public ClassroomExercisesStudentRecord getStudentRecordDetail(Long studentRecordId) {
+        ClassroomExercisesStudentRecord studentRecord = classroomExercisesStudentRecordRepository.findById(studentRecordId).orElse(null);
+        if(studentRecord!=null) {
+            List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
+            studentRecord.setStudentWriteDataList(writeDataList);
+            List<ClassroomTearcherApproveStu> tearcherApproveStuList = classroomTearcherApproveStuService.findByStudentRecordId(studentRecord.getId());
+            studentRecord.setTearcherApproveStuList(tearcherApproveStuList);
+        }
+        return studentRecord;
     }
 
     /**

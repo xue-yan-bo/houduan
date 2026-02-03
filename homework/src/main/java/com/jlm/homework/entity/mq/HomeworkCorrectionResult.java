@@ -15,7 +15,7 @@ public class HomeworkCorrectionResult {
     private List<QuestionCorrectionResult> questions;
     private Double totalScore;
     private Double maxScore;
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime correctedAt;
     private CorrectionStatus status;
     private String  type;

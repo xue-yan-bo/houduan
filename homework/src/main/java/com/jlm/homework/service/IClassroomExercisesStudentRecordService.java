@@ -14,6 +14,8 @@ public interface IClassroomExercisesStudentRecordService {
 
     List<ClassroomExercisesStudentRecord> selectByClassroomExercisesIdAndClass(Long classroomExercisesId, Long classId);
 
+    List<ClassroomExercisesStudentRecord> studentRecordNoWriteData(Long classroomExercisesId, Long classId);
+
     void endAllAnswer(ExerciseWriteData exerciseWriteData);
 
     List<StudentWriteDto> getLiveStreamtRecord(Long classroomExercisesId, Long classId);

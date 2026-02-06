@@ -68,6 +68,16 @@ public class ClassroomExercisesStudentRecordController {
     }
 
     /**
+     * 获取学生答题记录-无笔记
+     */
+    @GetMapping("/studentRecord-noWriteData")
+    @Operation(summary = "获取学生答题记录-无笔记")
+    public List<ClassroomExercisesStudentRecord> studentRecordNoWriteData(Long classroomExercisesId,Long classId ){
+        List<ClassroomExercisesStudentRecord> recordList= classroomExercisesStudentRecordService.studentRecordNoWriteData(classroomExercisesId,classId);
+        return recordList;
+    }
+
+    /**
      * 老师结束所有答题
      */
     @PostMapping("/end-all-answer")

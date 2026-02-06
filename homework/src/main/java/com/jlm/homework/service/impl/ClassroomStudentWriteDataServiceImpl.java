@@ -34,7 +34,7 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
                 classroomStudentWriteData.setStudentRecordId(recordList.get(0).getId());
             }
         }
-        if(classroomStudentWriteData.getStudentsWriteRecords()==null||classroomStudentWriteData.getStudentsWriteRecords().size()==0){
+        if(classroomStudentWriteData.getStudentsWriteRecords()==null||classroomStudentWriteData.getStudentsWriteRecords().size()<=0){
             return;
         }
         if(classroomStudentWriteData.getStudentsWriteRecords().size()<StudentWriteData_Size){

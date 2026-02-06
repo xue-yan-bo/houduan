@@ -85,9 +85,9 @@ public class ClientHandler implements Runnable {
 
     private void initHandlers() {
         // Dependencies for handlers
-        HandwritingHandler handwritingHandler = new HandwritingHandler(messagingTemplate, handlerService, smartDeviceUserRelationService);
+        HandwritingHandler handwritingHandler = new HandwritingHandler(messagingTemplate, handlerService, smartDeviceUserRelationService, this);
         ButtonHandler buttonHandler = new ButtonHandler(messagingTemplate, handlerService, responseSender, smartDeviceUserRelationService, this);
-        SerialNumberHandler serialNumberHandler = new SerialNumberHandler(smartDeviceUserRelationService, messagingTemplate);
+        SerialNumberHandler serialNumberHandler = new SerialNumberHandler(smartDeviceUserRelationService, messagingTemplate, this);
 
         handlers.put((byte) 0x01, handwritingHandler); // Handwriting
         handlers.put((byte) 0x81, handwritingHandler); // Handwriting Bluetooth
@@ -100,13 +100,18 @@ public class ClientHandler implements Runnable {
     public void run() {
         InputStream in = null;
         OutputStream out = null;
+        PacketDecoder decoder = null;
         try {
             // 获取输入输出流（不使用try-with-resources，避免自动关闭）
             in = clientSocket.getInputStream();
+            // 使用BufferedInputStream包装输入流，以便支持标记操作和提高读取性能
+            java.io.BufferedInputStream bufferedInputStream = new java.io.BufferedInputStream(in, 1024);
             out = clientSocket.getOutputStream();
             
             // 保持连接活跃，去掉超时限制
             clientSocket.setKeepAlive(true);
+            // 设置TCP连接超时时间为60分钟
+            clientSocket.setSoTimeout(60 * 60 * 1000);
             this.responseSender = new ResponseSender(out);
             initHandlers();
 
@@ -121,7 +126,7 @@ public class ClientHandler implements Runnable {
             sessionContext.setRelation(relation);
 
             // 2. Setup Packet Decoder
-            PacketDecoder decoder = new PacketDecoder(in);
+            decoder = new PacketDecoder(bufferedInputStream);
             // Push pre-read bytes if any
             if (preReadBytes != null && preReadBytes.length > 0) {
                 decoder.pushPreReadBytes(preReadBytes);
@@ -133,9 +138,17 @@ public class ClientHandler implements Runnable {
             // 4. Main Loop - 保持运行，不自动关闭
             while (true) {
                 try {
+                    // 检查Socket是否仍然连接
+                    if (clientSocket == null || clientSocket.isClosed() || !clientSocket.isConnected()) {
+                        //log.info("Socket is not connected, exiting loop");
+                        break;
+                    }
+                    
                     Packet packet = decoder.readNextPacket();
                     if (packet == null) {
-                        break;
+                        // Socket仍然连接，可能是暂时没有数据，继续循环
+                        Thread.sleep(100);
+                        continue;
                     }
                     if (packet.isBluetooth()) {
                         handleBluetoothPreProcess(packet);
@@ -156,16 +169,31 @@ public class ClientHandler implements Runnable {
                         log.warn("Unknown packet type: {}", String.format("0x%02X", packet.getType()));
                     }
 
-                } catch (Exception e) {
+                } catch (InterruptedException e) {
                     // 线程被中断，继续运行
                     //log.debug("ClientHandler thread interrupted, continuing...");
+                } catch (IOException e) {
+                    // IO异常可能表示连接断开
+                    log.info("IO exception, checking connection: {}", e.getMessage());
+                    // 检查Socket状态
+                    if (clientSocket != null && !clientSocket.isClosed()) {
+                        try {
+                            clientSocket.close();
+                        } catch (IOException ex) {
+                            // 忽略关闭异常
+                        }
+                    }
+                    break;
+                } catch (Exception e) {
+                    // 其他异常，继续运行
+                    log.debug("ClientHandler exception, continuing...: {}", e.getMessage());
                 }
             }
 
         } catch (IOException e) {
             log.info("Client handler exception: {}", e.getMessage());
         } finally {
-            // 只有在出现异常时才关闭资源，正常情况下保持连接
+            // 关闭资源
             cancelHeartbeat();
             try {
                 if (in != null) {
@@ -180,6 +208,7 @@ public class ClientHandler implements Runnable {
             } catch (IOException e) {
                 log.info("Error closing socket: {}", e.getMessage());
             }
+            log.info("Client connection closed: {}", sessionContext.getClientIP());
         }
     }
 
@@ -232,10 +261,56 @@ public class ClientHandler implements Runnable {
     /**
      * 保存SessionContext到Redis
      */
-    public void saveSessionContextToRedis() {
+    public synchronized void saveSessionContextToRedis() {
         if (redisTemplate != null && redisKey != null) {
             try {
-                redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                // 先获取最新的SessionContext，然后合并修改，最后保存回去
+                Object sessionObj = redisTemplate.opsForValue().get(redisKey);
+                if (sessionObj instanceof SessionContext) {
+                    SessionContext latestSessionContext = (SessionContext) sessionObj;
+                    // 合并修改，保留最新的状态
+                    latestSessionContext.setRemoteAddress(sessionContext.getRemoteAddress());
+                    latestSessionContext.setClientIP(sessionContext.getClientIP());
+                    latestSessionContext.setClientPort(sessionContext.getClientPort());
+                    latestSessionContext.setRelation(sessionContext.getRelation());
+                    latestSessionContext.setBluetooth(sessionContext.isBluetooth());
+                    latestSessionContext.setMac(sessionContext.getMac());
+                    latestSessionContext.setHomeworkFlag(sessionContext.isHomeworkFlag());
+                    latestSessionContext.setEmendFlag(sessionContext.isEmendFlag());
+                    latestSessionContext.setFeedbackFlag(sessionContext.isFeedbackFlag());
+                    latestSessionContext.setErrorTitleFlag(sessionContext.isErrorTitleFlag());
+                    latestSessionContext.setCopybookFlag(sessionContext.isCopybookFlag());
+                    latestSessionContext.setMenuFlag(sessionContext.isMenuFlag());
+                    latestSessionContext.setCurrentMenu(sessionContext.getCurrentMenu());
+                    latestSessionContext.setHomeworkMenu(sessionContext.getHomeworkMenu());
+                    latestSessionContext.setEmendMenu(sessionContext.getEmendMenu());
+                    latestSessionContext.setFeedbackMenu(sessionContext.getFeedbackMenu());
+                    latestSessionContext.setErrorTitleMenu(sessionContext.getErrorTitleMenu());
+                    latestSessionContext.setCopybookMenu(sessionContext.getCopybookMenu());
+                    latestSessionContext.setConfirmCount(sessionContext.getConfirmCount());
+                    latestSessionContext.setWork2Boards(sessionContext.getWork2Boards());
+                    latestSessionContext.setEmendBoards(sessionContext.getEmendBoards());
+                    latestSessionContext.setCopybookBoards(sessionContext.getCopybookBoards());
+                    latestSessionContext.setButtonTimes(sessionContext.getButtonTimes());
+                    latestSessionContext.setHomeId(sessionContext.getHomeId());
+                    latestSessionContext.setCopybookId(sessionContext.getCopybookId());
+                    latestSessionContext.setPageNum(sessionContext.getPageNum());
+                    // 合并笔记书写信息
+                    latestSessionContext.setStudentClassRecords(sessionContext.getStudentClassRecords());
+                    latestSessionContext.setStudentsWriteRecords(sessionContext.getStudentsWriteRecords());
+                    latestSessionContext.setStudentsEmendRecords(sessionContext.getStudentsEmendRecords());
+                    latestSessionContext.setStudentsFeedbackRecords(sessionContext.getStudentsFeedbackRecords());
+                    latestSessionContext.setUploadErrorTitleRecords(sessionContext.getUploadErrorTitleRecords());
+                    latestSessionContext.setStudentsCopybookRecords(sessionContext.getStudentsCopybookRecords());
+                    latestSessionContext.setLastList(sessionContext.getLastList());
+                    // 保存合并后的SessionContext
+                    redisTemplate.opsForValue().set(redisKey, latestSessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                    // 更新本地SessionContext
+                    sessionContext = latestSessionContext;
+                } else {
+                    // 不存在，直接保存
+                    redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                }
                 log.info("Saved session context to Redis for client: {}", sessionContext.getClientIP());
             } catch (Exception e) {
                 log.warn("Failed to save session context to Redis: {}", e.getMessage());
@@ -260,10 +335,24 @@ public class ClientHandler implements Runnable {
         heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
         heartbeatScheduler.scheduleAtFixedRate(() -> {
             try {
+                // 先检查Socket连接状态
+                if (clientSocket == null || clientSocket.isClosed() || !clientSocket.isConnected()) {
+                    log.info("Socket is closed, stopping heartbeat");
+                    cancelHeartbeat();
+                    return;
+                }
                 sendHeartbeat(out);
             } catch (IOException e) {
-                log.info("Heartbeat failed: " + e.getMessage());
+                //log.info("Heartbeat failed: " + e.getMessage());
                 cancelHeartbeat();
+                // 心跳失败时检查Socket状态
+                try {
+                    if (clientSocket != null && !clientSocket.isClosed()) {
+                        clientSocket.close();
+                    }
+                } catch (IOException ex) {
+                    // 忽略关闭异常
+                }
             }
         }, HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL, TimeUnit.SECONDS);
     }

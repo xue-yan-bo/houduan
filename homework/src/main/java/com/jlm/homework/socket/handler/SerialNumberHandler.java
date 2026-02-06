@@ -17,11 +17,21 @@ public class SerialNumberHandler implements MessageHandler {
 
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final com.jlm.homework.socket.ClientHandler clientHandler;
 
     public SerialNumberHandler(ISmartDeviceUserRelationService smartDeviceUserRelationService,
                                SimpMessagingTemplate messagingTemplate) {
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
         this.messagingTemplate = messagingTemplate;
+        this.clientHandler = null;
+    }
+
+    public SerialNumberHandler(ISmartDeviceUserRelationService smartDeviceUserRelationService,
+                               SimpMessagingTemplate messagingTemplate,
+                               com.jlm.homework.socket.ClientHandler clientHandler) {
+        this.smartDeviceUserRelationService = smartDeviceUserRelationService;
+        this.messagingTemplate = messagingTemplate;
+        this.clientHandler = clientHandler;
     }
 
     @Override
@@ -29,6 +39,10 @@ public class SerialNumberHandler implements MessageHandler {
         MacParseResult result = ParseTcpDataUtil.parseSerialNumberTcpPacket(packet.getRawData());
         log.info("Serial Number Data Parsed: {}", result);
         context.setMac(result.getMac());
+        // 保存SessionContext到Redis
+        if (clientHandler != null) {
+            clientHandler.saveSessionContextToRedis();
+        }
         SmartDeviceUserRelation deviceUserRelation = smartDeviceUserRelationService.selectByDeviceCode(result.getMac().toString());
         if (deviceUserRelation != null) {
             deviceUserRelation.setIpAddress(context.getClientIP());

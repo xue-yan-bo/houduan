@@ -22,6 +22,7 @@ public class HandwritingHandler implements MessageHandler {
     private final SimpMessagingTemplate messagingTemplate;
     private final IHandlerService handlerService;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
+    private final com.jlm.homework.socket.ClientHandler clientHandler;
 
     public HandwritingHandler(SimpMessagingTemplate messagingTemplate,
                               IHandlerService handlerService,
@@ -29,6 +30,17 @@ public class HandwritingHandler implements MessageHandler {
         this.messagingTemplate = messagingTemplate;
         this.handlerService = handlerService;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
+        this.clientHandler = null;
+    }
+
+    public HandwritingHandler(SimpMessagingTemplate messagingTemplate,
+                              IHandlerService handlerService,
+                              ISmartDeviceUserRelationService smartDeviceUserRelationService,
+                              com.jlm.homework.socket.ClientHandler clientHandler) {
+        this.messagingTemplate = messagingTemplate;
+        this.handlerService = handlerService;
+        this.smartDeviceUserRelationService = smartDeviceUserRelationService;
+        this.clientHandler = clientHandler;
     }
 
     @Override
@@ -47,6 +59,8 @@ public class HandwritingHandler implements MessageHandler {
             
             if (relation != null) {
                 processRecord(context, result, relation, sender);
+                // 保存SessionContext到Redis
+                saveSessionContextToRedis(context);
             } else {
                 // Try to refresh relation from DB using IP
                 relation = smartDeviceUserRelationService.selectByIpAddress(context.getClientIP());
@@ -56,10 +70,21 @@ public class HandwritingHandler implements MessageHandler {
                     // Removed verbose server reply to reduce bandwidth
                     // sender.sendText("Server Reply: " + result.toString());
                     messagingTemplate.convertAndSend("/topic/writingData/" + relation.getUserId(), result);
+                    // 保存SessionContext到Redis
+                    saveSessionContextToRedis(context);
                 } else {
                     log.warn("Student info not found for IP: {}", context.getClientIP());
                 }
             }
+        }
+    }
+
+    /**
+     * 保存SessionContext到Redis
+     */
+    private void saveSessionContextToRedis(SessionContext context) {
+        if (clientHandler != null) {
+            clientHandler.saveSessionContextToRedis();
         }
     }
 
@@ -169,7 +194,13 @@ public class HandwritingHandler implements MessageHandler {
         result.setUserId(relation.getUserId());
         // Removed verbose server reply to reduce bandwidth
         // sender.sendText("Server Reply: " + result.toString());
-        messagingTemplate.convertAndSend("/topic/writingData/" + relation.getUserId(), result);
+        // 包装消息发送操作，处理会话关闭的情况
+        try {
+            messagingTemplate.convertAndSend("/topic/writingData/" + relation.getUserId(), result);
+        } catch (IllegalStateException e) {
+            log.warn("Failed to send writing data: {}", e.getMessage());
+            // 会话已关闭，跳过发送
+        }
     }
 
     private StudentsWriteRecord createRecord(HandwritingParseResult result) {

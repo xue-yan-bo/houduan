@@ -92,12 +92,22 @@ public class ButtonHandler implements MessageHandler {
         
         if (btn == 512) { // F 签到
             if (StringUtils.isNotEmpty(relation.getUserId())) {
-                messagingTemplate.convertAndSend("/topic/studentSign/" + relation.getUserId(), relation.getUserId());
+                try {
+                    messagingTemplate.convertAndSend("/topic/studentSign/" + relation.getUserId(), relation.getUserId());
+                } catch (IllegalStateException e) {
+                    log.warn("Failed to send student sign request: {}", e.getMessage());
+                    // 会话已关闭，跳过发送
+                }
             }
         }
 
         if (StringUtils.isNotEmpty(classroomResult.getOption())) {
-            messagingTemplate.convertAndSend("/topic/classroomData/" + relation.getUserId(), classroomResult);
+            try {
+                messagingTemplate.convertAndSend("/topic/classroomData/" + relation.getUserId(), classroomResult);
+            } catch (IllegalStateException e) {
+                log.warn("Failed to send classroom data: {}", e.getMessage());
+                // 会话已关闭，跳过发送
+            }
         }
     }
 
@@ -140,7 +150,12 @@ public class ButtonHandler implements MessageHandler {
         }else if (context.isMenuFlag() &&context.getCurrentMenu() != null) {
             handleMenuSelection(context, relation, sdf);
         } else if (StringUtils.isNotEmpty(relation.getUserId())) {
-            messagingTemplate.convertAndSend("/topic/endWrite/" + relation.getUserId(), relation.getUserId());
+            try {
+                messagingTemplate.convertAndSend("/topic/endWrite/" + relation.getUserId(), relation.getUserId());
+            } catch (IllegalStateException e) {
+                log.warn("Failed to send end write request: {}", e.getMessage());
+                // 会话已关闭，跳过发送
+            }
         }
     }
 
@@ -860,7 +875,12 @@ public class ButtonHandler implements MessageHandler {
         }else if(context.isMenuFlag()){
             prePageSelect(context);
         }else{
-            messagingTemplate.convertAndSend("/topic/lastPage/"+relation.getUserId(), relation.getUserId());
+            try {
+                messagingTemplate.convertAndSend("/topic/lastPage/"+relation.getUserId(), relation.getUserId());
+            } catch (IllegalStateException e) {
+                log.warn("Failed to send last page request: {}", e.getMessage());
+                // 会话已关闭，跳过发送
+            }
         }
         //获取当前选择菜单页数
         getCurrentPageNum(context);
@@ -925,7 +945,12 @@ public class ButtonHandler implements MessageHandler {
             nextPageSelect(context);
 
         }else{
-            messagingTemplate.convertAndSend("/topic/nextPage/"+relation.getUserId(), relation.getUserId());
+            try {
+                messagingTemplate.convertAndSend("/topic/nextPage/"+relation.getUserId(), relation.getUserId());
+            } catch (IllegalStateException e) {
+                log.warn("Failed to send next page request: {}", e.getMessage());
+                // 会话已关闭，跳过发送
+            }
         }
         //获取当前选择菜单页数
         getCurrentPageNum(context);

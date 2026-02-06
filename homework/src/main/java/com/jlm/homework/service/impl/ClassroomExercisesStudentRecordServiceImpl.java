@@ -77,16 +77,23 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         if (studentRecord.getId() == null) {
             studentRecord.setCreateTime(new Date());
         }
-        ClassroomExercisesStudentRecord exercisesStudentRecord = classroomExercisesStudentRecordRepository.save(studentRecord);
-        if (studentRecord.getStudentWriteDataList() != null && studentRecord.getStudentWriteDataList().size() > 0) {
+        //ClassroomExercisesStudentRecord exercisesStudentRecord = classroomExercisesStudentRecordRepository.save(studentRecord);
+        if (studentRecord.getStudentWriteDataList() != null && studentRecord.getStudentWriteDataList().size() >= 1) {
             List<ClassroomStudentWriteData> studentWriteDataList = studentRecord.getStudentWriteDataList();
+            boolean haveStudentWriteData = false;
             for (ClassroomStudentWriteData studentWriteData : studentWriteDataList) {
                 studentWriteData.setStudentRecordId(studentRecord.getId());
-                classroomStudentWriteDataService.save(studentWriteData);
+                if(studentWriteData.getStudentsWriteRecords()!=null&&studentWriteData.getStudentsWriteRecords().size()>0) {
+                    classroomStudentWriteDataService.save(studentWriteData);
+                    haveStudentWriteData = true;
+                }
             }
-            exercisesStudentRecord.setHavaWrite(1);
+            if(haveStudentWriteData) {
+                studentRecord.setHavaWrite(1);
+            }
+            studentRecord=classroomExercisesStudentRecordRepository.save(studentRecord);
         }
-        return exercisesStudentRecord;
+        return studentRecord;
     }
 
     @Override
@@ -96,17 +103,25 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         record.setClassId(classId);
         Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration", "createTime");
         List<ClassroomExercisesStudentRecord> recordList = classroomExercisesStudentRecordRepository.findAll(Example.of(record), sort);
-        /*for (ClassroomExercisesStudentRecord studentRecord : recordList) {
+        for (ClassroomExercisesStudentRecord studentRecord : recordList) {
             List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
             studentRecord.setStudentWriteDataList(writeDataList);
 
             List<ClassroomTearcherApproveStu> tearcherApproveStuList = classroomTearcherApproveStuService.findByStudentRecordId(studentRecord.getId());
             studentRecord.setTearcherApproveStuList(tearcherApproveStuList);
-        }*/
+        }
 
         return recordList;
     }
-
+    @Override
+    public List<ClassroomExercisesStudentRecord> studentRecordNoWriteData(Long classroomExercisesId, Long classId) {
+        ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
+        record.setClassroomExercisesId(classroomExercisesId);
+        record.setClassId(classId);
+        Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration", "createTime");
+        List<ClassroomExercisesStudentRecord> recordList = classroomExercisesStudentRecordRepository.findAll(Example.of(record), sort);
+        return recordList;
+    }
     @Override
     @Transactional
     public void endAllAnswer(ExerciseWriteData exerciseWriteData) {
@@ -141,14 +156,10 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             recordList = selectByClassroomExercisesIdAndClass(classroomExercisesId, classId);
         }
         List<StudentWriteDto> writeDtos = exerciseWriteData.getStudentWriteList();
-
-        if (exerciseWriteData.getTeacherWriteRecords() != null && exerciseWriteData.getTeacherWriteRecords().size() > 0) {
-            Optional<ClassroomExercises> optional = classroomExercisesRepository.findById(exerciseWriteData.getClassroomExercisesId());
-            if (optional != null && optional.isPresent()) {
-                ClassroomExercises exercises = optional.get();
-                exercises.setTeacherWriteRecords(exerciseWriteData.getTeacherWriteRecords());
-                classroomExercisesRepository.save(exercises);
-            }
+        ClassroomExercises exercises =classroomExercisesRepository.findById(exerciseWriteData.getClassroomExercisesId()).orElse(null);
+        if (exercises!=null&&exerciseWriteData.getTeacherWriteRecords() != null && exerciseWriteData.getTeacherWriteRecords().size() > 0) {
+            exercises.setTeacherWriteRecords(exerciseWriteData.getTeacherWriteRecords());
+            classroomExercisesRepository.save(exercises);
 
         }
         if(exerciseWriteData.getTeacherWriteDto()!=null){
@@ -170,14 +181,14 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 if (record.getStartTime() != null) {
                     record.setAnswerDuration(now.getTime() - record.getStartTime().getTime());
                 }
+                classroomExercisesStudentRecordRepository.save(record);
                 for (StudentWriteDto studentWriteDto : writeDtos) {
                     if (Long.compare(studentWriteDto.getStudentId(), record.getStudentId()) == 0) {
                         record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordList());
-                        record.setHavaWrite(1);
                         this.save(record);
                     }
                 }
-                classroomExercisesStudentRecordRepository.save(record);
+
                 if(tearcherApproveStuList!=null&&tearcherApproveStuList.size()>0){
                     for(ClassroomTearcherApproveStu approveStu:tearcherApproveStuList){
                         if (Long.compare(approveStu.getStudentId(), record.getStudentId()) == 0) {
@@ -187,13 +198,13 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                     }
                 }
             }
+            if(exercises!=null&&exercises.getExercisesType()==1) {
 
-
-            List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
-            for (ClassroomExercisesStudentRecord record : studentRecordList) {
-                aiParseWriteStrucRecord(record.getId());
+                List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
+                for (ClassroomExercisesStudentRecord record : studentRecordList) {
+                    aiParseWriteStrucRecord(record.getId());
+                }
             }
-
             return "异步-OK";
 
         });
@@ -428,6 +439,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             return;
         }
         ClassroomExercisesStudentRecord studentRecord = optional.get();
+
         List<ClassroomExercisesStudentAnswer> studentAnswerList = new ArrayList<>();
 
         try {

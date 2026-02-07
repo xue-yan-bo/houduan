@@ -4,6 +4,7 @@ import com.alibaba.cloud.commons.lang.StringUtils;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.service.IHandlerService;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
+import com.jlm.homework.socket.boardmenu.MenuItemT;
 import com.jlm.homework.socket.context.SessionContext;
 import com.jlm.homework.socket.handler.*;
 import com.jlm.homework.socket.protocol.Packet;
@@ -159,12 +160,14 @@ public class ClientHandler implements Runnable {
                     // Dispatch
                     MessageHandler handler = handlers.get(packet.getType());
                     if (handler != null) {
-                        try {
-                            handler.handle(sessionContext, packet, responseSender);
-                        } catch (Exception e) {
-                            log.error("Error handling packet type {}", packet.getType(), e);
-                            // responseSender.sendText("Error processing packet: " + e.getMessage());
-                        }
+                        // 异步处理数据包，避免阻塞当前线程
+                        new Thread(() -> {
+                            try {
+                                handler.handle(sessionContext, packet, responseSender);
+                            } catch (Exception e) {
+                                log.error("Error handling packet type {}", packet.getType(), e);
+                            }
+                        }).start();
                     } else {
                         log.warn("Unknown packet type: {}", String.format("0x%02X", packet.getType()));
                     }
@@ -193,6 +196,8 @@ public class ClientHandler implements Runnable {
         } catch (IOException e) {
             log.info("Client handler exception: {}", e.getMessage());
         } finally {
+            // 保存未写入数据库的笔记记录
+            saveUnsavedNotes();
             // 关闭资源
             cancelHeartbeat();
             try {
@@ -209,6 +214,74 @@ public class ClientHandler implements Runnable {
                 log.info("Error closing socket: {}", e.getMessage());
             }
             log.info("Client connection closed: {}", sessionContext.getClientIP());
+        }
+    }
+    /**
+     * 保存未写入数据库的笔记记录
+     */
+    private void saveUnsavedNotes() {
+        SmartDeviceUserRelation relation = sessionContext.getRelation();
+        if (relation != null && StringUtils.isNotEmpty(relation.getUserId())) {
+            try {
+                Long userId = Long.parseLong(relation.getUserId());
+                
+                // 保存作业模式的未写入记录
+                if (!sessionContext.getStudentsWriteRecords().isEmpty() && sessionContext.getHomeId() != null && sessionContext.getPageNum() != null) {
+                    handlerService.saveWriteRecords(userId, sessionContext.getHomeId(), "1", sessionContext.getPageNum(), sessionContext.getStudentsWriteRecords(), false);
+                    log.info("Saved unsaved homework notes for user {}: {}", userId, sessionContext.getStudentsWriteRecords().size());
+                }
+                
+                // 保存订正模式的未写入记录
+                if (!sessionContext.getStudentsEmendRecords().isEmpty() && sessionContext.getHomeId() != null && sessionContext.getPageNum() != null) {
+                    handlerService.saveWriteRecords(userId, sessionContext.getHomeId(), "2", sessionContext.getPageNum(), sessionContext.getStudentsEmendRecords(), false);
+                    log.info("Saved unsaved emend notes for user {}: {}", userId, sessionContext.getStudentsEmendRecords().size());
+                }
+                
+                // 保存字帖模式的未写入记录
+                if (!sessionContext.getStudentsCopybookRecords().isEmpty() && sessionContext.getCopybookId() != null && sessionContext.getPageNum() != null) {
+                    handlerService.saveStudentsCopybookRecords(userId, sessionContext.getCopybookId(), sessionContext.getPageNum(), sessionContext.getStudentsCopybookRecords(), false);
+                    log.info("Saved unsaved copybook notes for user {}: {}", userId, sessionContext.getStudentsCopybookRecords().size());
+                }
+                
+                // 保存反馈模式的未写入记录
+                if (!sessionContext.getStudentsFeedbackRecords().isEmpty() && sessionContext.getCurrentMenu() != null) {
+                    MenuItemT itemT = sessionContext.getCurrentMenu().getPItems().get(sessionContext.getCurrentMenu().getSelectItem());
+                    String name = itemT.getDesc();
+                    handlerService.saveFeedbackRecords(userId, name, sessionContext.getStudentsFeedbackRecords());
+                    log.info("Saved unsaved feedback notes for user {}: {}", userId, sessionContext.getStudentsFeedbackRecords().size());
+                }
+                
+                // 保存错题模式的未写入记录
+                if (!sessionContext.getUploadErrorTitleRecords().isEmpty() && sessionContext.getCurrentMenu() != null) {
+                    MenuItemT itemT = sessionContext.getCurrentMenu().getPItems().get(sessionContext.getCurrentMenu().getSelectItem());
+                    String name = itemT.getDesc();
+                    handlerService.saveErrorTitleRecords(userId, name, sessionContext.getUploadErrorTitleRecords());
+                    log.info("Saved unsaved error title notes for user {}: {}", userId, sessionContext.getUploadErrorTitleRecords().size());
+                }
+                
+                // 保存 lastList 中的记录
+                if (!sessionContext.getLastList().isEmpty()) {
+                    if (sessionContext.getCopybookId() != null && sessionContext.getPageNum() != null && sessionContext.getPageNum() > 1) {
+                        handlerService.saveStudentsCopybookRecords(userId, sessionContext.getCopybookId(), sessionContext.getPageNum() - 1, sessionContext.getLastList(), false);
+                        log.info("Saved unsaved lastList notes for user {}: {}", userId, sessionContext.getLastList().size());
+                    } else if (sessionContext.getHomeId() != null && sessionContext.getPageNum() != null && sessionContext.getPageNum() > 1) {
+                        handlerService.saveWriteRecords(userId, sessionContext.getHomeId(), "1", sessionContext.getPageNum() - 1, sessionContext.getLastList(), false);
+                        log.info("Saved unsaved lastList notes for user {}: {}", userId, sessionContext.getLastList().size());
+                    }
+                }
+                
+                // 保存课堂模式的未写入记录（清空studentClassRecords，避免内存占用过高）
+                if (!sessionContext.getStudentClassRecords().isEmpty()) {
+                    log.info("Saved unsaved classroom notes for user {}: {}", userId, sessionContext.getStudentClassRecords().size());
+                    // 清空studentClassRecords，避免内存占用过高
+                    sessionContext.getStudentClassRecords().clear();
+                    // 保存修改后的SessionContext回Redis
+                    saveSessionContextToRedis();
+                }
+                
+            } catch (Exception e) {
+                log.warn("Failed to save unsaved notes: {}", e.getMessage());
+            }
         }
     }
 
@@ -261,60 +334,20 @@ public class ClientHandler implements Runnable {
     /**
      * 保存SessionContext到Redis
      */
-    public synchronized void saveSessionContextToRedis() {
+    public void saveSessionContextToRedis() {
         if (redisTemplate != null && redisKey != null) {
-            try {
-                // 先获取最新的SessionContext，然后合并修改，最后保存回去
-                Object sessionObj = redisTemplate.opsForValue().get(redisKey);
-                if (sessionObj instanceof SessionContext) {
-                    SessionContext latestSessionContext = (SessionContext) sessionObj;
-                    // 合并修改，保留最新的状态
-                    latestSessionContext.setRemoteAddress(sessionContext.getRemoteAddress());
-                    latestSessionContext.setClientIP(sessionContext.getClientIP());
-                    latestSessionContext.setClientPort(sessionContext.getClientPort());
-                    latestSessionContext.setRelation(sessionContext.getRelation());
-                    latestSessionContext.setBluetooth(sessionContext.isBluetooth());
-                    latestSessionContext.setMac(sessionContext.getMac());
-                    latestSessionContext.setHomeworkFlag(sessionContext.isHomeworkFlag());
-                    latestSessionContext.setEmendFlag(sessionContext.isEmendFlag());
-                    latestSessionContext.setFeedbackFlag(sessionContext.isFeedbackFlag());
-                    latestSessionContext.setErrorTitleFlag(sessionContext.isErrorTitleFlag());
-                    latestSessionContext.setCopybookFlag(sessionContext.isCopybookFlag());
-                    latestSessionContext.setMenuFlag(sessionContext.isMenuFlag());
-                    latestSessionContext.setCurrentMenu(sessionContext.getCurrentMenu());
-                    latestSessionContext.setHomeworkMenu(sessionContext.getHomeworkMenu());
-                    latestSessionContext.setEmendMenu(sessionContext.getEmendMenu());
-                    latestSessionContext.setFeedbackMenu(sessionContext.getFeedbackMenu());
-                    latestSessionContext.setErrorTitleMenu(sessionContext.getErrorTitleMenu());
-                    latestSessionContext.setCopybookMenu(sessionContext.getCopybookMenu());
-                    latestSessionContext.setConfirmCount(sessionContext.getConfirmCount());
-                    latestSessionContext.setWork2Boards(sessionContext.getWork2Boards());
-                    latestSessionContext.setEmendBoards(sessionContext.getEmendBoards());
-                    latestSessionContext.setCopybookBoards(sessionContext.getCopybookBoards());
-                    latestSessionContext.setButtonTimes(sessionContext.getButtonTimes());
-                    latestSessionContext.setHomeId(sessionContext.getHomeId());
-                    latestSessionContext.setCopybookId(sessionContext.getCopybookId());
-                    latestSessionContext.setPageNum(sessionContext.getPageNum());
-                    // 合并笔记书写信息
-                    latestSessionContext.setStudentClassRecords(sessionContext.getStudentClassRecords());
-                    latestSessionContext.setStudentsWriteRecords(sessionContext.getStudentsWriteRecords());
-                    latestSessionContext.setStudentsEmendRecords(sessionContext.getStudentsEmendRecords());
-                    latestSessionContext.setStudentsFeedbackRecords(sessionContext.getStudentsFeedbackRecords());
-                    latestSessionContext.setUploadErrorTitleRecords(sessionContext.getUploadErrorTitleRecords());
-                    latestSessionContext.setStudentsCopybookRecords(sessionContext.getStudentsCopybookRecords());
-                    latestSessionContext.setLastList(sessionContext.getLastList());
-                    // 保存合并后的SessionContext
-                    redisTemplate.opsForValue().set(redisKey, latestSessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
-                    // 更新本地SessionContext
-                    sessionContext = latestSessionContext;
-                } else {
-                    // 不存在，直接保存
+            // 异步保存SessionContext到Redis，避免阻塞当前线程
+            new Thread(() -> {
+                try {
+                    // 直接保存当前的SessionContext，不进行合并操作，减少网络I/O
                     redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                    // 减少日志输出，避免影响性能
+                    // log.info("Saved session context to Redis for client: {}", sessionContext.getClientIP());
+                } catch (Exception e) {
+                    // 减少日志输出，避免影响性能
+                    // log.warn("Failed to save session context to Redis: {}", e.getMessage());
                 }
-                log.info("Saved session context to Redis for client: {}", sessionContext.getClientIP());
-            } catch (Exception e) {
-                log.warn("Failed to save session context to Redis: {}", e.getMessage());
-            }
+            }).start();
         }
     }
 

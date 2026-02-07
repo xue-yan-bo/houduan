@@ -190,16 +190,41 @@ public class HandwritingHandler implements MessageHandler {
         context.getUploadErrorTitleRecords().add(createRecord(result));
     }
 
+    // 课堂模式笔记记录计数器
+    private int classroomModeCounter = 0;
+    // 每处理多少条笔记记录后保存一次到Redis
+    private static final int CLASSROOM_MODE_SAVE_INTERVAL = 1000;
+    // 课堂模式笔记记录最大数量，超过后清空
+    private static final int CLASSROOM_MODE_MAX_RECORDS = 500;
+
     private void handleClassroomMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation, ResponseSender sender) {
         result.setUserId(relation.getUserId());
-        // Removed verbose server reply to reduce bandwidth
-        // sender.sendText("Server Reply: " + result.toString());
+        // 先保存笔记记录到 SessionContext，确保数据不会丢失
+        synchronized (context) {
+            context.getStudentClassRecords().add(result);
+        }
         // 包装消息发送操作，处理会话关闭的情况
         try {
+            // 同步发送消息，确保消息能够及时发送
             messagingTemplate.convertAndSend("/topic/writingData/" + relation.getUserId(), result);
         } catch (IllegalStateException e) {
             log.warn("Failed to send writing data: {}", e.getMessage());
             // 会话已关闭，跳过发送
+        }
+        // 定期清空 studentClassRecords，避免内存占用过高
+        synchronized (context) {
+            if (context.getStudentClassRecords().size() > CLASSROOM_MODE_MAX_RECORDS) {
+                log.info("Clearing classroom records to avoid memory overflow: {}", context.getStudentClassRecords().size());
+                context.getStudentClassRecords().clear();
+            }
+        }
+        // 减少保存频率，每处理CLASSROOM_MODE_SAVE_INTERVAL条记录保存一次
+        classroomModeCounter++;
+        if (classroomModeCounter >= CLASSROOM_MODE_SAVE_INTERVAL) {
+            // 保存SessionContext到Redis
+            saveSessionContextToRedis(context);
+            // 重置计数器
+            classroomModeCounter = 0;
         }
     }
 

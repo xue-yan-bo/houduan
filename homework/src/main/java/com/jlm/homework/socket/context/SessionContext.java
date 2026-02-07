@@ -57,7 +57,7 @@ public class SessionContext implements Serializable {
     private List<HomeWork2Board> emendBoards = new ArrayList<>();
     private List<Copybook2Board> copybookBoards = new ArrayList<>();
     // 笔迹数据缓存
-    private List<HandwritingParseResult> studentClassRecords = new ArrayList<>();
+    private List<HandwritingParseResult> studentClassRecords = java.util.Collections.synchronizedList(new ArrayList<>());
     private List<StudentsWriteRecord> studentsWriteRecords = new ArrayList<>();
     private List<StudentsWriteRecord> studentsEmendRecords = new ArrayList<>();
     private List<StudentsWriteRecord> studentsFeedbackRecords = new ArrayList<>();
@@ -73,6 +73,7 @@ public class SessionContext implements Serializable {
         this.uploadErrorTitleRecords.clear();
         this.studentsCopybookRecords.clear();
         this.lastList.clear();
+        this.studentClassRecords.clear();
         this.homeId = null;
         this.copybookId = null;
         this.pageNum = null;

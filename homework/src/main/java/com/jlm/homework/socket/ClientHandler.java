@@ -50,28 +50,6 @@ public class ClientHandler implements Runnable {
 
     public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
                          ISmartDeviceUserRelationService smartDeviceUserRelationService,
-                         IHandlerService handlerService, SessionContext sessionContext) {
-        this.clientSocket = socket;
-        this.messagingTemplate = messagingTemplate;
-        this.smartDeviceUserRelationService = smartDeviceUserRelationService;
-        this.handlerService = handlerService;
-        this.sessionContext = sessionContext;
-        this.preReadBytes = null;
-    }
-
-    public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
-                         ISmartDeviceUserRelationService smartDeviceUserRelationService,
-                         IHandlerService handlerService, SessionContext sessionContext, byte[] preReadBytes) {
-        this.clientSocket = socket;
-        this.messagingTemplate = messagingTemplate;
-        this.smartDeviceUserRelationService = smartDeviceUserRelationService;
-        this.handlerService = handlerService;
-        this.sessionContext = sessionContext;
-        this.preReadBytes = preReadBytes;
-    }
-
-    public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
-                         ISmartDeviceUserRelationService smartDeviceUserRelationService,
                          IHandlerService handlerService, SessionContext sessionContext, byte[] preReadBytes,
                          org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate, String redisKey) {
         this.clientSocket = socket;
@@ -160,14 +138,12 @@ public class ClientHandler implements Runnable {
                     // Dispatch
                     MessageHandler handler = handlers.get(packet.getType());
                     if (handler != null) {
-                        // 异步处理数据包，避免阻塞当前线程
-                        new Thread(() -> {
-                            try {
-                                handler.handle(sessionContext, packet, responseSender);
-                            } catch (Exception e) {
-                                log.error("Error handling packet type {}", packet.getType(), e);
-                            }
-                        }).start();
+                        // 直接在当前线程中处理数据包，确保数据包能够及时处理
+                        try {
+                            handler.handle(sessionContext, packet, responseSender);
+                        } catch (Exception e) {
+                            log.error("Error handling packet type {}", packet.getType(), e);
+                        }
                     } else {
                         log.warn("Unknown packet type: {}", String.format("0x%02X", packet.getType()));
                     }

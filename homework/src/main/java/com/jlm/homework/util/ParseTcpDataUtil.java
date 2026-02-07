@@ -78,7 +78,7 @@ public class ParseTcpDataUtil {
         }
 
         // 验证总长度
-        if (data.length != length + 4) { // Header(2) + Length(1) + Type(1) + Packet(length-1) + Checksum(1) = length + 2
+        if (data.length != length + 4) { // Header(2) + Length(1) + Type(1) + Packet(length-1) + Checksum(1) = length + 4
             throw new IllegalArgumentException("数据总长度与Length字段不匹配");
         }
 
@@ -528,7 +528,7 @@ public class ParseTcpDataUtil {
         }
 
         // 验证总长度
-        if (data.length != length + 4) { // Header(2) + Length(1) + Type(1) + Packet(length-1-6) + Checksum(1) = length + 2
+        if (data.length != length + 4) { // Header(2) + Length(1) + Type(1) + MAC(6) + Packet(length-1-6) + Checksum(1) = length + 4
             throw new IllegalArgumentException("数据总长度与Length字段不匹配");
         }
 

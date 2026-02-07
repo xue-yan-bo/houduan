@@ -17,7 +17,7 @@ public class PacketDecoder {
 
     public PacketDecoder(InputStream inputStream) {
         this.inputStream = inputStream;
-        this.buffer = new byte[2048];
+        this.buffer = new byte[8192]; // 增加缓冲区大小，减少数据丢失的可能性
         this.bufferPos = 0;
     }
 

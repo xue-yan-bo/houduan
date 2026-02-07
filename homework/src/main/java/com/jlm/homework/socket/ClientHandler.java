@@ -43,6 +43,9 @@ public class ClientHandler implements Runnable {
     // Handlers
     private final Map<Byte, MessageHandler> handlers = new HashMap<>();
     
+    // 处理线程池，使用固定大小的线程池，增加线程数以提高并发处理能力
+    private static final java.util.concurrent.ExecutorService PROCESS_THREAD_POOL = java.util.concurrent.Executors.newFixedThreadPool(200);
+    
     // Heartbeat
     private ScheduledExecutorService heartbeatScheduler;
     private static final byte HEARTBEAT_TYPE = 0x05;
@@ -138,14 +141,18 @@ public class ClientHandler implements Runnable {
                     // Dispatch
                     MessageHandler handler = handlers.get(packet.getType());
                     if (handler != null) {
-                        // 直接在当前线程中处理数据包，确保数据包能够及时处理
-                        try {
-                            handler.handle(sessionContext, packet, responseSender);
-                        } catch (Exception e) {
-                            log.error("Error handling packet type {}", packet.getType(), e);
-                        }
+                        // 使用固定大小的线程池来处理数据包，提高并发处理能力
+                        //log.info("Handling packet type: {} for client: {}", String.format("0x%02X", packet.getType()), sessionContext.getClientIP());
+                        PROCESS_THREAD_POOL.submit(() -> {
+                            try {
+                                handler.handle(sessionContext, packet, responseSender);
+                                //log.info("Packet type: {} handled successfully for client: {}", String.format("0x%02X", packet.getType()), sessionContext.getClientIP());
+                            } catch (Exception e) {
+                                log.error("Error handling packet type {} for client: {}", packet.getType(), sessionContext.getClientIP(), e);
+                            }
+                        });
                     } else {
-                        log.warn("Unknown packet type: {}", String.format("0x%02X", packet.getType()));
+                        log.warn("Unknown packet type: {} for client: {}", String.format("0x%02X", packet.getType()), sessionContext.getClientIP());
                     }
 
                 } catch (InterruptedException e) {
@@ -189,7 +196,7 @@ public class ClientHandler implements Runnable {
             } catch (IOException e) {
                 log.info("Error closing socket: {}", e.getMessage());
             }
-            log.info("Client connection closed: {}", sessionContext.getClientIP());
+            //log.info("Client connection closed: {}", sessionContext.getClientIP());
         }
     }
     /**
@@ -204,19 +211,19 @@ public class ClientHandler implements Runnable {
                 // 保存作业模式的未写入记录
                 if (!sessionContext.getStudentsWriteRecords().isEmpty() && sessionContext.getHomeId() != null && sessionContext.getPageNum() != null) {
                     handlerService.saveWriteRecords(userId, sessionContext.getHomeId(), "1", sessionContext.getPageNum(), sessionContext.getStudentsWriteRecords(), false);
-                    log.info("Saved unsaved homework notes for user {}: {}", userId, sessionContext.getStudentsWriteRecords().size());
+                    //log.info("Saved unsaved homework notes for user {}: {}", userId, sessionContext.getStudentsWriteRecords().size());
                 }
                 
                 // 保存订正模式的未写入记录
                 if (!sessionContext.getStudentsEmendRecords().isEmpty() && sessionContext.getHomeId() != null && sessionContext.getPageNum() != null) {
                     handlerService.saveWriteRecords(userId, sessionContext.getHomeId(), "2", sessionContext.getPageNum(), sessionContext.getStudentsEmendRecords(), false);
-                    log.info("Saved unsaved emend notes for user {}: {}", userId, sessionContext.getStudentsEmendRecords().size());
+                    //log.info("Saved unsaved emend notes for user {}: {}", userId, sessionContext.getStudentsEmendRecords().size());
                 }
                 
                 // 保存字帖模式的未写入记录
                 if (!sessionContext.getStudentsCopybookRecords().isEmpty() && sessionContext.getCopybookId() != null && sessionContext.getPageNum() != null) {
                     handlerService.saveStudentsCopybookRecords(userId, sessionContext.getCopybookId(), sessionContext.getPageNum(), sessionContext.getStudentsCopybookRecords(), false);
-                    log.info("Saved unsaved copybook notes for user {}: {}", userId, sessionContext.getStudentsCopybookRecords().size());
+                    //log.info("Saved unsaved copybook notes for user {}: {}", userId, sessionContext.getStudentsCopybookRecords().size());
                 }
                 
                 // 保存反馈模式的未写入记录
@@ -224,7 +231,7 @@ public class ClientHandler implements Runnable {
                     MenuItemT itemT = sessionContext.getCurrentMenu().getPItems().get(sessionContext.getCurrentMenu().getSelectItem());
                     String name = itemT.getDesc();
                     handlerService.saveFeedbackRecords(userId, name, sessionContext.getStudentsFeedbackRecords());
-                    log.info("Saved unsaved feedback notes for user {}: {}", userId, sessionContext.getStudentsFeedbackRecords().size());
+                    //log.info("Saved unsaved feedback notes for user {}: {}", userId, sessionContext.getStudentsFeedbackRecords().size());
                 }
                 
                 // 保存错题模式的未写入记录
@@ -232,17 +239,17 @@ public class ClientHandler implements Runnable {
                     MenuItemT itemT = sessionContext.getCurrentMenu().getPItems().get(sessionContext.getCurrentMenu().getSelectItem());
                     String name = itemT.getDesc();
                     handlerService.saveErrorTitleRecords(userId, name, sessionContext.getUploadErrorTitleRecords());
-                    log.info("Saved unsaved error title notes for user {}: {}", userId, sessionContext.getUploadErrorTitleRecords().size());
+                    //log.info("Saved unsaved error title notes for user {}: {}", userId, sessionContext.getUploadErrorTitleRecords().size());
                 }
                 
                 // 保存 lastList 中的记录
                 if (!sessionContext.getLastList().isEmpty()) {
                     if (sessionContext.getCopybookId() != null && sessionContext.getPageNum() != null && sessionContext.getPageNum() > 1) {
                         handlerService.saveStudentsCopybookRecords(userId, sessionContext.getCopybookId(), sessionContext.getPageNum() - 1, sessionContext.getLastList(), false);
-                        log.info("Saved unsaved lastList notes for user {}: {}", userId, sessionContext.getLastList().size());
+                        //log.info("Saved unsaved lastList notes for user {}: {}", userId, sessionContext.getLastList().size());
                     } else if (sessionContext.getHomeId() != null && sessionContext.getPageNum() != null && sessionContext.getPageNum() > 1) {
                         handlerService.saveWriteRecords(userId, sessionContext.getHomeId(), "1", sessionContext.getPageNum() - 1, sessionContext.getLastList(), false);
-                        log.info("Saved unsaved lastList notes for user {}: {}", userId, sessionContext.getLastList().size());
+                        //log.info("Saved unsaved lastList notes for user {}: {}", userId, sessionContext.getLastList().size());
                     }
                 }
                 

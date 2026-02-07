@@ -17,7 +17,7 @@ public class PacketDecoder {
 
     public PacketDecoder(InputStream inputStream) {
         this.inputStream = inputStream;
-        this.buffer = new byte[8192]; // 增加缓冲区大小，减少数据丢失的可能性
+        this.buffer = new byte[2048];
         this.bufferPos = 0;
     }
 
@@ -50,6 +50,7 @@ public class PacketDecoder {
             int headerIndex = findHeader();
             if (headerIndex == -1) {
                 // 没找到包头，丢弃无效数据（保留最后1字节防跨包）
+                //log.debug("Header not found in buffer (size: {}), discarding data", bufferPos);
                 if (bufferPos > 0) {
                     buffer[0] = buffer[bufferPos - 1];
                     bufferPos = 1;
@@ -63,6 +64,7 @@ public class PacketDecoder {
 
             // 3. 移动数据对齐包头
             if (headerIndex > 0) {
+                //log.debug("Found header at index {}, moving {} bytes", headerIndex, bufferPos - headerIndex);
                 System.arraycopy(buffer, headerIndex, buffer, 0, bufferPos - headerIndex);
                 bufferPos -= headerIndex;
             }
@@ -106,7 +108,9 @@ public class PacketDecoder {
 
             // 10. 验证包头（双重检查）
             if ((fullPacketBuffer[0] & 0xFF) != 0x55 || (fullPacketBuffer[1] & 0xFF) != 0x56) {
-                log.warn("无效包头，丢弃");
+                log.error("Invalid header in packet: expected 0x55 0x56, got 0x{:02X} 0x{:02X}, packet length: {}, data: {}", 
+                        fullPacketBuffer[0] & 0xFF, fullPacketBuffer[1] & 0xFF, packetTotalLength, 
+                        bytesToHex(fullPacketBuffer, Math.min(16, packetTotalLength)));
                 continue;
             }
 
@@ -143,10 +147,12 @@ public class PacketDecoder {
         while (readTotal < minBytes) {
             int read = inputStream.read(buffer, bufferPos, buffer.length - bufferPos);
             if (read == -1) {
+                //log.debug("End of stream reached while reading {} bytes", minBytes);
                 return false;
             }
             bufferPos += read;
             readTotal += read;
+            //log.debug("Read {} bytes (total: {} / {})", read, readTotal, minBytes);
         }
         return true;
     }
@@ -157,5 +163,13 @@ public class PacketDecoder {
             System.arraycopy(buffer, 0, newBuffer, 0, bufferPos);
             buffer = newBuffer;
         }
+    }
+
+    private String bytesToHex(byte[] bytes, int length) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < Math.min(bytes.length, length); i++) {
+            sb.append(String.format("%02X ", bytes[i] & 0xFF));
+        }
+        return sb.toString().trim();
     }
 }

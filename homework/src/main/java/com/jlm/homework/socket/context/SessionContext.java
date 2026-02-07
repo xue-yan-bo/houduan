@@ -65,7 +65,7 @@ public class SessionContext implements Serializable {
     private List<StudentsWriteRecord> studentsCopybookRecords = new ArrayList<>();
     private List<StudentsWriteRecord> lastList = new ArrayList<>();
 
-    public void clearSession() {
+    public synchronized void clearSession() {
         this.work2Boards.clear();
         this.studentsWriteRecords.clear();
         this.studentsEmendRecords.clear();

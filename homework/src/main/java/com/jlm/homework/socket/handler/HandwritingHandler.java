@@ -41,62 +41,6 @@ public class HandwritingHandler implements MessageHandler {
         this.handlerService = handlerService;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
         this.clientHandler = clientHandler;
-        // 初始化处理线程
-        initProcessThread();
-    }
-
-    /**
-     * 初始化处理线程池
-     */
-    private void initProcessThread() {
-        // 启动多个处理线程，从队列中取出笔记记录并处理
-        for (int i = 0; i < 50; i++) {
-            processThreadPool.submit(() -> {
-                while (true) {
-                    try {
-                        // 从队列中取出笔记记录
-                        java.util.Map<String, Object> record = recordQueue.take();
-                        // 处理笔记记录
-                        processRecord(record);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    } catch (Exception e) {
-                        log.error("Error processing record: {}", e.getMessage());
-                    }
-                }
-            });
-        }
-    }
-
-    /**
-     * 处理笔记记录
-     * @param record 笔记记录
-     */
-    private void processRecord(java.util.Map<String, Object> record) {
-        SessionContext context = (SessionContext) record.get("context");
-        HandwritingParseResult result = (HandwritingParseResult) record.get("result");
-        SmartDeviceUserRelation relation = (SmartDeviceUserRelation) record.get("relation");
-        // 发送消息
-        sendWritingDataWithRetry(relation.getUserId(), result);
-        // 保存笔记记录到 SessionContext
-        synchronized (context) {
-            context.getStudentClassRecords().add(result);
-        }
-        // 定期清空 studentClassRecords，避免内存占用过高
-        synchronized (context) {
-            if (context.getStudentClassRecords().size() > CLASSROOM_MODE_MAX_RECORDS) {
-                log.info("Clearing classroom records to avoid memory overflow: {}", context.getStudentClassRecords().size());
-                context.getStudentClassRecords().clear();
-            }
-        }
-        // 减少保存频率，每处理CLASSROOM_MODE_SAVE_INTERVAL条记录保存一次
-        if (classroomModeCounter.incrementAndGet() >= CLASSROOM_MODE_SAVE_INTERVAL) {
-            // 保存SessionContext到Redis
-            saveSessionContextToRedis(context);
-            // 重置计数器
-            classroomModeCounter.set(0);
-        }
     }
 
     /**
@@ -118,24 +62,32 @@ public class HandwritingHandler implements MessageHandler {
                 results = ParseTcpDataUtil.parseHandwritingTcpPacketsBluetooth(packet.getRawData());
             }
 
-            log.debug("Handwriting data parsed, count: {}", results.size());
+            //log.info("Handwriting data parsed, count: {}", results.size());
 
             for (HandwritingParseResult result : results) {
                 SmartDeviceUserRelation relation = context.getRelation();
                 
                 if (relation != null) {
+                    //log.info("Processing handwriting data for user: {}", relation.getUserId());
                     processRecord(context, result, relation, sender);
                 } else {
                     // Try to refresh relation from DB using IP
                     relation = smartDeviceUserRelationService.selectByIpAddress(context.getClientIP());
                     if (relation != null) {
                         context.setRelation(relation); // Update context
+                        //log.info("Processing handwriting data for user: {}", relation.getUserId());
                         // 调用processRecord方法处理笔记记录，确保通过队列处理
                         processRecord(context, result, relation, sender);
                         // 保存SessionContext到Redis
                         saveSessionContextToRedis(context);
                     } else {
-                        log.warn("Student info not found for IP: {}", context.getClientIP());
+                        // 即使没有找到relation，也保存手写数据到SessionContext
+                        // 这样当后续绑定学生时，能够恢复这些数据
+                        //log.warn("Student info not found for IP: {}, saving handwriting data to session context", context.getClientIP());
+                        synchronized (context) {
+                            context.getStudentClassRecords().add(result);
+                            //log.warn("Added handwriting data to session context, current size: {}", context.getStudentClassRecords().size());
+                        }
                     }
                 }
             }
@@ -145,7 +97,7 @@ public class HandwritingHandler implements MessageHandler {
                 saveSessionContextToRedis(context);
             }
         } catch (Exception e) {
-            log.error("Error handling handwriting data: {}", e.getMessage());
+            log.error("Error handling handwriting data: {}", e.getMessage(), e);
         }
     }
 
@@ -173,123 +125,156 @@ public class HandwritingHandler implements MessageHandler {
 
     private void handleCopybookMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation) {
         StudentsWriteRecord writeRecord = createRecord(result);
-        if (context.getButtonTimes() != null && result.getTimestamp() < context.getButtonTimes()) {
-            context.getLastList().add(writeRecord);
-        } else {
-            context.getStudentsCopybookRecords().add(writeRecord);
+        synchronized (context) {
+            if (context.getButtonTimes() != null && result.getTimestamp() < context.getButtonTimes()) {
+                context.getLastList().add(writeRecord);
+            } else {
+                context.getStudentsCopybookRecords().add(writeRecord);
+            }
         }
-        if (context.getStudentsCopybookRecords().size() >= SessionContext.SAVE_SIZE
-                && context.getCopybookId() != null && context.getPageNum() != null) {
-            handlerService.saveStudentsCopybookRecords(
-                    Long.parseLong(relation.getUserId()),
-                    context.getCopybookId(),
-                    context.getPageNum(),
-                    context.getStudentsCopybookRecords(),
-                    false
-            );
-            context.setStudentsCopybookRecords(new ArrayList<>());
+        synchronized (context) {
+            if (context.getStudentsCopybookRecords().size() >= SessionContext.SAVE_SIZE
+                    && context.getCopybookId() != null && context.getPageNum() != null) {
+                handlerService.saveStudentsCopybookRecords(
+                        Long.parseLong(relation.getUserId()),
+                        context.getCopybookId(),
+                        context.getPageNum(),
+                        context.getStudentsCopybookRecords(),
+                        false
+                );
+                context.setStudentsCopybookRecords(new ArrayList<>());
+            }
         }
     }
 
     private void handleHomeworkMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation) {
         StudentsWriteRecord writeRecord = createRecord(result);
-        if (context.getButtonTimes() != null && result.getTimestamp() < context.getButtonTimes()) {
-            context.getLastList().add(writeRecord);
-        } else {
-            context.getStudentsWriteRecords().add(writeRecord);
+        synchronized (context) {
+            if (context.getButtonTimes() != null && result.getTimestamp() < context.getButtonTimes()) {
+                context.getLastList().add(writeRecord);
+            } else {
+                context.getStudentsWriteRecords().add(writeRecord);
+            }
         }
         
-        if (context.getStudentsWriteRecords().size() >= SessionContext.SAVE_SIZE 
-                && context.getHomeId() != null && context.getPageNum() != null) {
-            handlerService.saveWriteRecords(
-                    Long.parseLong(relation.getUserId()), 
-                    context.getHomeId(), 
-                    "1", 
-                    context.getPageNum(), 
-                    context.getStudentsWriteRecords(), 
-                    false
-            );
-            context.setStudentsWriteRecords(new ArrayList<>());
+        synchronized (context) {
+            if (context.getStudentsWriteRecords().size() >= SessionContext.SAVE_SIZE 
+                    && context.getHomeId() != null && context.getPageNum() != null) {
+                handlerService.saveWriteRecords(
+                        Long.parseLong(relation.getUserId()), 
+                        context.getHomeId(), 
+                        "1", 
+                        context.getPageNum(), 
+                        context.getStudentsWriteRecords(), 
+                        false
+                );
+                context.setStudentsWriteRecords(new ArrayList<>());
+            }
         }
     }
 
     private void handleEmendMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation) {
         StudentsWriteRecord writeRecord = createRecord(result);
-        context.getStudentsEmendRecords().add(writeRecord);
-        
-        if (context.getButtonTimes() != null && result.getTimestamp() < context.getButtonTimes()) {
-            context.getLastList().add(writeRecord);
-        } else {
-            context.getStudentsWriteRecords().add(writeRecord); // Note: Original code added to studentsWriteRecords here too? 
-            // Original line 289: studentsWriteRecords.add(writeRecord); 
-            // Wait, line 285 adds to studentsEmendRecords. Line 289 adds to studentsWriteRecords. 
-            // This looks like double adding or mistake in original code, but I will preserve behavior.
-            // Actually, looking at original code:
-            // if(buttonTimes!=null&&result.getTimestamp()<buttonTimes){ lastList.add } else { studentsWriteRecords.add }
-            // So it adds to studentsEmendRecords ALWAYS, and THEN conditionally to lastList OR studentsWriteRecords.
+        synchronized (context) {
+            context.getStudentsEmendRecords().add(writeRecord);
+            
+            if (context.getButtonTimes() != null && result.getTimestamp() < context.getButtonTimes()) {
+                context.getLastList().add(writeRecord);
+            } else {
+                context.getStudentsWriteRecords().add(writeRecord); // Note: Original code added to studentsWriteRecords here too? 
+                // Original line 289: studentsWriteRecords.add(writeRecord); 
+                // Wait, line 285 adds to studentsEmendRecords. Line 289 adds to studentsWriteRecords. 
+                // This looks like double adding or mistake in original code, but I will preserve behavior.
+                // Actually, looking at original code:
+                // if(buttonTimes!=null&&result.getTimestamp()<buttonTimes){ lastList.add } else { studentsWriteRecords.add }
+                // So it adds to studentsEmendRecords ALWAYS, and THEN conditionally to lastList OR studentsWriteRecords.
+            }
         }
 
-        if (context.getStudentsEmendRecords().size() >= SessionContext.SAVE_SIZE 
-                && context.getHomeId() != null && context.getPageNum() != null) {
-            handlerService.saveWriteRecords(
-                    Long.parseLong(relation.getUserId()), 
-                    context.getHomeId(), 
-                    "2", 
-                    context.getPageNum(), 
-                    context.getStudentsEmendRecords(), 
-                    false
-            );
-            context.setStudentsEmendRecords(new ArrayList<>());
+        synchronized (context) {
+            if (context.getStudentsEmendRecords().size() >= SessionContext.SAVE_SIZE 
+                    && context.getHomeId() != null && context.getPageNum() != null) {
+                handlerService.saveWriteRecords(
+                        Long.parseLong(relation.getUserId()), 
+                        context.getHomeId(), 
+                        "2", 
+                        context.getPageNum(), 
+                        context.getStudentsEmendRecords(), 
+                        false
+                );
+                context.setStudentsEmendRecords(new ArrayList<>());
+            }
         }
     }
 
     private void handleFeedbackMode(SessionContext context, HandwritingParseResult result) {
-        context.getStudentsFeedbackRecords().add(createRecord(result));
+        synchronized (context) {
+            context.getStudentsFeedbackRecords().add(createRecord(result));
+        }
     }
 
     private void handleErrorTitleMode(SessionContext context, HandwritingParseResult result) {
-        context.getUploadErrorTitleRecords().add(createRecord(result));
+        synchronized (context) {
+            context.getUploadErrorTitleRecords().add(createRecord(result));
+        }
     }
 
     // 课堂模式笔记记录计数器
     private final java.util.concurrent.atomic.AtomicInteger classroomModeCounter = new java.util.concurrent.atomic.AtomicInteger(0);
     // 每处理多少条笔记记录后保存一次到Redis
-    private static final int CLASSROOM_MODE_SAVE_INTERVAL = 5000;
+    private static final int CLASSROOM_MODE_SAVE_INTERVAL = 1000;
     // 课堂模式笔记记录最大数量，超过后清空
-    private static final int CLASSROOM_MODE_MAX_RECORDS = 10000;
-    // 笔记记录队列，设置更大的容量
-    private final java.util.concurrent.BlockingQueue<java.util.Map<String, Object>> recordQueue = new java.util.concurrent.LinkedBlockingQueue<>(50000);
-    // 处理线程池，使用更多的线程
-    private final java.util.concurrent.ExecutorService processThreadPool = java.util.concurrent.Executors.newFixedThreadPool(50);
+    private static final int CLASSROOM_MODE_MAX_RECORDS = 4000;
     // 消息发送线程池，使用更大的线程池大小
-    private static final java.util.concurrent.ExecutorService SEND_THREAD_POOL = java.util.concurrent.Executors.newFixedThreadPool(500);
+    private static final java.util.concurrent.ExecutorService SEND_THREAD_POOL = java.util.concurrent.Executors.newFixedThreadPool(1000);
 
     private void handleClassroomMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation, ResponseSender sender) {
         result.setUserId(relation.getUserId());
-        // 将笔记记录添加到队列中，由处理线程处理
-        try {
-            java.util.Map<String, Object> record = new java.util.HashMap<>();
-            record.put("context", context);
-            record.put("result", result);
-            record.put("relation", relation);
-            // 使用带超时参数的offer方法，当队列已满时，会等待一段时间
-            boolean added = recordQueue.offer(record, 100, java.util.concurrent.TimeUnit.MILLISECONDS);
-            if (!added) {
-                log.warn("Queue is full, processing record directly");
-                // 如果队列已满，直接处理笔记记录
-                sendWritingDataWithRetry(relation.getUserId(), result);
-                synchronized (context) {
-                    context.getStudentClassRecords().add(result);
-                }
-            }
-        } catch (Exception e) {
-            log.error("Error adding record to queue: {}", e.getMessage());
-            // 如果队列添加失败，直接处理笔记记录
-            sendWritingDataWithRetry(relation.getUserId(), result);
-            synchronized (context) {
-                context.getStudentClassRecords().add(result);
+        // 创建result对象的深拷贝，避免异步发送时数据被修改
+        HandwritingParseResult resultCopy = deepCopyResult(result);
+        // 直接发送消息，避免队列积压
+        //log.info("Sending writing data for user: {}, X: {}, Y: {}, Pressure: {}, Timestamp: {}",
+        //        relation.getUserId(), result.getX(), result.getY(), result.getPressure(), result.getTimestamp());
+        sendWritingDataWithRetry(relation.getUserId(), resultCopy);
+        // 保存笔记记录到 SessionContext
+        synchronized (context) {
+            context.getStudentClassRecords().add(result);
+            //log.info("Added writing data to session context, current size: {}", context.getStudentClassRecords().size());
+        }
+        // 定期清空 studentClassRecords，避免内存占用过高
+        synchronized (context) {
+            if (context.getStudentClassRecords().size() > CLASSROOM_MODE_MAX_RECORDS) {
+                //log.info("Clearing classroom records to avoid memory overflow: {}", context.getStudentClassRecords().size());
+                context.getStudentClassRecords().clear();
             }
         }
+        // 减少保存频率，每处理CLASSROOM_MODE_SAVE_INTERVAL条记录保存一次
+        if (classroomModeCounter.incrementAndGet() >= CLASSROOM_MODE_SAVE_INTERVAL) {
+            // 保存SessionContext到Redis
+            saveSessionContextToRedis(context);
+            // 重置计数器
+            classroomModeCounter.set(0);
+        }
+    }
+
+    /**
+     * 创建HandwritingParseResult对象的深拷贝
+     * @param original 原始对象
+     * @return 拷贝后的对象
+     */
+    private HandwritingParseResult deepCopyResult(HandwritingParseResult original) {
+        HandwritingParseResult copy = new HandwritingParseResult();
+        copy.setHeader(original.getHeader() != null ? original.getHeader().clone() : null);
+        copy.setLength(original.getLength());
+        copy.setType(original.getType());
+        copy.setX(original.getX());
+        copy.setY(original.getY());
+        copy.setPressure(original.getPressure());
+        copy.setTimestamp(original.getTimestamp());
+        copy.setChecksum(original.getChecksum());
+        copy.setChecksumValid(original.isChecksumValid());
+        copy.setUserId(original.getUserId());
+        return copy;
     }
 
     /**
@@ -298,16 +283,17 @@ public class HandwritingHandler implements MessageHandler {
      * @param result 书写数据
      */
     private void sendWritingDataWithRetry(String userId, HandwritingParseResult result) {
-        // 使用线程池发送消息，避免阻塞处理线程
+        // 使用线程池异步发送消息，避免阻塞处理线程
         SEND_THREAD_POOL.submit(() -> {
             int maxRetries = 10;
-            int retryDelay = 500; // 毫秒
+            int retryDelay = 100; // 毫秒
             for (int i = 0; i < maxRetries; i++) {
                 try {
                     messagingTemplate.convertAndSend("/topic/writingData/" + userId, result);
+                    //log.debug("Successfully sent writing data for user: {}, X: {}, Y: {}", userId, result.getX(), result.getY());
                     return; // 发送成功，直接返回
                 } catch (Exception e) {
-                    log.warn("Failed to send writing data (attempt {} of {}): {}", i + 1, maxRetries, e.getMessage());
+                    //log.warn("Failed to send writing data (attempt {} of {}) for user {}: {}", i + 1, maxRetries, userId, e.getMessage());
                     if (i < maxRetries - 1) {
                         try {
                             Thread.sleep(retryDelay);

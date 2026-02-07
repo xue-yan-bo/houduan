@@ -93,7 +93,19 @@ public class ParseTcpDataUtil {
         // 解析多条手写数据（每条10字节：X(2)+Y(2)+压力值(2)+时间戳(4)）
         List<HandwritingParseResult> results = new ArrayList<>();
         int singleDataLength = 10;
-        for (int i = 0; i + singleDataLength <= packet.length; i += singleDataLength) {
+        int packetLength = packet.length;
+        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ParseTcpDataUtil.class);
+        /* log.debug("Packet length: {}", packetLength);
+        log.debug("Single data length: {}", singleDataLength);
+        log.debug("Number of records: {}", (packetLength / singleDataLength));*/
+        // 确保数据包长度是单条数据长度的整数倍
+        if (packetLength % singleDataLength != 0) {
+            //log.warn("Warning: Packet length is not a multiple of single data length, packetLength={}, singleDataLength={}", packetLength, singleDataLength);
+            // 截断数据包，确保只处理完整的记录
+            packetLength = packetLength - (packetLength % singleDataLength);
+            //log.warn("Truncated packet length to: {}", packetLength);
+        }
+        for (int i = 0; i < packetLength; i += singleDataLength) {
             byte[] singlePacket = Arrays.copyOfRange(packet, i, i + singleDataLength);
 
             // 解析X坐标
@@ -122,6 +134,7 @@ public class ParseTcpDataUtil {
 
             results.add(result);
         }
+        //log.debug("Parsed {} records", results.size());
 
         return results;
     }
@@ -528,7 +541,7 @@ public class ParseTcpDataUtil {
         }
 
         // 验证总长度
-        if (data.length != length + 4) { // Header(2) + Length(1) + Type(1) + MAC(6) + Packet(length-1-6) + Checksum(1) = length + 4
+        if (data.length != length + 4 + 6) { // Header(2) + Length(1) + Type(1) + MAC(6) + Packet(length-1-6) + Checksum(1) = length + 4 + 6
             throw new IllegalArgumentException("数据总长度与Length字段不匹配");
         }
 
@@ -543,7 +556,13 @@ public class ParseTcpDataUtil {
         // 解析多条手写数据（每条10字节：X(2)+Y(2)+压力值(2)+时间戳(4)）
         List<HandwritingParseResult> results = new ArrayList<>();
         int singleDataLength = 10;
-        for (int i = 0; i + singleDataLength <= packet.length; i += singleDataLength) {
+        int packetLength = packet.length;
+        // 确保数据包长度是单条数据长度的整数倍
+        if (packetLength % singleDataLength != 0) {
+            // 截断数据包，确保只处理完整的记录
+            packetLength = packetLength - (packetLength % singleDataLength);
+        }
+        for (int i = 0; i < packetLength; i += singleDataLength) {
             byte[] singlePacket = Arrays.copyOfRange(packet, i, i + singleDataLength);
 
             // 解析X坐标

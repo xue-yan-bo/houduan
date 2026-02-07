@@ -43,11 +43,14 @@ public class SocketService implements SmartLifecycle {
     @Value("${socket.server.maxConnections:10}")
     private int maxConnections;
 
-
     // 连接计数器
     private final java.util.concurrent.atomic.AtomicInteger connectionCount = new java.util.concurrent.atomic.AtomicInteger(0);
     // 最大连接数
     private static final int DEFAULT_MAX_CONNECTIONS = 1000;
+    
+    // 连接状态监控
+    private java.util.concurrent.ScheduledExecutorService monitorScheduler;
+    private static final long MONITOR_INTERVAL = 30; // 监控间隔，30秒
 
     @Override
     public void start() {
@@ -59,8 +62,13 @@ public class SocketService implements SmartLifecycle {
             try {
                 serverSocket = new ServerSocket(socketPort);
                 serverSocket.setReuseAddress(true);
+                serverSocket.setReceiveBufferSize(64 * 1024); // 设置接收缓冲区为64KB
+                serverSocket.setPerformancePreferences(1, 10, 1); // 优先考虑延迟，提高响应速度
                 running = true;
                 log.info("Socket server started on port {}", socketPort);
+                
+                // 启动连接状态监控
+                startConnectionMonitor();
 
                 while (running) {
                     try {
@@ -80,7 +88,7 @@ public class SocketService implements SmartLifecycle {
                             continue;
                         }
                         
-                        //log.info("New client connected, raw address: {}", socket.getRemoteSocketAddress());
+                        log.info("New client connected, raw address: {}", socket.getRemoteSocketAddress());
                         
                         // 解析代理头，获取真实客户端地址
                         ProxyHeaderResult proxyResult;
@@ -99,7 +107,7 @@ public class SocketService implements SmartLifecycle {
                         String clientAddress = realAddress.getHostString();
                         int clientPort = realAddress.getPort();
                         
-                        //log.info("Client connected with real address: {}", clientAddress);
+                        log.info("Client connected with real address: {}", clientAddress);
                         
                         // 使用Redis获取或创建SessionContext
                         SessionContext sessionContext = null;
@@ -109,13 +117,13 @@ public class SocketService implements SmartLifecycle {
                         Object sessionObj = redisTemplate.opsForValue().get(redisKey);
                         if (sessionObj instanceof SessionContext) {
                             sessionContext = (SessionContext) sessionObj;
-                            //log.debug("Found existing session context in Redis for client: {}", clientAddress);
+                            log.debug("Found existing session context in Redis for client: {}", clientAddress);
                         } else {
                             // 创建新的SessionContext
                             sessionContext = new SessionContext();
                             // 保存到Redis，设置过期时间为24小时
                             redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
-                            //log.debug("Created new session context and saved to Redis for client: {}", clientAddress);
+                            log.debug("Created new session context and saved to Redis for client: {}", clientAddress);
                         }
                         
                         // 设置真实客户端地址到SessionContext
@@ -124,7 +132,7 @@ public class SocketService implements SmartLifecycle {
                         sessionContext.setClientPort(clientPort);
                         // 保存修改后的SessionContext回Redis
                         redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
-                        //log.debug("Saved session context to Redis for client: {}", clientAddress);
+                        log.debug("Saved session context to Redis for client: {}", clientAddress);
                         
                         // 提交客户端连接到线程池处理
                         ClientHandler clientHandler = new ClientHandler(socket, messagingTemplate,
@@ -139,7 +147,7 @@ public class SocketService implements SmartLifecycle {
                                 log.info("Client connection closed, current connections: {}", connectionCount.get());
                             }
                         });
-                        //log.info("Submitted client handler for client: {}, current connections: {}", clientAddress, connectionCount.get());
+                        log.info("Submitted client handler for client: {}, current connections: {}", clientAddress, connectionCount.get());
                     } catch (IOException e) {
                         if (running) {
                             log.error("Error accepting client connection: {}", e.getMessage());
@@ -163,8 +171,45 @@ public class SocketService implements SmartLifecycle {
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
             }
+            // 停止连接状态监控
+            stopConnectionMonitor();
         } catch (IOException e) {
-            System.err.println("Error closing server socket: " + e.getMessage());
+            log.error("Error closing server socket: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * 启动连接状态监控
+     */
+    private void startConnectionMonitor() {
+        monitorScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+        monitorScheduler.scheduleAtFixedRate(() -> {
+            int currentConnections = connectionCount.get();
+            log.info("Socket server status: current connections = {}, max connections = {}", 
+                    currentConnections, Math.min(maxConnections, DEFAULT_MAX_CONNECTIONS));
+            
+            // 检查服务器Socket状态
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                try {
+                    // 检查服务器Socket是否可用
+                    if (serverSocket.isBound()) {
+                        log.debug("Server socket is bound and listening on port {}", socketPort);
+                    } else {
+                        log.warn("Server socket is not bound");
+                    }
+                } catch (Exception e) {
+                    log.warn("Error checking server socket status: {}", e.getMessage());
+                }
+            }
+        }, MONITOR_INTERVAL, MONITOR_INTERVAL, java.util.concurrent.TimeUnit.SECONDS);
+    }
+    
+    /**
+     * 停止连接状态监控
+     */
+    private void stopConnectionMonitor() {
+        if (monitorScheduler != null && !monitorScheduler.isShutdown()) {
+            monitorScheduler.shutdownNow();
         }
     }
 
@@ -197,7 +242,7 @@ public class SocketService implements SmartLifecycle {
      */
     private ProxyHeaderResult parseProxyHeader(Socket socket) throws IOException {
         InputStream inputStream = socket.getInputStream();
-        // 使用BufferedInputStream包装输入流，以便支持标记操作
+        // 使用BufferedInputStream包装输入流，以便支持标记操作和提高读取性能
         java.io.BufferedInputStream bufferedInputStream = new java.io.BufferedInputStream(inputStream, 1024);
         // 设置标记，以便重置
         bufferedInputStream.mark(1024);
@@ -393,5 +438,3 @@ public class SocketService implements SmartLifecycle {
         }
     }
 }
-
-

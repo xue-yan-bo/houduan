@@ -149,30 +149,44 @@ public class PacketDecoder {
     private boolean readMoreData(int minBytes) throws IOException {
         int readTotal = 0;
         int attempts = 0;
-        final int MAX_ATTEMPTS = 5;
+        final int MAX_ATTEMPTS = 10; // 增加最大尝试次数
         
         while (readTotal < minBytes && attempts < MAX_ATTEMPTS) {
             int remaining = minBytes - readTotal;
-            int available = Math.min(inputStream.available(), buffer.length - bufferPos);
+            int available = inputStream.available();
             
             // 计算实际要读取的字节数
             int toRead = Math.min(remaining, Math.max(1, available > 0 ? available : 1024));
             
-            int read = inputStream.read(buffer, bufferPos, toRead);
-            if (read == -1) {
-                return false;
-            }
-            
-            bufferPos += read;
-            readTotal += read;
-            attempts++;
-            
-            // 如果读取速度太慢，短暂休眠一下
-            if (read < toRead) {
+            try {
+                int read = inputStream.read(buffer, bufferPos, toRead);
+                if (read == -1) {
+                    return false;
+                }
+                
+                bufferPos += read;
+                readTotal += read;
+                attempts++;
+                
+                // 如果读取速度太慢，短暂休眠一下
+                if (read < toRead) {
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            } catch (IOException e) {
+                // 记录IO异常，但继续尝试
+                log.warn("IO error while reading data (attempt {} of {}): {}", attempts, MAX_ATTEMPTS, e.getMessage());
+                attempts++;
+                
+                // 短暂休眠，避免异常风暴
                 try {
-                    Thread.sleep(1);
-                } catch (InterruptedException e) {
+                    Thread.sleep(10);
+                } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
+                    return false;
                 }
             }
         }

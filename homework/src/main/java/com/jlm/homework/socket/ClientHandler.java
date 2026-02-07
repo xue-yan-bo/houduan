@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.io.*;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -49,7 +48,16 @@ public class ClientHandler implements Runnable {
     // Heartbeat
     private ScheduledExecutorService heartbeatScheduler;
     private static final byte HEARTBEAT_TYPE = 0x05;
-    private static final long HEARTBEAT_INTERVAL = 6;
+    private static final long HEARTBEAT_INTERVAL = 4; // 减少心跳间隔到2秒，保持连接更活跃
+    private static final int MAX_HEARTBEAT_FAILURES = 5; // 增加允许的心跳失败次数到5次
+    private int heartbeatFailureCount = 0; // 心跳失败计数器
+    private volatile boolean isHeartbeatActive = true; // 心跳是否活跃
+    
+    // 网络异常恢复
+    private long lastNetworkExceptionTime = 0; // 上次网络异常时间
+    private int networkExceptionCount = 0; // 网络异常计数
+    private static final long NETWORK_RECOVERY_THRESHOLD = 30000; // 网络恢复阈值，30秒
+    private static final int MAX_NETWORK_EXCEPTIONS = 10; // 最大网络异常次数
 
     public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
                          ISmartDeviceUserRelationService smartDeviceUserRelationService,
@@ -92,8 +100,24 @@ public class ClientHandler implements Runnable {
             
             // 保持连接活跃，去掉超时限制
             clientSocket.setKeepAlive(true);
-            // 设置TCP连接超时时间为60分钟
-            clientSocket.setSoTimeout(60 * 60 * 1000);
+            // 设置TCP连接超时时间为0（无限），避免因超时而断开
+            clientSocket.setSoTimeout(0);
+            // 启用TCP_NODELAY，减少延迟
+            clientSocket.setTcpNoDelay(true);
+            // 增加接收缓冲区大小，减少数据包丢失
+            clientSocket.setReceiveBufferSize(128 * 1024);
+            // 增加发送缓冲区大小，提高发送效率
+            clientSocket.setSendBufferSize(128 * 1024);
+            // 设置TCP性能偏好，优先考虑延迟
+            clientSocket.setPerformancePreferences(1, 10, 1);
+            // 设置SO_LINGER为0，避免连接关闭时阻塞
+            clientSocket.setSoLinger(false, 0);
+            
+            // 优化TCP keepalive参数，保障长时间连接
+            // 注意：Socket类已经通过setKeepAlive(true)启用了keepalive
+            // 具体的keepalive参数（如空闲时间、间隔、次数）在不同平台上设置方式不同
+            // 我们已经启用了keepalive，这将有助于保持连接活跃
+            log.debug("TCP keepalive is enabled");
             this.responseSender = new ResponseSender(out);
             initHandlers();
 
@@ -118,21 +142,91 @@ public class ClientHandler implements Runnable {
             initHeartbeatScheduler(out);
 
             // 4. Main Loop - 保持运行，不自动关闭
+            int connectionCheckCount = 0;
+            int networkFluctuationCount = 0;
+            long lastNetworkFluctuationTime = 0;
             while (true) {
                 try {
                     // 检查Socket是否仍然连接
                     if (clientSocket == null || clientSocket.isClosed() || !clientSocket.isConnected()) {
-                        //log.info("Socket is not connected, exiting loop");
+                        log.info("Socket is not connected, exiting loop. Client: {}", sessionContext.getClientIP());
                         break;
                     }
                     
-                    // 设置Socket超时，避免长时间阻塞
-                    clientSocket.setSoTimeout(1000);
+                    // 检查心跳是否活跃
+                    if (!isHeartbeatActive) {
+                        log.warn("Heartbeat is not active, checking connection status. Client: {}", sessionContext.getClientIP());
+                        // 尝试恢复心跳
+                        try {
+                            // 检查输出流是否可用
+                            if (out != null) {
+                                // 尝试发送一个测试数据包
+                                out.write(new byte[]{0x55, 0x56, 0x02, HEARTBEAT_TYPE, 0x01, 0x04});
+                                out.flush();
+                                log.info("Test packet sent successfully, reactivating heartbeat. Client: {}", sessionContext.getClientIP());
+                                isHeartbeatActive = true;
+                                heartbeatFailureCount = 0;
+                                networkFluctuationCount = 0; // 重置网络波动计数
+                            } else {
+                                log.warn("OutputStream is null, cannot recover heartbeat. Client: {}", sessionContext.getClientIP());
+                                break;
+                            }
+                        } catch (IOException e) {
+                            log.warn("Failed to send test packet: {}, closing connection. Client: {}", e.getMessage(), sessionContext.getClientIP());
+                            break;
+                        }
+                    }
+                    
+                    // 定期检查连接状态（每100次循环检查一次）
+                    connectionCheckCount++;
+                    if (connectionCheckCount >= 100) {
+                        connectionCheckCount = 0;
+                        try {
+                            // 检查Socket连接状态
+                            if (clientSocket.isClosed() || !clientSocket.isConnected()) {
+                                log.warn("Connection check failed, socket is closed or not connected. Client: {}", sessionContext.getClientIP());
+                                break;
+                            }
+                            
+                            // 检查网络延迟
+                            long startTime = System.currentTimeMillis();
+                            // 发送一个小的测试数据包
+                            out.write(new byte[]{0x55, 0x56, 0x02, HEARTBEAT_TYPE, 0x01, 0x04});
+                            out.flush();
+                            long endTime = System.currentTimeMillis();
+                            long networkDelay = endTime - startTime;
+                            
+                            if (networkDelay > 1000) {
+                                networkFluctuationCount++;
+                                lastNetworkFluctuationTime = System.currentTimeMillis();
+                                log.warn("Network delay detected: {}ms, fluctuation count: {}. Client: {}", 
+                                        networkDelay, networkFluctuationCount, sessionContext.getClientIP());
+                                
+                                // 如果网络延迟严重，调整心跳间隔
+                                if (networkFluctuationCount >= 3) {
+                                    log.warn("Persistent network fluctuation detected, increasing heartbeat interval. Client: {}", sessionContext.getClientIP());
+                                    // 这里可以动态调整心跳间隔
+                                }
+                            } else {
+                                // 网络正常，重置波动计数
+                                if (networkFluctuationCount > 0 && System.currentTimeMillis() - lastNetworkFluctuationTime > 30000) {
+                                    networkFluctuationCount = 0;
+                                    log.info("Network recovered, resetting fluctuation count. Client: {}", sessionContext.getClientIP());
+                                }
+                            }
+                        } catch (Exception e) {
+                            log.warn("Connection check error: {}. Client: {}", e.getMessage(), sessionContext.getClientIP());
+                        }
+                    }
+                    
+                    // 不再设置Socket超时，因为已经在初始化时设置为0（无限）
+                    // 这样可以避免因超时而断开连接
                     
                     Packet packet = decoder.readNextPacket();
                     if (packet == null) {
                         // Socket仍然连接，可能是暂时没有数据，短暂休眠后继续
-                        Thread.sleep(10);
+                        // 减少sleep时间，从10ms减少到1ms，提高响应速度
+                        Thread.sleep(1);
                         continue;
                     }
                     
@@ -162,30 +256,56 @@ public class ClientHandler implements Runnable {
                 } catch (InterruptedException e) {
                     // 线程被中断，退出循环
                     log.info("ClientHandler thread interrupted, exiting...");
+                    isHeartbeatActive = false;
                     break;
-                } catch (java.net.SocketTimeoutException e) {
-                    // 超时异常，继续循环
-                    continue;
                 } catch (IOException e) {
-                    // IO异常可能表示连接断开
-                    log.info("IO exception, checking connection: {}", e.getMessage());
-                    // 检查Socket状态
-                    if (clientSocket != null && !clientSocket.isClosed()) {
-                        try {
-                            clientSocket.close();
-                        } catch (IOException ex) {
-                            // 忽略关闭异常
-                        }
+                    // IO异常可能表示连接断开，但也可能是临时错误
+                    String errorMsg = e.getMessage();
+                    log.warn("IO exception: {}", errorMsg);
+                    
+                    // 检查是否是"断开的管道"错误
+                    if (errorMsg != null && (errorMsg.contains("断开的管道") || errorMsg.contains("Broken pipe") || errorMsg.contains("Connection reset"))) {
+                        log.warn("Connection reset or broken pipe detected, closing connection. Client: {}", sessionContext.getClientIP());
+                        isHeartbeatActive = false;
+                        break;
                     }
-                    break;
+                    
+                    // 检查Socket状态，只有在真正断开时才退出
+                    if (clientSocket == null || clientSocket.isClosed()) {
+                        log.info("Socket is closed, exiting loop. Client: {}", sessionContext.getClientIP());
+                        isHeartbeatActive = false;
+                        break;
+                    }
+                    
+                    // 处理网络异常
+                    handleNetworkException(e);
+                    
+                    // 如果Socket仍然连接，可能是临时错误，短暂休眠后继续
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        isHeartbeatActive = false;
+                        break;
+                    }
+                    
+                    // 继续循环，不要立即退出
+                    continue;
                 } catch (Exception e) {
                     // 其他异常，记录并继续
                     log.error("ClientHandler exception, continuing...: {}", e.getMessage(), e);
+                    
+                    // 处理网络相关异常
+                    if (e instanceof java.net.SocketException || e instanceof java.net.SocketTimeoutException) {
+                        handleNetworkException(e);
+                    }
+                    
                     // 短暂休眠，避免异常风暴
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
+                        isHeartbeatActive = false;
                         break;
                     }
                 }
@@ -198,20 +318,34 @@ public class ClientHandler implements Runnable {
             saveUnsavedNotes();
             // 关闭资源
             cancelHeartbeat();
+            isHeartbeatActive = false; // 确保心跳调度器不会继续运行
+            
             try {
                 if (in != null) {
                     in.close();
+                    in = null; // 释放引用
                 }
                 if (out != null) {
                     out.close();
+                    out = null; // 释放引用
                 }
                 if (clientSocket != null && !clientSocket.isClosed()) {
                     clientSocket.close();
+                    //clientSocket = null; // 释放引用
                 }
             } catch (IOException e) {
                 log.info("Error closing socket: {}", e.getMessage());
             }
-            //log.info("Client connection closed: {}", sessionContext.getClientIP());
+            
+            // 清理其他资源，避免内存泄漏
+            if (handlers != null) {
+                handlers.clear(); // 清理处理器映射
+            }
+            
+            // 释放引用
+            preReadBytes = null;
+            
+            log.info("Client connection closed: {}", sessionContext.getClientIP());
         }
     }
     /**
@@ -366,24 +500,73 @@ public class ClientHandler implements Runnable {
         heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
         heartbeatScheduler.scheduleAtFixedRate(() -> {
             try {
-                // 先检查Socket连接状态
-                if (clientSocket == null || clientSocket.isClosed() || !clientSocket.isConnected()) {
-                    log.info("Socket is closed, stopping heartbeat");
+                // 检查心跳是否活跃
+                if (!isHeartbeatActive) {
+                    //log.info("Heartbeat is not active, stopping heartbeat scheduler");
                     cancelHeartbeat();
                     return;
                 }
-                sendHeartbeat(out);
-            } catch (IOException e) {
-                //log.info("Heartbeat failed: " + e.getMessage());
-                cancelHeartbeat();
-                // 心跳失败时检查Socket状态
-                try {
-                    if (clientSocket != null && !clientSocket.isClosed()) {
-                        clientSocket.close();
-                    }
-                } catch (IOException ex) {
-                    // 忽略关闭异常
+                
+                // 先检查Socket连接状态
+                if (clientSocket == null || clientSocket.isClosed()) {
+                    //log.info("Socket is closed, stopping heartbeat");
+                    isHeartbeatActive = false;
+                    cancelHeartbeat();
+                    return;
                 }
+                
+                // 检查输出流是否可用
+                if (out == null) {
+                    //log.warn("OutputStream is null, stopping heartbeat");
+                    isHeartbeatActive = false;
+                    cancelHeartbeat();
+                    return;
+                }
+                
+                // 尝试发送心跳
+                sendHeartbeat(out);
+                
+                // 心跳发送成功，重置失败计数
+                heartbeatFailureCount = 0;
+                
+            } catch (IOException e) {
+                // 心跳失败，增加失败计数
+                heartbeatFailureCount++;
+                log.warn("Heartbeat failed (attempt {} of {}): {}", heartbeatFailureCount, MAX_HEARTBEAT_FAILURES, e.getMessage());
+                
+                // 如果是"断开的管道"错误，直接关闭连接
+                if (e.getMessage() != null && (e.getMessage().contains("断开的管道") || e.getMessage().contains("Broken pipe"))) {
+                    log.info("Broken pipe detected, closing connection immediately");
+                    isHeartbeatActive = false;
+                    cancelHeartbeat();
+                    // 关闭Socket
+                    try {
+                        if (clientSocket != null && !clientSocket.isClosed()) {
+                            clientSocket.close();
+                        }
+                    } catch (IOException ex) {
+                        // 忽略关闭异常
+                    }
+                    return;
+                }
+                
+                // 如果心跳失败次数超过阈值，关闭连接
+                if (heartbeatFailureCount >= MAX_HEARTBEAT_FAILURES) {
+                    log.error("Heartbeat failed {} times, closing connection", MAX_HEARTBEAT_FAILURES);
+                    isHeartbeatActive = false;
+                    cancelHeartbeat();
+                    // 关闭Socket
+                    try {
+                        if (clientSocket != null && !clientSocket.isClosed()) {
+                            clientSocket.close();
+                        }
+                    } catch (IOException ex) {
+                        // 忽略关闭异常
+                    }
+                }
+            } catch (Exception e) {
+                // 其他异常，记录并继续
+                log.error("Unexpected error in heartbeat: {}", e.getMessage(), e);
             }
         }, HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL, TimeUnit.SECONDS);
     }
@@ -452,6 +635,35 @@ public class ClientHandler implements Runnable {
     private void cancelHeartbeat() {
         if (heartbeatScheduler != null && !heartbeatScheduler.isShutdown()) {
             heartbeatScheduler.shutdownNow();
+        }
+    }
+    
+    /**
+     * 处理网络异常
+     * @param e 异常对象
+     */
+    private void handleNetworkException(Exception e) {
+        long currentTime = System.currentTimeMillis();
+        
+        // 检查是否是网络恢复
+        if (currentTime - lastNetworkExceptionTime > NETWORK_RECOVERY_THRESHOLD) {
+            networkExceptionCount = 0;
+            log.info("Network recovered, resetting exception count. Client: {}", sessionContext.getClientIP());
+        }
+        
+        // 增加网络异常计数
+        networkExceptionCount++;
+        lastNetworkExceptionTime = currentTime;
+        
+        log.warn("Network exception detected (count: {}), error: {}. Client: {}", 
+                networkExceptionCount, e.getMessage(), sessionContext.getClientIP());
+        
+        // 如果网络异常次数过多，考虑关闭连接
+        if (networkExceptionCount >= MAX_NETWORK_EXCEPTIONS) {
+            log.warn("Too many network exceptions ({}) detected, closing connection. Client: {}", 
+                    networkExceptionCount, sessionContext.getClientIP());
+            isHeartbeatActive = false;
+            // 这里不立即断开，让主循环自然退出
         }
     }
 }

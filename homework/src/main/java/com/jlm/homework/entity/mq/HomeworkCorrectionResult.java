@@ -15,9 +15,25 @@ public class HomeworkCorrectionResult {
     private List<QuestionCorrectionResult> questions;
     private Double totalScore;
     private Double maxScore;
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime correctedAt;
+    //@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private String correctedAt;
     private CorrectionStatus status;
     private String  type;
     private String  errorMessage;
+
+    @Override
+    public String toString() {
+        return "HomeworkCorrectionResult{" +
+                "submissionId='" + submissionId + '\'' +
+                ", homeworkId='" + homeworkId + '\'' +
+                ", studentId='" + studentId + '\'' +
+                ", questions=" + questions +
+                ", totalScore=" + totalScore +
+                ", maxScore=" + maxScore +
+                ", correctedAt='" + correctedAt + '\'' +
+                ", status=" + status +
+                ", type='" + type + '\'' +
+                ", errorMessage='" + errorMessage + '\'' +
+                '}';
+    }
 }

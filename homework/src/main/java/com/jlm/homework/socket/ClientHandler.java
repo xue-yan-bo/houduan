@@ -126,29 +126,33 @@ public class ClientHandler implements Runnable {
                         break;
                     }
                     
+                    // 设置Socket超时，避免长时间阻塞
+                    clientSocket.setSoTimeout(1000);
+                    
                     Packet packet = decoder.readNextPacket();
                     if (packet == null) {
-                        // Socket仍然连接，可能是暂时没有数据，继续循环
-                        Thread.sleep(100);
+                        // Socket仍然连接，可能是暂时没有数据，短暂休眠后继续
+                        Thread.sleep(10);
                         continue;
                     }
+                    
+                    // 处理蓝牙数据标记
                     if (packet.isBluetooth()) {
                         handleBluetoothPreProcess(packet);
                     } else {
                         sessionContext.setBluetooth(false);
                     }
 
-                    // Dispatch
+                    // Dispatch到对应的处理器
                     MessageHandler handler = handlers.get(packet.getType());
                     if (handler != null) {
                         // 使用固定大小的线程池来处理数据包，提高并发处理能力
-                        //log.info("Handling packet type: {} for client: {}", String.format("0x%02X", packet.getType()), sessionContext.getClientIP());
+                        final Packet finalPacket = packet; // 避免lambda变量捕获问题
                         PROCESS_THREAD_POOL.submit(() -> {
                             try {
-                                handler.handle(sessionContext, packet, responseSender);
-                                //log.info("Packet type: {} handled successfully for client: {}", String.format("0x%02X", packet.getType()), sessionContext.getClientIP());
+                                handler.handle(sessionContext, finalPacket, responseSender);
                             } catch (Exception e) {
-                                log.error("Error handling packet type {} for client: {}", packet.getType(), sessionContext.getClientIP(), e);
+                                log.error("Error handling packet type {} for client: {}", finalPacket.getType(), sessionContext.getClientIP(), e);
                             }
                         });
                     } else {
@@ -156,8 +160,12 @@ public class ClientHandler implements Runnable {
                     }
 
                 } catch (InterruptedException e) {
-                    // 线程被中断，继续运行
-                    //log.debug("ClientHandler thread interrupted, continuing...");
+                    // 线程被中断，退出循环
+                    log.info("ClientHandler thread interrupted, exiting...");
+                    break;
+                } catch (java.net.SocketTimeoutException e) {
+                    // 超时异常，继续循环
+                    continue;
                 } catch (IOException e) {
                     // IO异常可能表示连接断开
                     log.info("IO exception, checking connection: {}", e.getMessage());
@@ -171,8 +179,15 @@ public class ClientHandler implements Runnable {
                     }
                     break;
                 } catch (Exception e) {
-                    // 其他异常，继续运行
-                    log.debug("ClientHandler exception, continuing...: {}", e.getMessage());
+                    // 其他异常，记录并继续
+                    log.error("ClientHandler exception, continuing...: {}", e.getMessage(), e);
+                    // 短暂休眠，避免异常风暴
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
             }
 

@@ -38,7 +38,7 @@ public class HomeworkResultServiceImpl implements IHomeworkResultService {
     private HomeworkPublishQuestionRepository homeworkPublishQuestionRepository;
     @Override
     public void processHomeworkResult(HomeworkCorrectionResult message) {
-        log.info("处理批改结果开始 - homeworkId: {}, studentId: {}",message.getHomeworkId(),message.getStudentId());
+        log.info("处理批改结果开始 -message:{}",message.toString());
         // TODO: 实现具体的作业结果处理逻辑
         Long studentHomeworkId = Long.parseLong(message.getHomeworkId());
 
@@ -50,6 +50,7 @@ public class HomeworkResultServiceImpl implements IHomeworkResultService {
             Map<String,Boolean>  map = new HashMap<>();
             for(QuestionCorrectionResult questionResult:message.getQuestions()){
                 HomeworkPublishQuestion search = new HomeworkPublishQuestion();
+                search.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
                 search.setSmallNumber(questionResult.getQuestionNumber());
                 search.setQuestionType(questionResult.getQuestionType());
                 HomeworkPublishQuestion publishQuestion=homeworkPublishQuestionRepository.findOne(Example.of(search)).orElse(null);
@@ -57,6 +58,8 @@ public class HomeworkResultServiceImpl implements IHomeworkResultService {
                 BeanUtils.copyProperties(publishQuestion,questionAnalysis);
                 questionAnalysis.setId(null);
                 questionAnalysis.setSchoolId(studentsHomework.getSchoolId());
+                questionAnalysis.setBigNumber(publishQuestion.getBigNumber()
+                );
                 questionAnalysis.setStudentsHomeworkId(studentHomeworkId);
                 questionAnalysis.setStudentId(studentsHomework.getStudentId());
                 questionAnalysis.setStudentName(studentsHomework.getStudentName());
@@ -101,6 +104,7 @@ public class HomeworkResultServiceImpl implements IHomeworkResultService {
                     smallDtoList.add(smallDto);
                     bigDto.setSmallDtoList(smallDtoList);
                     bigMap.put(bigKey,bigDto);
+                    bigDtoList.add(bigDto);
                 }
                 questionAnalysis.setObtainedScore(questionResult.getScore());
                 if("1".equals(message.getType())) {
@@ -108,6 +112,7 @@ public class HomeworkResultServiceImpl implements IHomeworkResultService {
                 }
 
             }
+
             if("1".equals(message.getType())) {
                 studentsHomework.setAiAudit(JSONArray.toJSONString(bigDtoList));
                 studentsHomework.setScore(message.getTotalScore());

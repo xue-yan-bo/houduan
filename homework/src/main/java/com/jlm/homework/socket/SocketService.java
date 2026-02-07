@@ -44,73 +44,114 @@ public class SocketService implements SmartLifecycle {
     private int maxConnections;
 
 
+    // 连接计数器
+    private final java.util.concurrent.atomic.AtomicInteger connectionCount = new java.util.concurrent.atomic.AtomicInteger(0);
+    // 最大连接数
+    private static final int DEFAULT_MAX_CONNECTIONS = 1000;
+
     @Override
     public void start() {
-        threadPool = Executors.newFixedThreadPool(maxConnections);
+        // 使用更合理的线程池大小，默认最大1000连接
+        int threadPoolSize = Math.min(maxConnections, DEFAULT_MAX_CONNECTIONS);
+        threadPool = Executors.newFixedThreadPool(threadPoolSize);
+        
         new Thread(() -> {
             try {
-
                 serverSocket = new ServerSocket(socketPort);
+                serverSocket.setReuseAddress(true);
                 running = true;
-                //System.out.println("Socket server started on port " + socketPort);
+                log.info("Socket server started on port {}", socketPort);
 
                 while (running) {
-                    Socket socket = serverSocket.accept();
-                    //log.info("New client connected, raw address: {}", socket.getRemoteSocketAddress());
-                    
-                    // 解析代理头，获取真实客户端地址
-                    ProxyHeaderResult proxyResult;
                     try {
-                        proxyResult = parseProxyHeader(socket);
-                    } catch (IOException e) {
-                        log.warn("Failed to parse proxy header, using default address: {}", e.getMessage());
-                        proxyResult = new ProxyHeaderResult(
-                            (InetSocketAddress) socket.getRemoteSocketAddress(),
-                            null
-                        );
-                    }
-                    
-                    // 使用真实客户端地址
-                    InetSocketAddress realAddress = proxyResult.getRealAddress();
-                    String clientAddress = realAddress.getHostString();
-                    int clientPort = realAddress.getPort();
-                    
-                    //log.info("Client connected with real address: {}", clientAddress);
-                    
-                    // 使用Redis获取或创建SessionContext
-                    SessionContext sessionContext = null;
-                    String redisKey = REDIS_KEY_PREFIX + clientAddress;
-                    
-                    // 从Redis获取SessionContext
-                    Object sessionObj = redisTemplate.opsForValue().get(redisKey);
-                    if (sessionObj instanceof SessionContext) {
-                        sessionContext = (SessionContext) sessionObj;
-                        //log.info("Found existing session context in Redis for client: {}", clientAddress);
-                    } else {
-                        // 创建新的SessionContext
-                        sessionContext = new SessionContext();
-                        // 保存到Redis，设置过期时间为24小时
+                        Socket socket = serverSocket.accept();
+                        
+                        // 检查连接数是否超过限制
+                        int currentConnections = connectionCount.incrementAndGet();
+                        if (currentConnections > threadPoolSize) {
+                            log.warn("Connection limit reached: {}, closing new connection from {}", 
+                                    threadPoolSize, socket.getRemoteSocketAddress());
+                            connectionCount.decrementAndGet();
+                            try {
+                                socket.close();
+                            } catch (IOException e) {
+                                // 忽略关闭异常
+                            }
+                            continue;
+                        }
+                        
+                        //log.info("New client connected, raw address: {}", socket.getRemoteSocketAddress());
+                        
+                        // 解析代理头，获取真实客户端地址
+                        ProxyHeaderResult proxyResult;
+                        try {
+                            proxyResult = parseProxyHeader(socket);
+                        } catch (IOException e) {
+                            log.warn("Failed to parse proxy header, using default address: {}", e.getMessage());
+                            proxyResult = new ProxyHeaderResult(
+                                (InetSocketAddress) socket.getRemoteSocketAddress(),
+                                null
+                            );
+                        }
+                        
+                        // 使用真实客户端地址
+                        InetSocketAddress realAddress = proxyResult.getRealAddress();
+                        String clientAddress = realAddress.getHostString();
+                        int clientPort = realAddress.getPort();
+                        
+                        //log.info("Client connected with real address: {}", clientAddress);
+                        
+                        // 使用Redis获取或创建SessionContext
+                        SessionContext sessionContext = null;
+                        String redisKey = REDIS_KEY_PREFIX + clientAddress;
+                        
+                        // 从Redis获取SessionContext
+                        Object sessionObj = redisTemplate.opsForValue().get(redisKey);
+                        if (sessionObj instanceof SessionContext) {
+                            sessionContext = (SessionContext) sessionObj;
+                            //log.debug("Found existing session context in Redis for client: {}", clientAddress);
+                        } else {
+                            // 创建新的SessionContext
+                            sessionContext = new SessionContext();
+                            // 保存到Redis，设置过期时间为24小时
+                            redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                            //log.debug("Created new session context and saved to Redis for client: {}", clientAddress);
+                        }
+                        
+                        // 设置真实客户端地址到SessionContext
+                        sessionContext.setRemoteAddress(realAddress);
+                        sessionContext.setClientIP(clientAddress);
+                        sessionContext.setClientPort(clientPort);
+                        // 保存修改后的SessionContext回Redis
                         redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
-                        //log.info("Created new session context and saved to Redis for client: {}", clientAddress);
-                    }
-                    
-                    // 设置真实客户端地址到SessionContext
-                    sessionContext.setRemoteAddress(realAddress);
-                    sessionContext.setClientIP(clientAddress);
-                    sessionContext.setClientPort(clientPort);
-                    // 保存修改后的SessionContext回Redis
-                    redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
-                    //log.info("Saved session context to Redis for client: {}", clientAddress);
-                    
-                    // 提交客户端连接到线程池处理
-                    ClientHandler clientHandler = new ClientHandler(socket, messagingTemplate,
-                            smartDeviceUserRelationService, handlerService, sessionContext, proxyResult.getPreReadBytes(), redisTemplate, redisKey);
+                        //log.debug("Saved session context to Redis for client: {}", clientAddress);
+                        
+                        // 提交客户端连接到线程池处理
+                        ClientHandler clientHandler = new ClientHandler(socket, messagingTemplate,
+                                smartDeviceUserRelationService, handlerService, sessionContext, proxyResult.getPreReadBytes(), redisTemplate, redisKey);
 
-                    threadPool.submit(clientHandler);
-                    //log.info("Submitted client handler for client: {}", clientAddress);
+                        threadPool.submit(() -> {
+                            try {
+                                clientHandler.run();
+                            } finally {
+                                // 连接处理完成后，减少连接计数
+                                connectionCount.decrementAndGet();
+                                log.info("Client connection closed, current connections: {}", connectionCount.get());
+                            }
+                        });
+                        //log.info("Submitted client handler for client: {}, current connections: {}", clientAddress, connectionCount.get());
+                    } catch (IOException e) {
+                        if (running) {
+                            log.error("Error accepting client connection: {}", e.getMessage());
+                        }
+                    }
                 }
             } catch (IOException e) {
-                System.err.println("Socket server error: " + e.getMessage());
+                if (running) {
+                    log.error("Socket server error: {}", e.getMessage(), e);
+                }
+            } finally {
+                stop();
             }
         }).start();
     }

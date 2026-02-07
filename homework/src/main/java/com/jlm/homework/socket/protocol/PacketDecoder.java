@@ -50,8 +50,12 @@ public class PacketDecoder {
             int headerIndex = findHeader();
             if (headerIndex == -1) {
                 // 没找到包头，丢弃无效数据（保留最后1字节防跨包）
-                //log.debug("Header not found in buffer (size: {}), discarding data", bufferPos);
                 if (bufferPos > 0) {
+                    // 记录丢弃的数据量
+                    if (bufferPos > 10) {
+                        log.warn("Header not found, discarding {} bytes of invalid data", bufferPos - 1);
+                    }
+                    // 保留最后1字节，防止跨包的包头被丢弃
                     buffer[0] = buffer[bufferPos - 1];
                     bufferPos = 1;
                 }
@@ -144,17 +148,36 @@ public class PacketDecoder {
 
     private boolean readMoreData(int minBytes) throws IOException {
         int readTotal = 0;
-        while (readTotal < minBytes) {
-            int read = inputStream.read(buffer, bufferPos, buffer.length - bufferPos);
+        int attempts = 0;
+        final int MAX_ATTEMPTS = 5;
+        
+        while (readTotal < minBytes && attempts < MAX_ATTEMPTS) {
+            int remaining = minBytes - readTotal;
+            int available = Math.min(inputStream.available(), buffer.length - bufferPos);
+            
+            // 计算实际要读取的字节数
+            int toRead = Math.min(remaining, Math.max(1, available > 0 ? available : 1024));
+            
+            int read = inputStream.read(buffer, bufferPos, toRead);
             if (read == -1) {
-                //log.debug("End of stream reached while reading {} bytes", minBytes);
                 return false;
             }
+            
             bufferPos += read;
             readTotal += read;
-            //log.debug("Read {} bytes (total: {} / {})", read, readTotal, minBytes);
+            attempts++;
+            
+            // 如果读取速度太慢，短暂休眠一下
+            if (read < toRead) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         }
-        return true;
+        
+        return readTotal >= minBytes;
     }
 
     private void ensureCapacity(int requiredSize) {

@@ -270,21 +270,37 @@ public class SocketService implements SmartLifecycle {
                 return new ProxyHeaderResult(realAddress, null);
             } else {
                 // 检测代理协议类型
-                String sigStr = new String(signature);
-                if (sigStr.equals("PROXY")) {
-                    // PROXY v1 协议
-                    return parseProxyV1(socket, bufferedInputStream);
-                } else if (isProxyV2Signature(signature)) {
-                    // PROXY v2 协议
-                    return parseProxyV2(socket, bufferedInputStream);
-                } else {
-                    // 不是代理协议，重置输入流
+                try {
+                    String sigStr = new String(signature);
+                    if (sigStr.equals("PROXY")) {
+                        // PROXY v1 协议
+                        return parseProxyV1(socket, bufferedInputStream);
+                    } else if (isProxyV2Signature(signature)) {
+                        // PROXY v2 协议
+                        return parseProxyV2(socket, bufferedInputStream);
+                    } else {
+                        // 不是代理协议，重置输入流并返回已读取的字节
+                        try {
+                            bufferedInputStream.reset();
+                        } catch (Exception ex) {
+                            // 忽略重置异常
+                        }
+                        // 将已读取的字节作为preReadBytes返回，确保序列号数据包能够被正确解析
+                        byte[] preReadBytes = new byte[bytesRead];
+                        System.arraycopy(signature, 0, preReadBytes, 0, bytesRead);
+                        return new ProxyHeaderResult(realAddress, preReadBytes);
+                    }
+                } catch (Exception ex) {
+                    // 解析签名时发生异常，重置输入流并返回默认地址
                     try {
                         bufferedInputStream.reset();
-                    } catch (Exception ex) {
+                    } catch (Exception resetEx) {
                         // 忽略重置异常
                     }
-                    return new ProxyHeaderResult(realAddress, null);
+                    // 将已读取的字节作为preReadBytes返回，确保序列号数据包能够被正确解析
+                    byte[] preReadBytes = new byte[bytesRead];
+                    System.arraycopy(signature, 0, preReadBytes, 0, bytesRead);
+                    return new ProxyHeaderResult(realAddress, preReadBytes);
                 }
             }
         } catch (Exception e) {
@@ -308,9 +324,16 @@ public class SocketService implements SmartLifecycle {
      * @return 是否为PROXY v2协议
      */
     private boolean isProxyV2Signature(byte[] signature) {
-        return signature[0] == 0x0D && signature[1] == 0x0A && 
-               signature[2] == 0x0D && signature[3] == 0x0A && 
-               signature[4] == 0x00;
+        if (signature == null || signature.length < 5) {
+            return false;
+        }
+        try {
+            return signature[0] == 0x0D && signature[1] == 0x0A && 
+                   signature[2] == 0x0D && signature[3] == 0x0A && 
+                   signature[4] == 0x00;
+        } catch (Exception e) {
+            return false;
+        }
     }
     
     /**

@@ -54,12 +54,15 @@ public class HomeworkResultServiceImpl implements IHomeworkResultService {
                 search.setSmallNumber(questionResult.getQuestionNumber());
                 search.setQuestionType(questionResult.getQuestionType());
                 HomeworkPublishQuestion publishQuestion=homeworkPublishQuestionRepository.findOne(Example.of(search)).orElse(null);
+
                 QuestionAnalysis questionAnalysis = new QuestionAnalysis();
-                BeanUtils.copyProperties(publishQuestion,questionAnalysis);
+                if(publishQuestion!=null){
+                    BeanUtils.copyProperties(publishQuestion,questionAnalysis);
+                    questionAnalysis.setBigNumber(publishQuestion.getBigNumber());
+                }
                 questionAnalysis.setId(null);
                 questionAnalysis.setSchoolId(studentsHomework.getSchoolId());
-                questionAnalysis.setBigNumber(publishQuestion.getBigNumber()
-                );
+
                 questionAnalysis.setStudentsHomeworkId(studentHomeworkId);
                 questionAnalysis.setStudentId(studentsHomework.getStudentId());
                 questionAnalysis.setStudentName(studentsHomework.getStudentName());

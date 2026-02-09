@@ -117,7 +117,7 @@ public class ClientHandler implements Runnable {
             // 注意：Socket类已经通过setKeepAlive(true)启用了keepalive
             // 具体的keepalive参数（如空闲时间、间隔、次数）在不同平台上设置方式不同
             // 我们已经启用了keepalive，这将有助于保持连接活跃
-            log.debug("TCP keepalive is enabled");
+            //log.debug("TCP keepalive is enabled");
             this.responseSender = new ResponseSender(out);
             initHandlers();
 
@@ -149,13 +149,13 @@ public class ClientHandler implements Runnable {
                 try {
                     // 检查Socket是否仍然连接
                     if (clientSocket == null || clientSocket.isClosed() || !clientSocket.isConnected()) {
-                        log.info("Socket is not connected, exiting loop. Client: {}", sessionContext.getClientIP());
+                        //log.info("Socket is not connected, exiting loop. Client: {}", sessionContext.getClientIP());
                         break;
                     }
                     
                     // 检查心跳是否活跃
                     if (!isHeartbeatActive) {
-                        log.warn("Heartbeat is not active, checking connection status. Client: {}", sessionContext.getClientIP());
+                        //log.warn("Heartbeat is not active, checking connection status. Client: {}", sessionContext.getClientIP());
                         // 尝试恢复心跳
                         try {
                             // 检查输出流是否可用
@@ -163,16 +163,16 @@ public class ClientHandler implements Runnable {
                                 // 尝试发送一个测试数据包
                                 out.write(new byte[]{0x55, 0x56, 0x02, HEARTBEAT_TYPE, 0x01, 0x04});
                                 out.flush();
-                                log.info("Test packet sent successfully, reactivating heartbeat. Client: {}", sessionContext.getClientIP());
+                                //log.info("Test packet sent successfully, reactivating heartbeat. Client: {}", sessionContext.getClientIP());
                                 isHeartbeatActive = true;
                                 heartbeatFailureCount = 0;
                                 networkFluctuationCount = 0; // 重置网络波动计数
                             } else {
-                                log.warn("OutputStream is null, cannot recover heartbeat. Client: {}", sessionContext.getClientIP());
+                                //log.warn("OutputStream is null, cannot recover heartbeat. Client: {}", sessionContext.getClientIP());
                                 break;
                             }
                         } catch (IOException e) {
-                            log.warn("Failed to send test packet: {}, closing connection. Client: {}", e.getMessage(), sessionContext.getClientIP());
+                            //log.warn("Failed to send test packet: {}, closing connection. Client: {}", e.getMessage(), sessionContext.getClientIP());
                             break;
                         }
                     }
@@ -184,7 +184,7 @@ public class ClientHandler implements Runnable {
                         try {
                             // 检查Socket连接状态
                             if (clientSocket.isClosed() || !clientSocket.isConnected()) {
-                                log.warn("Connection check failed, socket is closed or not connected. Client: {}", sessionContext.getClientIP());
+                                //log.warn("Connection check failed, socket is closed or not connected. Client: {}", sessionContext.getClientIP());
                                 break;
                             }
                             
@@ -199,23 +199,32 @@ public class ClientHandler implements Runnable {
                             if (networkDelay > 1000) {
                                 networkFluctuationCount++;
                                 lastNetworkFluctuationTime = System.currentTimeMillis();
-                                log.warn("Network delay detected: {}ms, fluctuation count: {}. Client: {}", 
-                                        networkDelay, networkFluctuationCount, sessionContext.getClientIP());
+                                //log.warn("Network delay detected: {}ms, fluctuation count: {}. Client: {}",
+                                //        networkDelay, networkFluctuationCount, sessionContext.getClientIP());
                                 
                                 // 如果网络延迟严重，调整心跳间隔
                                 if (networkFluctuationCount >= 3) {
-                                    log.warn("Persistent network fluctuation detected, increasing heartbeat interval. Client: {}", sessionContext.getClientIP());
+                                    //log.warn("Persistent network fluctuation detected, increasing heartbeat interval. Client: {}", sessionContext.getClientIP());
                                     // 这里可以动态调整心跳间隔
                                 }
                             } else {
                                 // 网络正常，重置波动计数
                                 if (networkFluctuationCount > 0 && System.currentTimeMillis() - lastNetworkFluctuationTime > 30000) {
                                     networkFluctuationCount = 0;
-                                    log.info("Network recovered, resetting fluctuation count. Client: {}", sessionContext.getClientIP());
+                                    //log.info("Network recovered, resetting fluctuation count. Client: {}", sessionContext.getClientIP());
                                 }
                             }
                         } catch (Exception e) {
-                            log.warn("Connection check error: {}. Client: {}", e.getMessage(), sessionContext.getClientIP());
+                            String errorMsg = e.getMessage();
+                            // 检查是否是连接断开错误
+                            if (errorMsg != null && (errorMsg.contains("断开的管道") || errorMsg.contains("Broken pipe") || 
+                                    errorMsg.contains("Connection reset") || errorMsg.contains("Socket closed"))) {
+                                //log.warn("Connection check detected disconnection: {}. Client: {}", errorMsg, sessionContext.getClientIP());
+                                isHeartbeatActive = false;
+                                break;
+                            }
+                            // 其他错误，记录但继续
+                            //log.warn("Connection check error: {}. Client: {}", errorMsg, sessionContext.getClientIP());
                         }
                     }
                     
@@ -250,29 +259,29 @@ public class ClientHandler implements Runnable {
                             }
                         });
                     } else {
-                        log.warn("Unknown packet type: {} for client: {}", String.format("0x%02X", packet.getType()), sessionContext.getClientIP());
+                        //log.warn("Unknown packet type: {} for client: {}", String.format("0x%02X", packet.getType()), sessionContext.getClientIP());
                     }
 
                 } catch (InterruptedException e) {
                     // 线程被中断，退出循环
-                    log.info("ClientHandler thread interrupted, exiting...");
+                    //log.info("ClientHandler thread interrupted, exiting...");
                     isHeartbeatActive = false;
                     break;
                 } catch (IOException e) {
                     // IO异常可能表示连接断开，但也可能是临时错误
                     String errorMsg = e.getMessage();
-                    log.warn("IO exception: {}", errorMsg);
+                    //log.warn("IO exception: {}", errorMsg);
                     
                     // 检查是否是"断开的管道"错误
                     if (errorMsg != null && (errorMsg.contains("断开的管道") || errorMsg.contains("Broken pipe") || errorMsg.contains("Connection reset"))) {
-                        log.warn("Connection reset or broken pipe detected, closing connection. Client: {}", sessionContext.getClientIP());
+                        //log.warn("Connection reset or broken pipe detected, closing connection. Client: {}", sessionContext.getClientIP());
                         isHeartbeatActive = false;
                         break;
                     }
                     
                     // 检查Socket状态，只有在真正断开时才退出
                     if (clientSocket == null || clientSocket.isClosed()) {
-                        log.info("Socket is closed, exiting loop. Client: {}", sessionContext.getClientIP());
+                        //log.info("Socket is closed, exiting loop. Client: {}", sessionContext.getClientIP());
                         isHeartbeatActive = false;
                         break;
                     }
@@ -345,7 +354,7 @@ public class ClientHandler implements Runnable {
             // 释放引用
             preReadBytes = null;
             
-            log.info("Client connection closed: {}", sessionContext.getClientIP());
+            //log.info("Client connection closed: {}", sessionContext.getClientIP());
         }
     }
     /**
@@ -404,7 +413,7 @@ public class ClientHandler implements Runnable {
                 
                 // 保存课堂模式的未写入记录（清空studentClassRecords，避免内存占用过高）
                 if (!sessionContext.getStudentClassRecords().isEmpty()) {
-                    log.info("Saved unsaved classroom notes for user {}: {}", userId, sessionContext.getStudentClassRecords().size());
+                    //log.info("Saved unsaved classroom notes for user {}: {}", userId, sessionContext.getStudentClassRecords().size());
                     // 清空studentClassRecords，避免内存占用过高
                     sessionContext.getStudentClassRecords().clear();
                     // 保存修改后的SessionContext回Redis
@@ -412,7 +421,7 @@ public class ClientHandler implements Runnable {
                 }
                 
             } catch (Exception e) {
-                log.warn("Failed to save unsaved notes: {}", e.getMessage());
+                //log.warn("Failed to save unsaved notes: {}", e.getMessage());
             }
         }
     }
@@ -444,7 +453,7 @@ public class ClientHandler implements Runnable {
             try {
                 messagingTemplate.convertAndSend("/topic/bindStudent", newRelation);
             } catch (IllegalStateException e) {
-                log.warn("Failed to send bind student request: {}", e.getMessage());
+                //log.warn("Failed to send bind student request: {}", e.getMessage());
                 // 会话已关闭，跳过发送
             }
         } else if (StringUtils.isEmpty(relation.getIpAddress())) {
@@ -532,11 +541,11 @@ public class ClientHandler implements Runnable {
             } catch (IOException e) {
                 // 心跳失败，增加失败计数
                 heartbeatFailureCount++;
-                log.warn("Heartbeat failed (attempt {} of {}): {}", heartbeatFailureCount, MAX_HEARTBEAT_FAILURES, e.getMessage());
+                //log.warn("Heartbeat failed (attempt {} of {}): {}", heartbeatFailureCount, MAX_HEARTBEAT_FAILURES, e.getMessage());
                 
                 // 如果是"断开的管道"错误，直接关闭连接
                 if (e.getMessage() != null && (e.getMessage().contains("断开的管道") || e.getMessage().contains("Broken pipe"))) {
-                    log.info("Broken pipe detected, closing connection immediately");
+                    //log.info("Broken pipe detected, closing connection immediately");
                     isHeartbeatActive = false;
                     cancelHeartbeat();
                     // 关闭Socket
@@ -655,13 +664,13 @@ public class ClientHandler implements Runnable {
         networkExceptionCount++;
         lastNetworkExceptionTime = currentTime;
         
-        log.warn("Network exception detected (count: {}), error: {}. Client: {}", 
-                networkExceptionCount, e.getMessage(), sessionContext.getClientIP());
+        //log.warn("Network exception detected (count: {}), error: {}. Client: {}",
+        //        networkExceptionCount, e.getMessage(), sessionContext.getClientIP());
         
         // 如果网络异常次数过多，考虑关闭连接
         if (networkExceptionCount >= MAX_NETWORK_EXCEPTIONS) {
-            log.warn("Too many network exceptions ({}) detected, closing connection. Client: {}", 
-                    networkExceptionCount, sessionContext.getClientIP());
+            //log.warn("Too many network exceptions ({}) detected, closing connection. Client: {}",
+            //        networkExceptionCount, sessionContext.getClientIP());
             isHeartbeatActive = false;
             // 这里不立即断开，让主循环自然退出
         }

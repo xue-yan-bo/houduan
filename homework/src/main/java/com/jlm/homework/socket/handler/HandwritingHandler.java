@@ -73,6 +73,16 @@ public class HandwritingHandler implements MessageHandler {
                 } else {
                     // Try to refresh relation from DB using IP
                     relation = smartDeviceUserRelationService.selectByIpAddress(context.getClientIP());
+                    // 如果通过IP查不到，尝试通过设备序列号（MAC）查询
+                    // 这解决了设备先连接再通过前端API绑定学生时，ipAddress未写入数据库的问题
+                    if (relation == null && context.getMac() != null && !context.getMac().isEmpty()) {
+                        relation = smartDeviceUserRelationService.selectByDeviceCode(context.getMac());
+                        if (relation != null) {
+                            // 同时更新数据库中的ipAddress，方便后续查询
+                            relation.setIpAddress(context.getClientIP());
+                            smartDeviceUserRelationService.update(relation);
+                        }
+                    }
                     if (relation != null) {
                         context.setRelation(relation); // Update context
                         //log.info("Processing handwriting data for user: {}", relation.getUserId());

@@ -136,7 +136,8 @@ public class SocketService implements SmartLifecycle {
                         
                         // 提交客户端连接到线程池处理
                         ClientHandler clientHandler = new ClientHandler(socket, messagingTemplate,
-                                smartDeviceUserRelationService, handlerService, sessionContext, proxyResult.getPreReadBytes(), redisTemplate, redisKey);
+                                smartDeviceUserRelationService, handlerService, sessionContext, proxyResult.getPreReadBytes(),
+                                redisTemplate, redisKey, proxyResult.getBufferedInputStream());
 
                         threadPool.submit(() -> {
                             try {
@@ -246,8 +247,8 @@ public class SocketService implements SmartLifecycle {
         java.io.BufferedInputStream bufferedInputStream = new java.io.BufferedInputStream(inputStream, 1024);
         // 设置标记，以便重置
         bufferedInputStream.mark(1024);
-        // 读取前5个字节用于检测代理头
-        byte[] signature = new byte[5];
+        // 读取前16个字节用于检测代理头（PROXY v2需要至少16字节）
+        byte[] signature = new byte[16];
         int bytesRead = 0;
 
         try {
@@ -255,56 +256,77 @@ public class SocketService implements SmartLifecycle {
             
             // 默认使用Socket远程地址
             InetSocketAddress realAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
+            
+            // 记录原始地址用于调试
+            String originalAddress = realAddress.getHostString();
+            log.debug("Parsing proxy header, original socket address: {}", originalAddress);
 
             // 更健壮的代理头处理
             if (bytesRead == -1) {
                 // 流已关闭，返回默认地址
-                return new ProxyHeaderResult(realAddress, null);
+                log.debug("Stream closed, using original address: {}", originalAddress);
+                return new ProxyHeaderResult(realAddress, null, bufferedInputStream);
             } else if (bytesRead < 5) {
                 // 读取字节不足，重置输入流并返回默认地址
                 try {
                     bufferedInputStream.reset();
+                    log.debug("Insufficient bytes read ({}/5), using original address: {}", bytesRead, originalAddress);
+                    return new ProxyHeaderResult(realAddress, null, bufferedInputStream);
                 } catch (Exception ex) {
-                    // 忽略重置异常
+                    // reset失败，通过preReadBytes传递已读取的数据
+                    byte[] pre = new byte[bytesRead];
+                    System.arraycopy(signature, 0, pre, 0, bytesRead);
+                    log.debug("Insufficient bytes read ({}/5), reset failed, using preReadBytes", bytesRead);
+                    return new ProxyHeaderResult(realAddress, pre, bufferedInputStream);
                 }
-                return new ProxyHeaderResult(realAddress, null);
             } else {
-                // 检测代理协议类型
+                    // 检测代理协议类型
                 try {
-                    String sigStr = new String(signature);
-                    if (sigStr.equals("PROXY")) {
-                        // PROXY v1 协议
-                        return parseProxyV1(socket, bufferedInputStream);
-                    } else if (isProxyV2Signature(signature)) {
+                    // 先检查PROXY v2协议（更常见）
+                    if (isProxyV2Signature(signature)) {
                         // PROXY v2 协议
-                        return parseProxyV2(socket, bufferedInputStream);
+                        log.debug("Detected PROXY v2 protocol, parsing...");
+                        // 传递已读取的signature数据，避免重复读取
+                        return parseProxyV2(socket, bufferedInputStream, signature, bytesRead);
+                    }
+                    
+                    // 检查PROXY v1协议
+                    String sigStr = new String(signature, 0, Math.min(5, bytesRead));
+                    if (sigStr.startsWith("PROXY")) {
+                        // PROXY v1 协议
+                        log.debug("Detected PROXY v1 protocol, parsing...");
+                        return parseProxyV1(socket, bufferedInputStream);
                     } else {
-                        // 不是代理协议，重置输入流并返回已读取的字节
+                        // 不是代理协议，重置输入流
+                        log.debug("No proxy protocol detected, using original address: {}", originalAddress);
                         try {
                             bufferedInputStream.reset();
+                            // reset成功，数据已回退到流中，不需要preReadBytes
+                            return new ProxyHeaderResult(realAddress, null, bufferedInputStream);
                         } catch (Exception ex) {
-                            // 忽略重置异常
+                            // reset失败，通过preReadBytes传递已读取的数据
+                            byte[] preReadBytes = new byte[bytesRead];
+                            System.arraycopy(signature, 0, preReadBytes, 0, bytesRead);
+                            return new ProxyHeaderResult(realAddress, preReadBytes, bufferedInputStream);
                         }
-                        // 将已读取的字节作为preReadBytes返回，确保序列号数据包能够被正确解析
-                        byte[] preReadBytes = new byte[bytesRead];
-                        System.arraycopy(signature, 0, preReadBytes, 0, bytesRead);
-                        return new ProxyHeaderResult(realAddress, preReadBytes);
                     }
                 } catch (Exception ex) {
                     // 解析签名时发生异常，重置输入流并返回默认地址
+                    log.warn("Exception parsing proxy header: {}, using original address: {}", ex.getMessage(), originalAddress);
                     try {
                         bufferedInputStream.reset();
+                        return new ProxyHeaderResult(realAddress, null, bufferedInputStream);
                     } catch (Exception resetEx) {
-                        // 忽略重置异常
+                        // reset失败，通过preReadBytes传递已读取的数据
+                        byte[] preReadBytes = new byte[bytesRead];
+                        System.arraycopy(signature, 0, preReadBytes, 0, bytesRead);
+                        return new ProxyHeaderResult(realAddress, preReadBytes, bufferedInputStream);
                     }
-                    // 将已读取的字节作为preReadBytes返回，确保序列号数据包能够被正确解析
-                    byte[] preReadBytes = new byte[bytesRead];
-                    System.arraycopy(signature, 0, preReadBytes, 0, bytesRead);
-                    return new ProxyHeaderResult(realAddress, preReadBytes);
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to read proxy header signature: {}", e.getMessage());
+            log.warn("Failed to read proxy header signature: {}, using original address: {}", e.getMessage(), 
+                    socket.getRemoteSocketAddress());
             // 重置输入流
             try {
                 bufferedInputStream.reset();
@@ -313,24 +335,39 @@ public class SocketService implements SmartLifecycle {
             }
             return new ProxyHeaderResult(
                     (InetSocketAddress) socket.getRemoteSocketAddress(),
-                    null
+                    null,
+                    bufferedInputStream
             );
         }
     }
     
     /**
      * 检测是否为PROXY v2协议签名
+     * PROXY v2协议签名：0x0D 0x0A 0x0D 0x0A 0x00 0x0D 0x0A 0x51 0x55 0x49 0x54 0x0A
+     * 简化检测：前5字节为 0x0D 0x0A 0x0D 0x0A 0x00
      * @param signature 签名字节
      * @return 是否为PROXY v2协议
      */
     private boolean isProxyV2Signature(byte[] signature) {
-        if (signature == null || signature.length < 5) {
+        if (signature == null || signature.length < 12) {
             return false;
         }
         try {
-            return signature[0] == 0x0D && signature[1] == 0x0A && 
-                   signature[2] == 0x0D && signature[3] == 0x0A && 
-                   signature[4] == 0x00;
+            // 检查前5字节的简化签名
+            boolean basicMatch = signature[0] == 0x0D && signature[1] == 0x0A && 
+                                signature[2] == 0x0D && signature[3] == 0x0A && 
+                                signature[4] == 0x00;
+            if (!basicMatch) {
+                return false;
+            }
+            // 可选：检查完整12字节签名以提高准确性
+            if (signature.length >= 12) {
+                return signature[5] == 0x0D && signature[6] == 0x0A &&
+                       signature[7] == 0x51 && signature[8] == 0x55 &&
+                       signature[9] == 0x49 && signature[10] == 0x54 &&
+                       signature[11] == 0x0A;
+            }
+            return true;
         } catch (Exception e) {
             return false;
         }
@@ -344,9 +381,9 @@ public class SocketService implements SmartLifecycle {
      * @throws IOException 解析异常
      */
     private ProxyHeaderResult parseProxyV1(Socket socket, InputStream inputStream) throws IOException {
+        java.io.BufferedInputStream bufferedInputStream = null;
         try {
             // 尝试将输入流转换为BufferedInputStream，以便支持标记操作
-            java.io.BufferedInputStream bufferedInputStream = null;
             if (inputStream instanceof java.io.BufferedInputStream) {
                 bufferedInputStream = (java.io.BufferedInputStream) inputStream;
             } else {
@@ -374,90 +411,232 @@ public class SocketService implements SmartLifecycle {
 
             if (line.isEmpty() || !line.startsWith("PROXY")) {
                 // 无效的PROXY v1头，使用默认地址
-                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null);
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, bufferedInputStream);
             }
 
             String[] parts = line.split(" ");
             if (parts.length < 6) {
                 // 无效的PROXY v1格式，使用默认地址
-                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null);
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, bufferedInputStream);
             }
             // 获取真实客户端地址
             String clientIp = parts[2];
             int clientPort = Integer.parseInt(parts[4]);
             InetSocketAddress realAddress = new InetSocketAddress(clientIp, clientPort);
 
-            // 再次重置输入流，以便后续的PacketDecoder能够正确读取数据
-            try {
-                bufferedInputStream.reset();
-            } catch (Exception ex) {
-                // 忽略重置异常
-            }
+            // PROXY v1头已经被读取消费掉了，不需要再reset
+            // 后续的PacketDecoder直接从bufferedInputStream继续读取即可
 
-            return new ProxyHeaderResult(realAddress, null);
+            return new ProxyHeaderResult(realAddress, null, bufferedInputStream);
         } catch (Exception e) {
             log.warn("Failed to parse PROXY v1 header: {}", e.getMessage());
-            return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null);
+            return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, bufferedInputStream);
         }
     }
     
     /**
      * 解析PROXY v2协议
+     * PROXY v2协议格式：
+     * - 0-11字节：固定头部（12字节signature）
+     * - 12字节：version/command（高4位version=2，低4位command）
+     * - 13字节：protocol/family（高4位protocol，低4位address family）
+     * - 14-15字节：address length（2字节，大端序）
+     * - 16字节开始：源地址和端口、目标地址和端口
      * @param socket 客户端Socket
-     * @param inputStream 输入流
+     * @param inputStream 输入流（已读取signature）
+     * @param signature 已读取的签名字节数组
+     * @param bytesRead 已读取的字节数
      * @return 解析结果
      * @throws IOException 解析异常
      */
-    private ProxyHeaderResult parseProxyV2(Socket socket, InputStream inputStream) throws IOException {
+    private ProxyHeaderResult parseProxyV2(Socket socket, java.io.BufferedInputStream inputStream, 
+                                          byte[] signature, int bytesRead) throws IOException {
         try {
-            // 尝试将输入流转换为BufferedInputStream，以便支持标记操作
-            java.io.BufferedInputStream bufferedInputStream = null;
-            if (inputStream instanceof java.io.BufferedInputStream) {
-                bufferedInputStream = (java.io.BufferedInputStream) inputStream;
-            } else {
-                bufferedInputStream = new java.io.BufferedInputStream(inputStream, 1024);
-                bufferedInputStream.mark(1024);
-            }
-            // 重置输入流到标记位置
+            // 重置输入流到标记位置（开始位置）
             try {
-                bufferedInputStream.reset();
+                inputStream.reset();
             } catch (Exception ex) {
-                // 忽略重置异常
+                log.warn("Failed to reset stream in parseProxyV2: {}", ex.getMessage());
+                // 如果重置失败，使用已读取的数据
+                if (bytesRead >= 16) {
+                    return parseProxyV2FromBytes(socket, signature, inputStream);
+                }
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, inputStream);
             }
+            
             // 使用DataInputStream包装BufferedInputStream
-            DataInputStream dataInputStream = new DataInputStream(bufferedInputStream);
+            DataInputStream dataInputStream = new DataInputStream(inputStream);
 
-            // 跳过PROXY v2头的前12个字节
+            // 跳过PROXY v2固定头部的前12个字节（signature）
             dataInputStream.skipBytes(12);
 
-            // 读取客户端IP地址（IPv4，4字节）
-            byte[] addressBytes = new byte[4];
-            dataInputStream.readFully(addressBytes);
+            // 读取version/command字节
+            int versionCommand = dataInputStream.readUnsignedByte();
+            int version = (versionCommand >> 4) & 0x0F;
+            int command = versionCommand & 0x0F;
+            
+            // 检查version是否为2
+            if (version != 2) {
+                log.warn("Invalid PROXY v2 version: {}, expected 2", version);
+                inputStream.reset();
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, inputStream);
+            }
+            
+            // 检查command：0x01=PROXY, 0x00=LOCAL
+            if (command != 0x01) {
+                log.debug("PROXY v2 command is LOCAL (0x00), using original address");
+                inputStream.reset();
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, inputStream);
+            }
 
-            // 读取客户端端口（2字节）
-            int port = dataInputStream.readUnsignedShort();
-
-            // 构建IP地址字符串
-            String ip = String.format("%d.%d.%d.%d",
-                    addressBytes[0] & 0xff,
-                    addressBytes[1] & 0xff,
-                    addressBytes[2] & 0xff,
-                    addressBytes[3] & 0xff);
+            // 读取protocol/family字节
+            int protocolFamily = dataInputStream.readUnsignedByte();
+            int protocol = (protocolFamily >> 4) & 0x0F;
+            int family = protocolFamily & 0x0F;
+            
+            // 读取address length（2字节，大端序）
+            int addressLength = dataInputStream.readUnsignedShort();
+            
+            // 根据address family解析地址
+            String clientIp = null;
+            int clientPort = 0;
+            
+            if (family == 0x01) {
+                // IPv4: 源地址4字节 + 源端口2字节 + 目标地址4字节 + 目标端口2字节 = 12字节
+                byte[] srcAddressBytes = new byte[4];
+                dataInputStream.readFully(srcAddressBytes);
+                int srcPort = dataInputStream.readUnsignedShort();
+                
+                // 跳过目标地址和端口
+                dataInputStream.skipBytes(4 + 2);
+                
+                clientIp = String.format("%d.%d.%d.%d",
+                        srcAddressBytes[0] & 0xff,
+                        srcAddressBytes[1] & 0xff,
+                        srcAddressBytes[2] & 0xff,
+                        srcAddressBytes[3] & 0xff);
+                clientPort = srcPort;
+            } else if (family == 0x02) {
+                // IPv6: 源地址16字节 + 源端口2字节 + 目标地址16字节 + 目标端口2字节 = 36字节
+                byte[] srcAddressBytes = new byte[16];
+                dataInputStream.readFully(srcAddressBytes);
+                int srcPort = dataInputStream.readUnsignedShort();
+                
+                // 跳过目标地址和端口
+                dataInputStream.skipBytes(16 + 2);
+                
+                // 构建IPv6地址字符串
+                StringBuilder ipBuilder = new StringBuilder();
+                for (int i = 0; i < 16; i += 2) {
+                    if (i > 0) ipBuilder.append(":");
+                    int high = (srcAddressBytes[i] & 0xff) << 8;
+                    int low = srcAddressBytes[i + 1] & 0xff;
+                    ipBuilder.append(String.format("%04x", high | low));
+                }
+                clientIp = ipBuilder.toString();
+                clientPort = srcPort;
+            } else {
+                // 不支持的地址族
+                log.warn("Unsupported PROXY v2 address family: {}, using original address", family);
+                inputStream.reset();
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, inputStream);
+            }
 
             // 构建真实地址
-            InetSocketAddress realAddress = new InetSocketAddress(ip, port);
+            InetSocketAddress realAddress = new InetSocketAddress(clientIp, clientPort);
+            log.info("Parsed PROXY v2 header successfully, real client address: {}:{}, original: {}", 
+                    clientIp, clientPort, socket.getRemoteSocketAddress());
             
-            // 再次重置输入流，以便后续的PacketDecoder能够正确读取数据
+            // 计算PROXY v2头部总长度
+            // 12字节(signature) + 4字节(version/command/protocol/length) + addressLength字节(地址数据)
+            int totalHeaderLength = 12 + 4 + addressLength;
+            
+            // 重置输入流到开始位置，然后跳过整个PROXY v2头部
+            // 这样后续的PacketDecoder就能从实际应用数据开始读取
             try {
-                bufferedInputStream.reset();
+                inputStream.reset();
+                // 跳过整个PROXY v2头部
+                long skipped = dataInputStream.skip(totalHeaderLength);
+                if (skipped != totalHeaderLength) {
+                    log.warn("Failed to skip complete PROXY v2 header, skipped {}/{} bytes", skipped, totalHeaderLength);
+                    // 如果skip失败，尝试读取剩余字节
+                    int remaining = (int)(totalHeaderLength - skipped);
+                    byte[] buffer = new byte[remaining];
+                    int read = dataInputStream.read(buffer);
+                    if (read != remaining) {
+                        log.warn("Failed to read remaining PROXY v2 header bytes, read {}/{} bytes", read, remaining);
+                    }
+                }
+            } catch (Exception ex) {
+                log.warn("Failed to skip PROXY v2 header after parsing: {}", ex.getMessage());
+                // 如果处理失败，尝试重置流
+                try {
+                    inputStream.reset();
+                } catch (Exception resetEx) {
+                    // 忽略重置异常
+                }
+            }
+
+            return new ProxyHeaderResult(realAddress, null, inputStream);
+        } catch (Exception e) {
+            log.warn("Failed to parse PROXY v2 header: {}, using original address: {}", 
+                    e.getMessage(), socket.getRemoteSocketAddress(), e);
+            try {
+                inputStream.reset();
             } catch (Exception ex) {
                 // 忽略重置异常
             }
-
-            return new ProxyHeaderResult(realAddress, null);
-        } catch (Exception e) {
-            log.warn("Failed to parse PROXY v2 header: {}", e.getMessage());
-            return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null);
+            return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, inputStream);
         }
+    }
+    
+    /**
+     * 从已读取的字节数组中解析PROXY v2协议（备用方法）
+     * @param socket 客户端Socket
+     * @param signature 已读取的签名字节数组
+     * @return 解析结果
+     */
+    private ProxyHeaderResult parseProxyV2FromBytes(Socket socket, byte[] signature, java.io.BufferedInputStream bufferedInputStream) {
+        try {
+            if (signature.length < 16) {
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, bufferedInputStream);
+            }
+            
+            // 从signature数组中解析（假设已经读取了足够的字节）
+            // 12字节: signature
+            // 13字节: version/command
+            int versionCommand = signature[12] & 0xFF;
+            int version = (versionCommand >> 4) & 0x0F;
+            int command = versionCommand & 0x0F;
+            
+            if (version != 2 || command != 0x01) {
+                return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, bufferedInputStream);
+            }
+            
+            // 14字节: protocol/family
+            int protocolFamily = signature[13] & 0xFF;
+            int family = protocolFamily & 0x0F;
+            
+            // 15-16字节: address length
+            int addressLength = ((signature[14] & 0xFF) << 8) | (signature[15] & 0xFF);
+            
+            if (family == 0x01 && signature.length >= 16 + 12) {
+                // IPv4
+                int offset = 16;
+                String clientIp = String.format("%d.%d.%d.%d",
+                        signature[offset] & 0xff,
+                        signature[offset + 1] & 0xff,
+                        signature[offset + 2] & 0xff,
+                        signature[offset + 3] & 0xff);
+                int clientPort = ((signature[offset + 4] & 0xFF) << 8) | (signature[offset + 5] & 0xFF);
+                
+                InetSocketAddress realAddress = new InetSocketAddress(clientIp, clientPort);
+                log.info("Parsed PROXY v2 from bytes, real client address: {}:{}", clientIp, clientPort);
+                return new ProxyHeaderResult(realAddress, null, bufferedInputStream);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse PROXY v2 from bytes: {}", e.getMessage());
+        }
+        return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, bufferedInputStream);
     }
 }

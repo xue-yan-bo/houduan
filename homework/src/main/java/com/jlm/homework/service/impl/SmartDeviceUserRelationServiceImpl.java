@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelationService {
@@ -75,27 +77,28 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
         Result<Student> result= studentFeignClient.getStudentList(pageNum,pageSize,student.getSchoolId(),student.getGradeId(),student.getClassesId(),student.getStudentStatus());
         List<Student> studentList=result.getRows();
         List<StudentVo> studentVoList=new ArrayList<>();
-        Pageable pageable = pageable = PageRequest.of(pageNum, pageSize);
-        if(studentList==null&&studentList.isEmpty()){
-            return null;
+        Pageable pageable = PageRequest.of(pageNum, pageSize);
+        if(studentList==null||studentList.isEmpty()){
+            return new PageImpl<>(studentVoList, pageable, 0);
         }
+        // 批量查询所有学生的设备绑定关系，避免 N+1 查询
+        List<String> studentIds = studentList.stream()
+                .map(s -> s.getStudentId().toString())
+                .collect(Collectors.toList());
+        Map<String, SmartDeviceUserRelation> relationMap = smartDeviceUserRelationRepository
+                .findByUserIdInAndUserType(studentIds, 1)
+                .stream()
+                .collect(Collectors.toMap(SmartDeviceUserRelation::getUserId, r -> r, (a, b) -> a));
         for(Student student1:studentList){
             StudentVo studentVo=StudentVo.studentToVo(student1);
-            SmartDeviceUserRelation deviceUserRelation=new SmartDeviceUserRelation();
-            deviceUserRelation.setUserId(student1.getStudentId().toString());
-            deviceUserRelation.setUserType(1);
-            Optional<SmartDeviceUserRelation> optional=smartDeviceUserRelationRepository.findOne(Example.of(deviceUserRelation));
-            if(!optional.isEmpty()) {
-                SmartDeviceUserRelation relation=optional.get();
-                if (relation != null) {
-                    studentVo.setDeviceCode(relation.getDeviceCode());
-                    studentVo.setDeviceUserRelationId(relation.getId());
-                }
-
+            SmartDeviceUserRelation relation = relationMap.get(student1.getStudentId().toString());
+            if (relation != null) {
+                studentVo.setDeviceCode(relation.getDeviceCode());
+                studentVo.setDeviceUserRelationId(relation.getId());
             }
             studentVoList.add(studentVo);
         }
-        Page<StudentVo> page = new PageImpl(studentVoList,pageable,result.getTotal());
+        Page<StudentVo> page = new PageImpl<>(studentVoList,pageable,result.getTotal());
         return page;
     }
 

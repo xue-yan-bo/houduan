@@ -53,6 +53,14 @@ public class ButtonHandler implements MessageHandler {
         SmartDeviceUserRelation relation = context.getRelation();
         if(relation==null) {
             relation = smartDeviceUserRelationService.selectByIpAddress(context.getClientIP());
+            // 如果通过IP查不到，尝试通过设备序列号（MAC）查询
+            if (relation == null && context.getMac() != null && !context.getMac().isEmpty()) {
+                relation = smartDeviceUserRelationService.selectByDeviceCode(context.getMac());
+                if (relation != null) {
+                    relation.setIpAddress(context.getClientIP());
+                    smartDeviceUserRelationService.update(relation);
+                }
+            }
             context.setRelation(relation);
             // 保存SessionContext到Redis
             if (clientHandler != null) {
@@ -566,6 +574,13 @@ public class ButtonHandler implements MessageHandler {
         SmartDeviceUserRelation relation=context.getRelation();
         if(relation==null) {
             relation = smartDeviceUserRelationService.selectByIpAddress(context.getClientIP());
+            if (relation == null && context.getMac() != null && !context.getMac().isEmpty()) {
+                relation = smartDeviceUserRelationService.selectByDeviceCode(context.getMac());
+                if (relation != null) {
+                    relation.setIpAddress(context.getClientIP());
+                    smartDeviceUserRelationService.update(relation);
+                }
+            }
             context.setRelation(relation);
         }
         Long studentId = Long.parseLong(relation.getUserId());

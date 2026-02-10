@@ -38,6 +38,7 @@ public class ClientHandler implements Runnable {
     private byte[] preReadBytes;
     private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
     private String redisKey;
+    private java.io.BufferedInputStream proxyBufferedInputStream;
     
     // Handlers
     private final Map<Byte, MessageHandler> handlers = new HashMap<>();
@@ -63,6 +64,14 @@ public class ClientHandler implements Runnable {
                          ISmartDeviceUserRelationService smartDeviceUserRelationService,
                          IHandlerService handlerService, SessionContext sessionContext, byte[] preReadBytes,
                          org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate, String redisKey) {
+        this(socket, messagingTemplate, smartDeviceUserRelationService, handlerService, sessionContext, preReadBytes, redisTemplate, redisKey, null);
+    }
+
+    public ClientHandler(Socket socket, SimpMessagingTemplate messagingTemplate,
+                         ISmartDeviceUserRelationService smartDeviceUserRelationService,
+                         IHandlerService handlerService, SessionContext sessionContext, byte[] preReadBytes,
+                         org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate, String redisKey,
+                         java.io.BufferedInputStream proxyBufferedInputStream) {
         this.clientSocket = socket;
         this.messagingTemplate = messagingTemplate;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
@@ -71,6 +80,7 @@ public class ClientHandler implements Runnable {
         this.preReadBytes = preReadBytes;
         this.redisTemplate = redisTemplate;
         this.redisKey = redisKey;
+        this.proxyBufferedInputStream = proxyBufferedInputStream;
     }
 
     private void initHandlers() {
@@ -91,11 +101,16 @@ public class ClientHandler implements Runnable {
         InputStream in = null;
         OutputStream out = null;
         PacketDecoder decoder = null;
+        java.io.BufferedInputStream bufferedInputStream = null;
         try {
             // 获取输入输出流（不使用try-with-resources，避免自动关闭）
-            in = clientSocket.getInputStream();
-            // 使用BufferedInputStream包装输入流，以便支持标记操作和提高读取性能
-            java.io.BufferedInputStream bufferedInputStream = new java.io.BufferedInputStream(in, 1024);
+            // 复用 SocketService 中 parseProxyHeader 创建的 BufferedInputStream，避免重复包装导致数据丢失
+            if (proxyBufferedInputStream != null) {
+                bufferedInputStream = proxyBufferedInputStream;
+            } else {
+                in = clientSocket.getInputStream();
+                bufferedInputStream = new java.io.BufferedInputStream(in, 1024);
+            }
             out = clientSocket.getOutputStream();
             
             // 保持连接活跃，去掉超时限制

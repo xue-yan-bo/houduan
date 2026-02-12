@@ -83,6 +83,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
+        classroomExercises.setDeleteFlag(0);
         Page<ClassroomExercises> page= classroomExercisesRepository.findAll(Example.of(classroomExercises),pageable);
         List<ClassroomExercises> exercisesList=page.getContent();
         for(ClassroomExercises item:exercisesList){
@@ -95,7 +96,11 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
 
     @Override
     public void deleteById(Long id) {
-        classroomExercisesRepository.deleteById(id);
+        ClassroomExercises classroomExercises=classroomExercisesRepository.findById(id).orElse(null);
+        if(classroomExercises!=null){
+            classroomExercises.setDeleteFlag(1);
+            classroomExercisesRepository.save(classroomExercises);
+        }
     }
 
     @Override
@@ -350,7 +355,8 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
-
+                Predicate condDel = criteriaBuilder.equal(root.get("deleteFlag"),0);
+                list.add(condDel);
                 Predicate[] p =  new Predicate[list.size()];
                 return criteriaBuilder.and(list.toArray(p));
             }
@@ -403,6 +409,8 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 List<Predicate> list = new ArrayList<>();
                 try {
+                    Predicate condDel = criteriaBuilder.equal(root.get("deleteFlag"),0);
+                    list.add(condDel);
                     Predicate cond = criteriaBuilder.equal(root.get("schoolId"),userService.getCurrentSchoolIdSafely());
                     list.add(cond);
                     if(classId!=null){
@@ -454,7 +462,8 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 List<Predicate> list = new ArrayList<>();
                 try {
-
+                    Predicate condDel = criteriaBuilder.equal(root.get("deleteFlag"),0);
+                    list.add(condDel);
                     Predicate cond = criteriaBuilder.equal(root.get("schoolId"),userService.getCurrentSchoolIdSafely());
                     list.add(cond);
                     if (classId != null) {

@@ -61,12 +61,26 @@ public class HandlerServiceImpl implements IHandlerService {
     public void saveWriteRecords(Long studentId, Long homeworkId, String type, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords, Boolean isFinish) {
         studentsHomeworkNewService.saveWriteRecords(studentId,homeworkId,type,pageN,studentsWriteRecords,isFinish);
         if(isFinish){
-            // 发送消息到MQ
-            JSONObject json= new JSONObject();
-            json.put("studentId", studentId);
-            json.put("homeworkId", homeworkId);
-            json.put("type", type);
-            mqTemplate.convertAndSend(RabbitMQConfig.HOMEWORK_CORRECTION_QUEUE, json.toJSONString());
+            // 异步发送消息到MQ，避免阻塞处理线程
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    // 延时5秒后发送消息到MQ
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    log.warn("Sleep interrupted while waiting to send MQ message", e);
+                    Thread.currentThread().interrupt();
+                }
+                // 发送消息到MQ
+                JSONObject json= new JSONObject();
+                json.put("studentId", studentId);
+                json.put("homeworkId", homeworkId);
+                json.put("type", type);
+                try {
+                    mqTemplate.convertAndSend(RabbitMQConfig.HOMEWORK_CORRECTION_QUEUE, json.toJSONString());
+                } catch (Exception e) {
+                    log.error("Failed to send MQ message", e);
+                }
+            });
         }
 
     }

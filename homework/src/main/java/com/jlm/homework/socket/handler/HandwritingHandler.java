@@ -246,18 +246,20 @@ public class HandwritingHandler implements MessageHandler {
         //log.info("Sending writing data for user: {}, X: {}, Y: {}, Pressure: {}, Timestamp: {}",
         //        relation.getUserId(), result.getX(), result.getY(), result.getPressure(), result.getTimestamp());
         sendWritingDataWithRetry(relation.getUserId(), resultCopy);
-        // 保存笔记记录到 SessionContext
+
+        // 优化同步块，减少锁竞争
+        // 合并两个同步块为一个，减少锁的获取和释放次数
         synchronized (context) {
             context.getStudentClassRecords().add(result);
             //log.info("Added writing data to session context, current size: {}", context.getStudentClassRecords().size());
-        }
-        // 定期清空 studentClassRecords，避免内存占用过高
-        synchronized (context) {
+
+            // 定期清空 studentClassRecords，避免内存占用过高
             if (context.getStudentClassRecords().size() > CLASSROOM_MODE_MAX_RECORDS) {
                 //log.info("Clearing classroom records to avoid memory overflow: {}", context.getStudentClassRecords().size());
                 context.getStudentClassRecords().clear();
             }
         }
+
         // 减少保存频率，每处理CLASSROOM_MODE_SAVE_INTERVAL条记录保存一次
         if (classroomModeCounter.incrementAndGet() >= CLASSROOM_MODE_SAVE_INTERVAL) {
             // 保存SessionContext到Redis
@@ -295,8 +297,8 @@ public class HandwritingHandler implements MessageHandler {
     private void sendWritingDataWithRetry(String userId, HandwritingParseResult result) {
         // 使用线程池异步发送消息，避免阻塞处理线程
         SEND_THREAD_POOL.submit(() -> {
-            int maxRetries = 10;
-            int retryDelay = 100; // 毫秒
+            int maxRetries = 3;
+            int retryDelay = 50; // 毫秒
             for (int i = 0; i < maxRetries; i++) {
                 try {
                     messagingTemplate.convertAndSend("/topic/writingData/" + userId, result);

@@ -12,7 +12,7 @@ public class RabbitMQConfig {
     public static final String HOMEWORK_CORRECTION_QUEUE = "homework.correction.queue";
 
     public static final String HOMEWORK_RESULT_QUEUE = "homework.result.queue";
-    public static final String HOMEWORK_RESULT_EXCHANGE = "homework.result.exchange";
+    public static final String HOMEWORK_RESULT_EXCHANGE = "homework.result.agentExchange";
     public static final String HOMEWORK_RESULT_ROUTING_KEY = "homework.result";
     
     // 声明作业结果队列

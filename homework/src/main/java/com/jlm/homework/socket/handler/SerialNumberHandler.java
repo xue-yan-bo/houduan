@@ -49,6 +49,18 @@ public class SerialNumberHandler implements MessageHandler {
             smartDeviceUserRelationService.update(deviceUserRelation);
         } else {
             log.warn("{} Device not bound to student!", result.getMac());
+            // 使用context.getClientIP()从Redis获取数据，如果有就清除该条Redis记录
+            if (clientHandler != null) {
+                try {
+                    String redisKey = "socket:client:" + context.getClientIP();
+                    Object sessionData = clientHandler.getRedisTemplate().opsForValue().get(redisKey);
+                    if (sessionData != null) {
+                        clientHandler.getRedisTemplate().delete(redisKey);
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to clear Redis data for IP: {}", context.getClientIP(), e);
+                }
+            }
             deviceUserRelation = new SmartDeviceUserRelation();
             deviceUserRelation.setIpAddress(context.getClientIP());
             deviceUserRelation.setDeviceCode(result.getMac());

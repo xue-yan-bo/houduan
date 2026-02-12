@@ -77,6 +77,7 @@ public class ClassroomExercisesController {
     }
 
     @GetMapping("/delete/{id}")
+    @Operation(summary = "删除")
     public void deleteById(@PathVariable Long id) {
         classroomExercisesService.deleteById(id);
 
@@ -154,4 +155,5 @@ public class ClassroomExercisesController {
 
         return list;
     }
+
 }

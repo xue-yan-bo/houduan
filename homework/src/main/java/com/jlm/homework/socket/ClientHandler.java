@@ -18,9 +18,7 @@ import java.net.Socket;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * Refactored ClientHandler
@@ -44,7 +42,14 @@ public class ClientHandler implements Runnable {
     private final Map<Byte, MessageHandler> handlers = new HashMap<>();
     
     // 处理线程池，使用固定大小的线程池，增加线程数以提高并发处理能力
-    private static final java.util.concurrent.ExecutorService PROCESS_THREAD_POOL = java.util.concurrent.Executors.newFixedThreadPool(200);
+    private static final ExecutorService PROCESS_THREAD_POOL = new ThreadPoolExecutor(
+            100, // 核心线程数
+            500, // 最大线程数
+            60L, // 空闲线程存活时间
+            TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(1000), // 有界队列，避免内存溢出
+            new ThreadPoolExecutor.CallerRunsPolicy() // 拒绝策略：由调用者线程执行任务
+    );
     
     // Heartbeat
     private ScheduledExecutorService heartbeatScheduler;
@@ -505,6 +510,14 @@ public class ClientHandler implements Runnable {
                 }
             }).start();
         }
+    }
+
+    /**
+     * 获取RedisTemplate
+     * @return RedisTemplate实例
+     */
+    public org.springframework.data.redis.core.RedisTemplate<String, Object> getRedisTemplate() {
+        return redisTemplate;
     }
 
     private void logClientConnection() {

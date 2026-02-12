@@ -17,6 +17,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Component
@@ -44,12 +46,12 @@ public class SocketService implements SmartLifecycle {
     private int maxConnections;
 
     // 连接计数器
-    private final java.util.concurrent.atomic.AtomicInteger connectionCount = new java.util.concurrent.atomic.AtomicInteger(0);
+    private final AtomicInteger connectionCount = new AtomicInteger(0);
     // 最大连接数
     private static final int DEFAULT_MAX_CONNECTIONS = 1000;
     
     // 连接状态监控
-    private java.util.concurrent.ScheduledExecutorService monitorScheduler;
+    private ScheduledExecutorService monitorScheduler;
     private static final long MONITOR_INTERVAL = 30; // 监控间隔，30秒
 
     @Override
@@ -194,7 +196,7 @@ public class SocketService implements SmartLifecycle {
                 try {
                     // 检查服务器Socket是否可用
                     if (serverSocket.isBound()) {
-                        log.debug("Server socket is bound and listening on port {}", socketPort);
+                        //log.debug("Server socket is bound and listening on port {}", socketPort);
                     } else {
                         log.warn("Server socket is not bound");
                     }
@@ -259,7 +261,7 @@ public class SocketService implements SmartLifecycle {
             
             // 记录原始地址用于调试
             String originalAddress = realAddress.getHostString();
-            log.debug("Parsing proxy header, original socket address: {}", originalAddress);
+            //log.debug("Parsing proxy header, original socket address: {}", originalAddress);
 
             // 更健壮的代理头处理
             if (bytesRead == -1) {

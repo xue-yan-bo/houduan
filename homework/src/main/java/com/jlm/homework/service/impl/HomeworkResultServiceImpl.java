@@ -62,7 +62,18 @@ public class HomeworkResultServiceImpl implements IHomeworkResultService {
                 }
                 questionAnalysis.setId(null);
                 questionAnalysis.setSchoolId(studentsHomework.getSchoolId());
-
+                if(StringUtils.isEmpty(questionAnalysis.getSmallNumber())){
+                    questionAnalysis.setSmallNumber(questionResult.getQuestionNumber());
+                }
+                if(StringUtils.isEmpty(questionAnalysis.getQuestionType())){
+                    questionAnalysis.setQuestionType(questionResult.getQuestionType());
+                }
+                if(StringUtils.isEmpty(questionAnalysis.getContent())){
+                    questionAnalysis.setContent(questionResult.getQuestionText());
+                }
+                if(StringUtils.isEmpty(questionAnalysis.getBigNumber())){
+                    questionAnalysis.setBigNumber(questionResult.getQuestionType());
+                }
                 questionAnalysis.setStudentsHomeworkId(studentHomeworkId);
                 questionAnalysis.setStudentId(studentsHomework.getStudentId());
                 questionAnalysis.setStudentName(studentsHomework.getStudentName());

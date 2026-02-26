@@ -20,7 +20,7 @@ import java.util.List;
 public class SessionContext implements Serializable {
     private static final long serialVersionUID = 1L;
     // 常量
-    public static final int SAVE_SIZE = 1000;
+    public static final int SAVE_SIZE = 2000;
 
     // 用户信息
     private SmartDeviceUserRelation relation;
@@ -34,6 +34,10 @@ public class SessionContext implements Serializable {
     private Long homeId = null;
     private Long copybookId = null;
     private Integer pageNum = null;
+    private Long feedbackId = null;
+    private Long errorTitleId = null;
+    private String feedbackSubject = null;
+    private String errorTitleSubject = null;
     private MenuT currentMenu = null; // 当前菜单
     private Long buttonTimes = null;
     private int confirmCount = 0; // querenJishu
@@ -53,17 +57,17 @@ public class SessionContext implements Serializable {
     private MenuT errorTitleMenu = null;
     private MenuT copybookMenu = null;
     // 数据缓存
-    private List<HomeWork2Board> work2Boards = java.util.Collections.synchronizedList(new ArrayList<>());
-    private List<HomeWork2Board> emendBoards = java.util.Collections.synchronizedList(new ArrayList<>());
-    private List<Copybook2Board> copybookBoards = java.util.Collections.synchronizedList(new ArrayList<>());
+    private List<HomeWork2Board> work2Boards = new ArrayList<>();
+    private List<HomeWork2Board> emendBoards = new ArrayList<>();
+    private List<Copybook2Board> copybookBoards = new ArrayList<>();
     // 笔迹数据缓存
     private List<HandwritingParseResult> studentClassRecords = java.util.Collections.synchronizedList(new ArrayList<>());
-    private List<StudentsWriteRecord> studentsWriteRecords = java.util.Collections.synchronizedList(new ArrayList<>());
-    private List<StudentsWriteRecord> studentsEmendRecords = java.util.Collections.synchronizedList(new ArrayList<>());
-    private List<StudentsWriteRecord> studentsFeedbackRecords = java.util.Collections.synchronizedList(new ArrayList<>());
-    private List<StudentsWriteRecord> uploadErrorTitleRecords = java.util.Collections.synchronizedList(new ArrayList<>());
-    private List<StudentsWriteRecord> studentsCopybookRecords = java.util.Collections.synchronizedList(new ArrayList<>());
-    private List<StudentsWriteRecord> lastList = java.util.Collections.synchronizedList(new ArrayList<>());
+    private List<StudentsWriteRecord> studentsWriteRecords = new ArrayList<>();
+    private List<StudentsWriteRecord> studentsEmendRecords = new ArrayList<>();
+    private List<StudentsWriteRecord> studentsFeedbackRecords = new ArrayList<>();
+    private List<StudentsWriteRecord> uploadErrorTitleRecords = new ArrayList<>();
+    private List<StudentsWriteRecord> studentsCopybookRecords = new ArrayList<>();
+    private List<StudentsWriteRecord> lastList = new ArrayList<>();
 
     public synchronized void clearSession() {
         this.work2Boards.clear();
@@ -76,6 +80,8 @@ public class SessionContext implements Serializable {
         this.studentClassRecords.clear();
         this.homeId = null;
         this.copybookId = null;
+        this.feedbackId = null;
+        this.errorTitleId = null;
         this.pageNum = null;
         this.currentMenu = null;
         this.confirmCount = 0;

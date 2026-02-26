@@ -367,9 +367,11 @@ public class ButtonHandler implements MessageHandler {
         if (!context.getStudentsFeedbackRecords().isEmpty() && context.getCurrentMenu() != null) {
              MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
              String name = itemT.getDesc();
-             handlerService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
+             context.setFeedbackSubject(name);
+             // 保存反馈数据
+             handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
              context.setStudentsFeedbackRecords(new ArrayList<>());
-             resetContext(context);
+            resetContext(context);
              responseSender.sendMenuUpdate(context);
         } else {
             handleMenuNavigation(context);
@@ -380,7 +382,8 @@ public class ButtonHandler implements MessageHandler {
          if (!context.getUploadErrorTitleRecords().isEmpty() && context.getCurrentMenu() != null) {
              MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
              String name = itemT.getDesc();
-             handlerService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name, context.getUploadErrorTitleRecords());
+             context.setErrorTitleSubject(name);
+             handlerService.saveErrorTitleRecords(context.getErrorTitleId(),Long.parseLong(relation.getUserId()), name, context.getUploadErrorTitleRecords());
              context.setUploadErrorTitleRecords(new ArrayList<>());
              resetContext(context);
              responseSender.sendMenuUpdate(context);
@@ -562,6 +565,8 @@ public class ButtonHandler implements MessageHandler {
         context.getCurrentMenu().setShowStartItem(0);
         context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
         responseSender.sendMenuUpdate(context);
+        Long feedbackId=handlerService.createFeedbackRecords(Long.parseLong(context.getRelation().getUserId()));
+        context.setFeedbackId(feedbackId);
     }
     
     private void buildErrorTitleMenu(SessionContext context) throws IOException {
@@ -752,7 +757,7 @@ public class ButtonHandler implements MessageHandler {
             MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
             String name = itemT.getDesc();
             //System.out.println("=============保存反馈数据====科目："+name);
-            handlerService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
+            handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
             context.setStudentsFeedbackRecords(new ArrayList<>());
         }
     }
@@ -761,7 +766,7 @@ public class ButtonHandler implements MessageHandler {
             MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
             String name = itemT.getDesc();
             //System.out.println("=============保存反馈数据====科目："+name);
-            handlerService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name, context.getUploadErrorTitleRecords());
+            handlerService.saveErrorTitleRecords(context.getErrorTitleId(),Long.parseLong(relation.getUserId()), name, context.getUploadErrorTitleRecords());
             context.setUploadErrorTitleRecords(new ArrayList<>());
         }
     }
@@ -850,7 +855,7 @@ public class ButtonHandler implements MessageHandler {
             if (context.getStudentsFeedbackRecords().size() > 0 && context.getCurrentMenu() != null  && relation != null) {
                 MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
                 String name = itemT.getDesc();
-                handlerService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,context.getStudentsFeedbackRecords());
+                handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), name,context.getStudentsFeedbackRecords());
                 context.setStudentsFeedbackRecords(new ArrayList<>());
 
             }
@@ -862,7 +867,7 @@ public class ButtonHandler implements MessageHandler {
                 MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
                 String name = itemT.getDesc();
                 //System.out.println("=============保存错题上传数据====科目："+name);
-                handlerService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,context.getUploadErrorTitleRecords());
+                handlerService.saveErrorTitleRecords(context.getErrorTitleId(),Long.parseLong(relation.getUserId()), name,context.getUploadErrorTitleRecords());
                 context.setUploadErrorTitleRecords(new ArrayList<>());
                 //System.out.println("=============保存错题上传完成====");
 
@@ -950,7 +955,7 @@ public class ButtonHandler implements MessageHandler {
                 MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
                 String name = itemT.getDesc();
                 //System.out.println("=============保存反馈数据====科目："+name);
-                handlerService.saveFeedbackRecords(Long.parseLong(relation.getUserId()), name,context.getStudentsFeedbackRecords());
+                handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), name,context.getStudentsFeedbackRecords());
                 //System.out.println("=============保存反馈数据完成====");
 
             }
@@ -962,7 +967,7 @@ public class ButtonHandler implements MessageHandler {
                 MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
                 String name = itemT.getDesc();
                 //System.out.println("=============保存错题上传数据====科目："+name);
-                handlerService.saveErrorTitleRecords(Long.parseLong(relation.getUserId()), name,context.getUploadErrorTitleRecords());
+                handlerService.saveErrorTitleRecords(context.getErrorTitleId(),Long.parseLong(relation.getUserId()), name,context.getUploadErrorTitleRecords());
                 //System.out.println("=============保存错题上传数据完成====");
 
             }
@@ -1028,6 +1033,12 @@ public class ButtonHandler implements MessageHandler {
                 }
                 if(context.isCopybookFlag()){
                     context.setCopybookId(itemT.getObjectId());
+                }
+                if(context.isFeedbackFlag()){
+                    context.setFeedbackSubject(name);
+                }
+                if(context.isErrorTitleFlag()){
+                    context.setErrorTitleSubject(name);
                 }
                 if (name.contains(" ")) {
                     int num = name.lastIndexOf(" ");
@@ -1120,7 +1131,11 @@ public class ButtonHandler implements MessageHandler {
         context.setCopybookFlag(false);
         context.setConfirmCount(0);
         context.setHomeId(null);
+        context.setFeedbackId(null);
+        context.setErrorTitleId(null);
         context.setPageNum(null);
+        context.setFeedbackSubject(null);
+        context.setErrorTitleSubject(null);
         context.setWork2Boards(new ArrayList<>());
         context.setCopybookBoards(new ArrayList<>());
         context.setStudentsWriteRecords(new ArrayList<>());

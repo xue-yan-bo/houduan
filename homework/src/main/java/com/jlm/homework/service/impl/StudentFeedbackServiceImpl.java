@@ -2,7 +2,10 @@ package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.FeedbackDto;
 import com.jlm.homework.dto.StudentFeedbackReq;
+import com.jlm.homework.entity.StudentFeedBackWriteData;
 import com.jlm.homework.entity.StudentFeedback;
+import com.jlm.homework.entity.StudentsWriteRecord;
+import com.jlm.homework.repository.StudentFeedBackWriteDataRepository;
 import com.jlm.homework.repository.StudentFeedbackRepository;
 import com.jlm.homework.service.IStudentFeedbackService;
 import com.jlm.homework.service.UserService;
@@ -30,19 +33,34 @@ import java.util.Optional;
 public class StudentFeedbackServiceImpl implements IStudentFeedbackService {
     @Resource
     private StudentFeedbackRepository studentFeedbackRepository;
+
+    @Resource
+    private StudentFeedBackWriteDataRepository studentFeedBackWriteDataRepository;
     @Autowired
     private UserService userService;
 
     @Override
-    public void save(StudentFeedback studentFeedback) {
-        studentFeedbackRepository.save(studentFeedback);
+    public StudentFeedback save(StudentFeedback studentFeedback) {
+        return studentFeedbackRepository.save(studentFeedback);
     }
 
     @Override
     public StudentFeedback findById(long id) {
         Optional<StudentFeedback> optional=studentFeedbackRepository.findById(id);
         if(optional!=null&&optional.isPresent()){
-            return optional.get();
+            StudentFeedback studentFeedback = optional.get();
+            StudentFeedBackWriteData search = new StudentFeedBackWriteData();
+            search.setStudentFeedbackId(studentFeedback.getId());
+            search.setStudentId(studentFeedback.getStudentId());
+            List<StudentFeedBackWriteData> list=studentFeedBackWriteDataRepository.findAll(Example.of(search));
+            if(list!=null&&list.size()>0){
+                List<StudentsWriteRecord> feedbackContent = studentFeedback.getFeedbackContent();
+                for(StudentFeedBackWriteData data:list){
+                    feedbackContent.addAll(data.getStudentsWriteRecords());
+                }
+                studentFeedback.setFeedbackContent(feedbackContent);
+            }
+            return studentFeedback;
         }
         return null;
     }
@@ -102,7 +120,21 @@ public class StudentFeedbackServiceImpl implements IStudentFeedbackService {
             }
         };
 
-        return studentFeedbackRepository.findAll(specification,pageable);
+        Page<StudentFeedback> page= studentFeedbackRepository.findAll(specification,pageable);
+        /*for(StudentFeedback feedback:page.getContent()){
+            StudentFeedBackWriteData search = new StudentFeedBackWriteData();
+            search.setStudentFeedbackId(feedback.getId());
+            search.setStudentId(feedback.getStudentId());
+            List<StudentFeedBackWriteData> list=studentFeedBackWriteDataRepository.findAll(Example.of(search));
+            if(list!=null&&list.size()>0){
+                List<StudentsWriteRecord> feedbackContent = feedback.getFeedbackContent();
+                for(StudentFeedBackWriteData data:list){
+                    feedbackContent.addAll(data.getStudentsWriteRecords());
+                }
+                feedback.setFeedbackContent(feedbackContent);
+            }
+        }*/
+        return page;
     }
 
     @Override
@@ -124,5 +156,39 @@ public class StudentFeedbackServiceImpl implements IStudentFeedbackService {
             }
         }
         return result;
+    }
+
+    @Override
+    public StudentFeedback findByStudentAndSubject(Long studentId, String subject) {
+        Specification<StudentFeedback> specification= new Specification<StudentFeedback>() {
+
+            @Override
+            public Predicate toPredicate(Root<StudentFeedback> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+
+                Predicate con1=criteriaBuilder.equal(root.get("studentId"),studentId);
+                list.add(con1);
+
+                Predicate con2=criteriaBuilder.like(root.get("subject"),"%"+subject+"%");
+                list.add(con2);
+                Date now = new Date();
+                Date start = new Date(now.getTime()-5*60*1000);
+                Predicate con3=criteriaBuilder.between(root.get("createTime"),start,now);
+                list.add(con3);
+                Predicate[] p = new Predicate[list.size()];
+                return  criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        return null;
+    }
+
+    @Override
+    public void saveMoreWriteRecords(Long feedbackId, Long studentId, List<StudentsWriteRecord> studentsFeedbackRecords) {
+        StudentFeedBackWriteData writeData = new StudentFeedBackWriteData();
+        writeData.setStudentFeedbackId(feedbackId);
+        writeData.setStudentId(studentId);
+        writeData.setStudentsWriteRecords(studentsFeedbackRecords);
+        writeData.setCreateTime(new Date());
+        studentFeedBackWriteDataRepository.save(writeData);
     }
 }

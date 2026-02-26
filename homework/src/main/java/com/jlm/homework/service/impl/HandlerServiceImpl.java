@@ -96,44 +96,73 @@ public class HandlerServiceImpl implements IHandlerService {
     }
 
     @Override
-    public void saveFeedbackRecords(Long studentId, String subject, List<StudentsWriteRecord> studentsFeedbackRecords) {
-        StudentFeedback feedback = new StudentFeedback();
-        Date now  = new Date();
+    public Long saveFeedbackRecords(Long feedbackId,Long studentId, String subject, List<StudentsWriteRecord> studentsFeedbackRecords) {
+        StudentFeedback feedback = null;
+        if(feedbackId!=null) {
+            feedback = studentFeedbackService.findById(feedbackId);
+        }
         if(studentsFeedbackRecords==null||studentsFeedbackRecords.isEmpty()){
-            return;
+            return feedbackId;
         }
-        feedback.setFeedbackContent(studentsFeedbackRecords);
-        feedback.setFeedbackTime(now);
-        feedback.setStudentId(studentId);
-        //feedback.setSubject(subject);
-        ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
-        if(resultDto!=null&&resultDto.getData()!=null) {
-            Student student = resultDto.getData();
-            feedback.setSchoolId(student.getSchoolId());
-            feedback.setStudentName(student.getStudentName());
-            feedback.setClassId(student.getClassesId());
-            if (StringUtils.isEmpty(student.getClassesName()) && student.getClassesId() != null) {
-                Classes classes = classFeignClient.getClasses(student.getClassesId());
-                feedback.setClassName(classes.getName());
-            } else {
-                feedback.setClassName(student.getClassesName());
+        Date now = new Date();
+        if(feedback==null) {
+            feedback = new StudentFeedback();
+            feedback.setCreateTime(now);
+            feedback.setStudentId(studentId);
+            //feedback.setSubject(subject);
+            ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
+            if(resultDto!=null&&resultDto.getData()!=null) {
+                Student student = resultDto.getData();
+                feedback.setSchoolId(student.getSchoolId());
+                feedback.setStudentName(student.getStudentName());
+                feedback.setClassId(student.getClassesId());
+                if (StringUtils.isEmpty(student.getClassesName()) && student.getClassesId() != null) {
+                    Classes classes = classFeignClient.getClasses(student.getClassesId());
+                    feedback.setClassName(classes.getName());
+                } else {
+                    feedback.setClassName(student.getClassesName());
+                }
+                log.info("学生信息：id" + student.getStudentId() + "姓名：" + student.getStudentName());
             }
-            log.info("学生信息：id" + student.getStudentId() + "姓名：" + student.getStudentName());
         }
-        feedback.setCreateTime(now);
-        studentFeedbackService.save(feedback);
-        log.info("--------完成反馈信息保存-------");
+
+        if(feedback.getFeedbackContent()!=null&&!feedback.getFeedbackContent().isEmpty()){
+            List<StudentsWriteRecord> writeRecords = feedback.getFeedbackContent();
+            if(writeRecords.size()>5000&&feedbackId!=null){
+                studentFeedbackService.saveMoreWriteRecords(feedbackId,studentId,studentsFeedbackRecords);
+            }else {
+                writeRecords.addAll(studentsFeedbackRecords);
+                feedback.setFeedbackContent(writeRecords);
+                feedback.setId(feedbackId);
+            }
+        }else {
+            feedback.setFeedbackContent(studentsFeedbackRecords);
+        }
+
+
+        feedback.setFeedbackTime(now);
+        feedback =studentFeedbackService.save(feedback);
+        log.info("--------完成反馈信息保存:-------"+feedback.getId());
+        return feedback.getId();
     }
 
     @Override
-    public void saveErrorTitleRecords(Long studentId, String subject, List<StudentsWriteRecord> uploadErrorTitleRecords) {
-        WrongTitleWriteData wrongTitleWriteData = new WrongTitleWriteData();
+    public Long saveErrorTitleRecords(Long wrongTitleId, Long studentId, String subject, List<StudentsWriteRecord> uploadErrorTitleRecords) {
+        WrongTitleWriteData wrongTitleWriteData = null;
+        if(wrongTitleId!=null){
+            wrongTitleWriteData = wrongTitleWriteDataService.getById(wrongTitleId);
+        }
+        if(wrongTitleWriteData==null) {
+            wrongTitleWriteData = new WrongTitleWriteData();
+            wrongTitleWriteData.setCreateTime(new Date());
+        }
         wrongTitleWriteData.setStudentId(studentId);
         wrongTitleWriteData.setSubject(subject);
         wrongTitleWriteData.setStudentsWriteRecords(uploadErrorTitleRecords);
-        wrongTitleWriteData.setCreateTime(new Date());
+
         wrongTitleWriteDataService.save(wrongTitleWriteData);
 
+        WrongTitleWriteData finalWrongTitleWriteData = wrongTitleWriteData;
         FutureTask<String> futureTask = new FutureTask<>(() -> {
             String auditImages = "";
             //异步处理AI智能审批
@@ -171,7 +200,7 @@ public class HandlerServiceImpl implements IHandlerService {
                         wrongTitleBook.setStudentAnswer(studentAnswer);
                         wrongTitleBook.setParse(parse);
                         wrongTitleBook.setSource("学生智能手写板上传");
-                        wrongTitleBook.setWriteDataId(wrongTitleWriteData.getId());
+                        wrongTitleBook.setWriteDataId(finalWrongTitleWriteData.getId());
                         wrongTitleBook.setStudentId(studentId);
                         if(resultDto!=null&&resultDto.getData()!=null) {
                             Student student = resultDto.getData();
@@ -196,6 +225,7 @@ public class HandlerServiceImpl implements IHandlerService {
         });
         Thread thread = new Thread(futureTask);
         thread.start();
+        return wrongTitleWriteData.getId();
     }
 
     @Override
@@ -219,5 +249,30 @@ public class HandlerServiceImpl implements IHandlerService {
     @Override
     public List<Copybook2Board> getCopybookBoards(Long studentId) {
         return copybookStudentRecordService.getCopybookBoards(studentId);
+    }
+
+    @Override
+    public Long createFeedbackRecords(long studentId) {
+        StudentFeedback feedback = new StudentFeedback();
+        feedback.setCreateTime(new Date());
+        feedback.setStudentId(studentId);
+        //feedback.setSubject(subject);
+        ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
+        if(resultDto!=null&&resultDto.getData()!=null) {
+            Student student = resultDto.getData();
+            feedback.setSchoolId(student.getSchoolId());
+            feedback.setStudentName(student.getStudentName());
+            feedback.setClassId(student.getClassesId());
+            if (StringUtils.isEmpty(student.getClassesName()) && student.getClassesId() != null) {
+                Classes classes = classFeignClient.getClasses(student.getClassesId());
+                feedback.setClassName(classes.getName());
+            } else {
+                feedback.setClassName(student.getClassesName());
+            }
+            log.info("学生信息：id" + student.getStudentId() + "姓名：" + student.getStudentName());
+            feedback =studentFeedbackService.save(feedback);
+            return feedback.getId();
+        }
+        return null;
     }
 }

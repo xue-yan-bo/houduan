@@ -408,7 +408,7 @@ public class ClientHandler implements Runnable {
                 if (!sessionContext.getStudentsFeedbackRecords().isEmpty() && sessionContext.getCurrentMenu() != null) {
                     MenuItemT itemT = sessionContext.getCurrentMenu().getPItems().get(sessionContext.getCurrentMenu().getSelectItem());
                     String name = itemT.getDesc();
-                    handlerService.saveFeedbackRecords(userId, name, sessionContext.getStudentsFeedbackRecords());
+                    handlerService.saveFeedbackRecords(sessionContext.getFeedbackId(),userId, name, sessionContext.getStudentsFeedbackRecords());
                     //log.info("Saved unsaved feedback notes for user {}: {}", userId, sessionContext.getStudentsFeedbackRecords().size());
                 }
                 
@@ -416,7 +416,7 @@ public class ClientHandler implements Runnable {
                 if (!sessionContext.getUploadErrorTitleRecords().isEmpty() && sessionContext.getCurrentMenu() != null) {
                     MenuItemT itemT = sessionContext.getCurrentMenu().getPItems().get(sessionContext.getCurrentMenu().getSelectItem());
                     String name = itemT.getDesc();
-                    handlerService.saveErrorTitleRecords(userId, name, sessionContext.getUploadErrorTitleRecords());
+                    handlerService.saveErrorTitleRecords(sessionContext.getErrorTitleId(),userId, name, sessionContext.getUploadErrorTitleRecords());
                     //log.info("Saved unsaved error title notes for user {}: {}", userId, sessionContext.getUploadErrorTitleRecords().size());
                 }
                 

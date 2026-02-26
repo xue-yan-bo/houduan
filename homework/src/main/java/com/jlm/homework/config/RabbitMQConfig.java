@@ -1,9 +1,6 @@
 package com.jlm.homework.config;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.core.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -22,11 +19,14 @@ public class RabbitMQConfig {
     }
     
     // 声明作业结果交换机
-    @Bean
+    /*@Bean
     public TopicExchange homeworkResultExchange() {
         return new TopicExchange(HOMEWORK_RESULT_EXCHANGE, true, false);
+    }*/
+    @Bean
+    public DirectExchange homeworkResultExchange() {
+        return new DirectExchange(HOMEWORK_RESULT_EXCHANGE, true, false);
     }
-    
     // 绑定队列到交换机
     @Bean
     public Binding bindHomeworkResultQueue() {

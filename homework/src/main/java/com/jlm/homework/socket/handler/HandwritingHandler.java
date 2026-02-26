@@ -120,10 +120,10 @@ public class HandwritingHandler implements MessageHandler {
             handleEmendMode(context, result, relation);
         } else if (context.isFeedbackFlag() && context.getCurrentMenu() != null) {
             // 反馈模式
-            handleFeedbackMode(context, result);
+            handleFeedbackMode(context, result, relation);
         } else if (context.isErrorTitleFlag() && context.getCurrentMenu() != null) {
             // 错题模式
-            handleErrorTitleMode(context, result);
+            handleErrorTitleMode(context, result, relation);
         }  else if (context.isCopybookFlag()) {
             // 字帖模式
             handleCopybookMode(context, result, relation);
@@ -166,16 +166,16 @@ public class HandwritingHandler implements MessageHandler {
                 context.getStudentsWriteRecords().add(writeRecord);
             }
         }
-        
+
         synchronized (context) {
-            if (context.getStudentsWriteRecords().size() >= SessionContext.SAVE_SIZE 
+            if (context.getStudentsWriteRecords().size() >= SessionContext.SAVE_SIZE
                     && context.getHomeId() != null && context.getPageNum() != null) {
                 handlerService.saveWriteRecords(
-                        Long.parseLong(relation.getUserId()), 
-                        context.getHomeId(), 
-                        "1", 
-                        context.getPageNum(), 
-                        context.getStudentsWriteRecords(), 
+                        Long.parseLong(relation.getUserId()),
+                        context.getHomeId(),
+                        "1",
+                        context.getPageNum(),
+                        context.getStudentsWriteRecords(),
                         false
                 );
                 context.setStudentsWriteRecords(new ArrayList<>());
@@ -187,13 +187,13 @@ public class HandwritingHandler implements MessageHandler {
         StudentsWriteRecord writeRecord = createRecord(result);
         synchronized (context) {
             context.getStudentsEmendRecords().add(writeRecord);
-            
+
             if (context.getButtonTimes() != null && result.getTimestamp() < context.getButtonTimes()) {
                 context.getLastList().add(writeRecord);
             } else {
-                context.getStudentsWriteRecords().add(writeRecord); // Note: Original code added to studentsWriteRecords here too? 
-                // Original line 289: studentsWriteRecords.add(writeRecord); 
-                // Wait, line 285 adds to studentsEmendRecords. Line 289 adds to studentsWriteRecords. 
+                context.getStudentsWriteRecords().add(writeRecord); // Note: Original code added to studentsWriteRecords here too?
+                // Original line 289: studentsWriteRecords.add(writeRecord);
+                // Wait, line 285 adds to studentsEmendRecords. Line 289 adds to studentsWriteRecords.
                 // This looks like double adding or mistake in original code, but I will preserve behavior.
                 // Actually, looking at original code:
                 // if(buttonTimes!=null&&result.getTimestamp()<buttonTimes){ lastList.add } else { studentsWriteRecords.add }
@@ -202,14 +202,14 @@ public class HandwritingHandler implements MessageHandler {
         }
 
         synchronized (context) {
-            if (context.getStudentsEmendRecords().size() >= SessionContext.SAVE_SIZE 
+            if (context.getStudentsEmendRecords().size() >= SessionContext.SAVE_SIZE
                     && context.getHomeId() != null && context.getPageNum() != null) {
                 handlerService.saveWriteRecords(
-                        Long.parseLong(relation.getUserId()), 
-                        context.getHomeId(), 
-                        "2", 
-                        context.getPageNum(), 
-                        context.getStudentsEmendRecords(), 
+                        Long.parseLong(relation.getUserId()),
+                        context.getHomeId(),
+                        "2",
+                        context.getPageNum(),
+                        context.getStudentsEmendRecords(),
                         false
                 );
                 context.setStudentsEmendRecords(new ArrayList<>());
@@ -217,15 +217,27 @@ public class HandwritingHandler implements MessageHandler {
         }
     }
 
-    private void handleFeedbackMode(SessionContext context, HandwritingParseResult result) {
+    private void handleFeedbackMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation) {
         synchronized (context) {
+            // 使用带大小限制的添加方法，防止内存溢出
             context.getStudentsFeedbackRecords().add(createRecord(result));
+            if (context.getStudentsFeedbackRecords().size() >= SessionContext.SAVE_SIZE&&context.getFeedbackId()!=null) {
+                // 保存反馈数据但不更新feedbackId
+                handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), context.getFeedbackSubject(), context.getStudentsFeedbackRecords());
+                context.setStudentsFeedbackRecords(new ArrayList<>());
+                saveSessionContextToRedis(context);
+            }
         }
     }
 
-    private void handleErrorTitleMode(SessionContext context, HandwritingParseResult result) {
+    private void handleErrorTitleMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation) {
         synchronized (context) {
             context.getUploadErrorTitleRecords().add(createRecord(result));
+            if (context.getUploadErrorTitleRecords().size() >= SessionContext.SAVE_SIZE) {
+                Long errorTitleId = handlerService.saveErrorTitleRecords(context.getErrorTitleId(),Long.parseLong(relation.getUserId()), context.getErrorTitleSubject(), context.getUploadErrorTitleRecords());
+                context.setErrorTitleId(errorTitleId);
+                context.setUploadErrorTitleRecords(new ArrayList<>());
+            }
         }
     }
 

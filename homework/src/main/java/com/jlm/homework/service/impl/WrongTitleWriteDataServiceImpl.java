@@ -22,4 +22,9 @@ public class WrongTitleWriteDataServiceImpl implements IWrongTitleWriteDataServi
         wrongTitleWriteDataRepository.save(wrongTitleWriteData);
 
     }
+
+    @Override
+    public WrongTitleWriteData getById(Long wrongTitleId) {
+        return wrongTitleWriteDataRepository.findById(wrongTitleId).orElse(null);
+    }
 }

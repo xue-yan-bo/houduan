@@ -15,12 +15,13 @@ public interface IHandlerService {
 
     List<HomeWork2Board> getEmendHomeWork2Board(String subject,Long studentId);
 
-    void saveFeedbackRecords(Long studentId,String subject ,List<StudentsWriteRecord> studentsFeedbackRecords);
+    Long saveFeedbackRecords(Long feedbackId,Long studentId,String subject ,List<StudentsWriteRecord> studentsFeedbackRecords);
 
-    void saveErrorTitleRecords(Long studentId, String subject, List<StudentsWriteRecord> uploadErrorTitleRecords);
+    Long saveErrorTitleRecords(Long wrongTitleId,Long studentId, String subject, List<StudentsWriteRecord> uploadErrorTitleRecords);
 
     void saveStudentsCopybookRecords(Long studentId,Long recordId,Integer pageN, List<StudentsWriteRecord> studentsCopybookRecords,Boolean isFinish);
 
     List<Copybook2Board> getCopybookBoards(Long studentId);
 
+    Long createFeedbackRecords(long studentId);
 }

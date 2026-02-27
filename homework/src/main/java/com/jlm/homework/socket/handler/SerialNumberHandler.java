@@ -48,7 +48,7 @@ public class SerialNumberHandler implements MessageHandler {
             deviceUserRelation.setIpAddress(context.getClientIP());
             smartDeviceUserRelationService.update(deviceUserRelation);
         } else {
-            log.warn("{} Device not bound to student!", result.getMac());
+            //log.warn("{} Device not bound to student!", result.getMac());
             // 使用context.getClientIP()从Redis获取数据，如果有就清除该条Redis记录
             if (clientHandler != null) {
                 try {

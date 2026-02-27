@@ -368,10 +368,10 @@ public class ButtonHandler implements MessageHandler {
              MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
              String name = itemT.getDesc();
              context.setFeedbackSubject(name);
-             // 保存反馈数据
-             handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
+             Long feedbackId = handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
+             context.setFeedbackId(feedbackId); // 保存返回的feedbackId，用于下次更新
              context.setStudentsFeedbackRecords(new ArrayList<>());
-            resetContext(context);
+             // 不重置feedbackId，保留它用于后续更新
              responseSender.sendMenuUpdate(context);
         } else {
             handleMenuNavigation(context);
@@ -565,8 +565,6 @@ public class ButtonHandler implements MessageHandler {
         context.getCurrentMenu().setShowStartItem(0);
         context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
         responseSender.sendMenuUpdate(context);
-        Long feedbackId=handlerService.createFeedbackRecords(Long.parseLong(context.getRelation().getUserId()));
-        context.setFeedbackId(feedbackId);
     }
     
     private void buildErrorTitleMenu(SessionContext context) throws IOException {
@@ -1131,10 +1129,12 @@ public class ButtonHandler implements MessageHandler {
         context.setCopybookFlag(false);
         context.setConfirmCount(0);
         context.setHomeId(null);
-        context.setFeedbackId(null);
+        // 保留feedbackId，用于后续更新操作
+        // context.setFeedbackId(null);
         context.setErrorTitleId(null);
         context.setPageNum(null);
-        context.setFeedbackSubject(null);
+        // 保留feedbackSubject，用于后续操作
+        // context.setFeedbackSubject(null);
         context.setErrorTitleSubject(null);
         context.setWork2Boards(new ArrayList<>());
         context.setCopybookBoards(new ArrayList<>());

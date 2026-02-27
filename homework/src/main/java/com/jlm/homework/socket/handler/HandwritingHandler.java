@@ -1,18 +1,18 @@
 package com.jlm.homework.socket.handler;
 
+import com.jlm.homework.socket.websocket.WebSocketSessionManager;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.entity.StudentsWriteRecord;
 import com.jlm.homework.service.IHandlerService;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
+import com.jlm.homework.socket.ClientHandler;
 import com.jlm.homework.socket.HandwritingParseResult;
-import com.jlm.homework.socket.boardmenu.MenuItemT;
 import com.jlm.homework.socket.context.SessionContext;
 import com.jlm.homework.socket.protocol.Packet;
 import com.jlm.homework.util.ParseTcpDataUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,11 +22,12 @@ public class HandwritingHandler implements MessageHandler {
     private final SimpMessagingTemplate messagingTemplate;
     private final IHandlerService handlerService;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
-    private final com.jlm.homework.socket.ClientHandler clientHandler;
+    private final ClientHandler clientHandler;
+
 
     public HandwritingHandler(SimpMessagingTemplate messagingTemplate,
                               IHandlerService handlerService,
-                              ISmartDeviceUserRelationService smartDeviceUserRelationService) {
+                              ISmartDeviceUserRelationService smartDeviceUserRelationService, WebSocketSessionManager sessionManager) {
         this.messagingTemplate = messagingTemplate;
         this.handlerService = handlerService;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
@@ -36,7 +37,7 @@ public class HandwritingHandler implements MessageHandler {
     public HandwritingHandler(SimpMessagingTemplate messagingTemplate,
                               IHandlerService handlerService,
                               ISmartDeviceUserRelationService smartDeviceUserRelationService,
-                              com.jlm.homework.socket.ClientHandler clientHandler) {
+                              ClientHandler clientHandler) {
         this.messagingTemplate = messagingTemplate;
         this.handlerService = handlerService;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
@@ -307,30 +308,35 @@ public class HandwritingHandler implements MessageHandler {
      * @param result 书写数据
      */
     private void sendWritingDataWithRetry(String userId, HandwritingParseResult result) {
-        // 使用线程池异步发送消息，避免阻塞处理线程
-        SEND_THREAD_POOL.submit(() -> {
-            int maxRetries = 3;
-            int retryDelay = 50; // 毫秒
-            for (int i = 0; i < maxRetries; i++) {
+        int maxRetries = 3;
+        int retryCount = 0;
+
+        while (retryCount < maxRetries) {
+            try {
+                messagingTemplate.convertAndSend("/topic/writingData/" + userId, result);
+                return;
+            } catch (Exception e) {
+                // 检查是否是会话关闭相关的异常
+                if (e instanceof IllegalStateException && e.getMessage().contains("session is closed")) {
+                    log.debug("WebSocket session closed for user {}, skipping message", userId);
+                    return;
+                }
+                
+                retryCount++;
+                if (retryCount >= maxRetries) {
+                    log.warn("Failed to send writing data after {} retries: {}", maxRetries, e.getMessage());
+                    return;
+                }
+
+                // 短暂延迟后重试
                 try {
-                    messagingTemplate.convertAndSend("/topic/writingData/" + userId, result);
-                    //log.debug("Successfully sent writing data for user: {}, X: {}, Y: {}", userId, result.getX(), result.getY());
-                    return; // 发送成功，直接返回
-                } catch (Exception e) {
-                    //log.warn("Failed to send writing data (attempt {} of {}) for user {}: {}", i + 1, maxRetries, userId, e.getMessage());
-                    if (i < maxRetries - 1) {
-                        try {
-                            Thread.sleep(retryDelay);
-                        } catch (InterruptedException ex) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                    }
+                    Thread.sleep(100 * retryCount);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
                 }
             }
-            // 所有重试都失败，记录错误
-            log.error("All attempts to send writing data failed for user: {}", userId);
-        });
+        }
     }
 
     private StudentsWriteRecord createRecord(HandwritingParseResult result) {

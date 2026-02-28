@@ -75,7 +75,6 @@ public class SocketService implements SmartLifecycle {
                 while (running) {
                     try {
                         Socket socket = serverSocket.accept();
-                        
                         // 检查连接数是否超过限制
                         int currentConnections = connectionCount.incrementAndGet();
                         if (currentConnections > threadPoolSize) {

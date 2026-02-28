@@ -609,56 +609,63 @@ public class ClientHandler implements Runnable {
     }
 
     private void sendHeartbeat(OutputStream out) throws IOException {
+        // 应用层心跳数据
         byte heartbeatData = 0x01;
-        byte[] packet = new byte[5];
-        packet[0] = 0x55;
-        packet[1] = 0x56;
-        packet[2] = 0x02;
-        packet[3] = HEARTBEAT_TYPE;
+        // 添加时间戳，确保每次心跳包内容不同
+        long timestamp = System.currentTimeMillis() & 0xFFFFFFFF; // 取低32位
+        byte[] timestampBytes = new byte[4];
+        timestampBytes[0] = (byte) (timestamp >> 24);
+        timestampBytes[1] = (byte) (timestamp >> 16);
+        timestampBytes[2] = (byte) (timestamp >> 8);
+        timestampBytes[3] = (byte) timestamp;
+        
         int checksum = 0;
 
         if (sessionContext.isBluetooth() && sessionContext.getMac() != null) {
-            // Re-implement Bluetooth Heartbeat logic
-            // Header(2)+Length(1)+Type(1)+MAC(6)+Data(1)+Checksum(1) = 12 bytes
-            // Original code: packet was 5 bytes, then logic for bluetooth...
-            // Line 1469: if(isBluetooth) ... 
-            // It seems the original code was reusing `packet` buffer which was 5 bytes, but writing into index 4... 
-            // Wait, original code line 1456: packet = new byte[5].
-            // Line 1472: System.arraycopy(macByte, 0, packet, 4, 6); -> IndexOutOfBoundsException if packet is 5 bytes!
-            // The original code might be buggy or I misread it.
-            // Original Line 1456: byte[] packet = new byte[5];
-            // Original Line 1472: System.arraycopy(..., packet, 4, 6); -> 4+6=10. Array is 5. Crash.
+            // 蓝牙设备心跳包
+            // Header(2)+Length(1)+Type(1)+MAC(6)+Data(5)+Checksum(1) = 16 bytes
+            byte[] fullPacket = new byte[16];
+            fullPacket[0] = 0x55; // 同步头
+            fullPacket[1] = 0x56; // 同步头
+            fullPacket[2] = 0x06; // 长度 (MAC 6 + 数据 5)
+            fullPacket[3] = HEARTBEAT_TYPE; // 心跳类型
             
-            // Wait, maybe `packet` variable is reassigned? No.
-            // This suggests the original code crashes on Bluetooth Heartbeat? 
-            // Or `isBluetooth` is rarely true.
-            
-            // I will fix this.
-            
-            byte[] fullPacket = new byte[12];
-            fullPacket[0] = 0x55;
-            fullPacket[1] = 0x56;
-            fullPacket[2] = 0x02; // Length
-            fullPacket[3] = HEARTBEAT_TYPE;
-            
+            // 添加MAC地址
             byte[] macByte = ParseTcpDataUtil.hexStringToByteArray(sessionContext.getMac());
             System.arraycopy(macByte, 0, fullPacket, 4, 6);
             
-            fullPacket[10] = heartbeatData;
+            // 添加应用层心跳数据
+            fullPacket[10] = heartbeatData; // 心跳标志
+            // 添加时间戳
+            System.arraycopy(timestampBytes, 0, fullPacket, 11, 4);
             
-            checksum = calculateChecksum(fullPacket, 0, 10);
-            fullPacket[11] = (byte) (checksum & 0xFF);
+            // 计算校验和
+            checksum = calculateChecksum(fullPacket, 0, 14);
+            fullPacket[15] = (byte) (checksum & 0xFF);
             
             out.write(fullPacket);
         } else {
-            packet[4] = heartbeatData;
-            checksum = calculateChecksum(packet, 0, 4);
-            byte[] fullPacket = new byte[6];
-            System.arraycopy(packet, 0, fullPacket, 0, 5);
-            fullPacket[5] = (byte) (checksum & 0xFF);
+            // 普通设备心跳包
+            // Header(2)+Length(1)+Type(1)+Data(5)+Checksum(1) = 10 bytes
+            byte[] fullPacket = new byte[10];
+            fullPacket[0] = 0x55; // 同步头
+            fullPacket[1] = 0x56; // 同步头
+            fullPacket[2] = 0x05; // 长度 (数据 5)
+            fullPacket[3] = HEARTBEAT_TYPE; // 心跳类型
+            
+            // 添加应用层心跳数据
+            fullPacket[4] = heartbeatData; // 心跳标志
+            // 添加时间戳
+            System.arraycopy(timestampBytes, 0, fullPacket, 5, 4);
+            
+            // 计算校验和
+            checksum = calculateChecksum(fullPacket, 0, 8);
+            fullPacket[9] = (byte) (checksum & 0xFF);
             out.write(fullPacket);
         }
         out.flush();
+        // 记录心跳发送时间
+        sessionContext.setLastHeartbeatTime(System.currentTimeMillis());
     }
     
     private int calculateChecksum(byte[] data, int start, int end) {

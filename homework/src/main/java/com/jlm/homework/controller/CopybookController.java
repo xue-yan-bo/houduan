@@ -74,4 +74,21 @@ public class CopybookController {
         Boolean publishFlag = copybookService.publish(id);
         return publishFlag;
     }
+
+    /**
+     * 分页查询
+     * @param teacherId
+     * @return
+     */
+    @GetMapping("/queryListByTeacher")
+    @Operation(summary = "分页查询老师字帖记录")
+    public Page<Copybook> queryListByTeacher(
+            @RequestParam(defaultValue = "1")Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            Long teacherId) {
+
+        Page<Copybook> list = copybookService.queryListByTeacher(pageNum,pageSize, teacherId);
+
+        return list;
+    }
 }

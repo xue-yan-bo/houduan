@@ -15,4 +15,6 @@ public interface ICopybookService {
     void deleteById(Long id);
 
     Boolean publish(Long id);
+
+    Page<Copybook> queryListByTeacher(Integer pageNum, Integer pageSize, Long teacherId);
 }

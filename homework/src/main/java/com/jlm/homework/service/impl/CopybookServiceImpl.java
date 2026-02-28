@@ -198,4 +198,17 @@ public class CopybookServiceImpl implements ICopybookService {
         }
         return flag;
     }
+
+    @Override
+    public Page<Copybook> queryListByTeacher(Integer pageNum, Integer pageSize, Long teacherId) {
+        if (pageNum == null || pageNum <= 0 || pageSize == null || pageSize <= 0) {
+            pageNum = 1;
+            pageSize = 10;
+        }
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
+        Pageable pageable = PageRequest.of(pageNum - 1, pageSize, sort);
+        Copybook search = new Copybook();
+        search.setTeacherId(teacherId);
+        return copybookRepository.findAll(Example.of(search),pageable);
+    }
 }

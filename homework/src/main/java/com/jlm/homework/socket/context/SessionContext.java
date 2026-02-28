@@ -41,6 +41,7 @@ public class SessionContext implements Serializable {
     private MenuT currentMenu = null; // 当前菜单
     private Long buttonTimes = null;
     private int confirmCount = 0; // querenJishu
+    private long lastHeartbeatTime = 0; // 最后心跳时间
 
     // 模式标志
     private boolean menuFlag = false; // mrnuflag

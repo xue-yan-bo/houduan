@@ -23,10 +23,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 @Component
 public class SocketService implements SmartLifecycle {
-    
+
     // Redis key prefix for client handler mapping
     private static final String REDIS_KEY_PREFIX = "socket:client:";
-    
+
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
     @Autowired
@@ -49,7 +49,7 @@ public class SocketService implements SmartLifecycle {
     private final AtomicInteger connectionCount = new AtomicInteger(0);
     // 最大连接数
     private static final int DEFAULT_MAX_CONNECTIONS = 1000;
-    
+
     // 连接状态监控
     private ScheduledExecutorService monitorScheduler;
     private static final long MONITOR_INTERVAL = 30; // 监控间隔，30秒
@@ -59,7 +59,7 @@ public class SocketService implements SmartLifecycle {
         // 使用更合理的线程池大小，默认最大1000连接
         int threadPoolSize = Math.min(maxConnections, DEFAULT_MAX_CONNECTIONS);
         threadPool = Executors.newFixedThreadPool(threadPoolSize);
-        
+
         new Thread(() -> {
             try {
                 serverSocket = new ServerSocket(socketPort);
@@ -68,7 +68,7 @@ public class SocketService implements SmartLifecycle {
                 serverSocket.setPerformancePreferences(1, 10, 1); // 优先考虑延迟，提高响应速度
                 running = true;
                 //log.info("Socket server started on port {}", socketPort);
-                
+
                 // 启动连接状态监控
                 startConnectionMonitor();
 
@@ -88,7 +88,7 @@ public class SocketService implements SmartLifecycle {
                             }
                             continue;
                         }
-                        
+
                        // log.info("New client connected, raw address: {}", socket.getRemoteSocketAddress());
 
                         // 解析代理头，获取真实客户端地址
@@ -102,18 +102,18 @@ public class SocketService implements SmartLifecycle {
                                 null
                             );
                         }
-                        
+
                         // 使用真实客户端地址
                         InetSocketAddress realAddress = proxyResult.getRealAddress();
                         String clientAddress = realAddress.getHostString();
                         int clientPort = realAddress.getPort();
-                        
+
                         //log.info("Client connected with real address: {}", clientAddress);
-                        
+
                         // 使用Redis获取或创建SessionContext
                         SessionContext sessionContext = null;
                         String redisKey = REDIS_KEY_PREFIX + clientAddress;
-                        
+
                         // 从Redis获取SessionContext
                         Object sessionObj = redisTemplate.opsForValue().get(redisKey);
                         if (sessionObj instanceof SessionContext) {
@@ -123,18 +123,20 @@ public class SocketService implements SmartLifecycle {
                             // 创建新的SessionContext
                             sessionContext = new SessionContext();
                             // 保存到Redis，设置过期时间为24小时
-                            redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                            redisTemplate.opsForValue().set("hard:" + sessionContext.getMac(), sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+//                            redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
                             //log.debug("Created new session context and saved to Redis for client: {}", clientAddress);
                         }
-                        
+
                         // 设置真实客户端地址到SessionContext
                         sessionContext.setRemoteAddress(realAddress);
                         sessionContext.setClientIP(clientAddress);
                         sessionContext.setClientPort(clientPort);
                         // 保存修改后的SessionContext回Redis
-                        redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                        redisTemplate.opsForValue().set("hard:" + sessionContext.getMac(), sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+//                        redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
                         //log.debug("Saved session context to Redis for client: {}", clientAddress);
-                        
+
                         // 提交客户端连接到线程池处理
                         ClientHandler clientHandler = new ClientHandler(socket, messagingTemplate,
                                 smartDeviceUserRelationService, handlerService, sessionContext, proxyResult.getPreReadBytes(),
@@ -179,7 +181,7 @@ public class SocketService implements SmartLifecycle {
             log.error("Error closing server socket: {}", e.getMessage());
         }
     }
-    
+
     /**
      * 启动连接状态监控
      */
@@ -189,7 +191,7 @@ public class SocketService implements SmartLifecycle {
             int currentConnections = connectionCount.get();
             /*log.info("Socket server status: current connections = {}, max connections = {}",
                     currentConnections, Math.min(maxConnections, DEFAULT_MAX_CONNECTIONS));*/
-            
+
             // 检查服务器Socket状态
             if (serverSocket != null && !serverSocket.isClosed()) {
                 try {
@@ -205,7 +207,7 @@ public class SocketService implements SmartLifecycle {
             }
         }, MONITOR_INTERVAL, MONITOR_INTERVAL, java.util.concurrent.TimeUnit.SECONDS);
     }
-    
+
     /**
      * 停止连接状态监控
      */
@@ -235,7 +237,7 @@ public class SocketService implements SmartLifecycle {
         stop();
         callback.run();
     }
-    
+
     /**
      * 解析代理头，获取真实客户端地址
      * @param socket 客户端Socket连接
@@ -254,10 +256,10 @@ public class SocketService implements SmartLifecycle {
 
         try {
             bytesRead = bufferedInputStream.read(signature);
-            
+
             // 默认使用Socket远程地址
             InetSocketAddress realAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
-            
+
             // 记录原始地址用于调试
             String originalAddress = realAddress.getHostString();
             //log.debug("Parsing proxy header, original socket address: {}", originalAddress);
@@ -290,7 +292,7 @@ public class SocketService implements SmartLifecycle {
                         // 传递已读取的signature数据，避免重复读取
                         return parseProxyV2(socket, bufferedInputStream, signature, bytesRead);
                     }
-                    
+
                     // 检查PROXY v1协议
                     String sigStr = new String(signature, 0, Math.min(5, bytesRead));
                     if (sigStr.startsWith("PROXY")) {
@@ -326,7 +328,7 @@ public class SocketService implements SmartLifecycle {
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to read proxy header signature: {}, using original address: {}", e.getMessage(), 
+            log.warn("Failed to read proxy header signature: {}, using original address: {}", e.getMessage(),
                     socket.getRemoteSocketAddress());
             // 重置输入流
             try {
@@ -341,7 +343,7 @@ public class SocketService implements SmartLifecycle {
             );
         }
     }
-    
+
     /**
      * 检测是否为PROXY v2协议签名
      * PROXY v2协议签名：0x0D 0x0A 0x0D 0x0A 0x00 0x0D 0x0A 0x51 0x55 0x49 0x54 0x0A
@@ -355,8 +357,8 @@ public class SocketService implements SmartLifecycle {
         }
         try {
             // 检查前5字节的简化签名
-            boolean basicMatch = signature[0] == 0x0D && signature[1] == 0x0A && 
-                                signature[2] == 0x0D && signature[3] == 0x0A && 
+            boolean basicMatch = signature[0] == 0x0D && signature[1] == 0x0A &&
+                                signature[2] == 0x0D && signature[3] == 0x0A &&
                                 signature[4] == 0x00;
             if (!basicMatch) {
                 return false;
@@ -373,7 +375,7 @@ public class SocketService implements SmartLifecycle {
             return false;
         }
     }
-    
+
     /**
      * 解析PROXY v1协议
      * @param socket 客户端Socket
@@ -434,7 +436,7 @@ public class SocketService implements SmartLifecycle {
             return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, bufferedInputStream);
         }
     }
-    
+
     /**
      * 解析PROXY v2协议
      * PROXY v2协议格式：
@@ -450,7 +452,7 @@ public class SocketService implements SmartLifecycle {
      * @return 解析结果
      * @throws IOException 解析异常
      */
-    private ProxyHeaderResult parseProxyV2(Socket socket, java.io.BufferedInputStream inputStream, 
+    private ProxyHeaderResult parseProxyV2(Socket socket, java.io.BufferedInputStream inputStream,
                                           byte[] signature, int bytesRead) throws IOException {
         try {
             // 重置输入流到标记位置（开始位置）
@@ -464,7 +466,7 @@ public class SocketService implements SmartLifecycle {
                 }
                 return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, inputStream);
             }
-            
+
             // 使用DataInputStream包装BufferedInputStream
             DataInputStream dataInputStream = new DataInputStream(inputStream);
 
@@ -475,14 +477,14 @@ public class SocketService implements SmartLifecycle {
             int versionCommand = dataInputStream.readUnsignedByte();
             int version = (versionCommand >> 4) & 0x0F;
             int command = versionCommand & 0x0F;
-            
+
             // 检查version是否为2
             if (version != 2) {
                 log.warn("Invalid PROXY v2 version: {}, expected 2", version);
                 inputStream.reset();
                 return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, inputStream);
             }
-            
+
             // 检查command：0x01=PROXY, 0x00=LOCAL
             if (command != 0x01) {
                 log.debug("PROXY v2 command is LOCAL (0x00), using original address");
@@ -494,23 +496,23 @@ public class SocketService implements SmartLifecycle {
             int protocolFamily = dataInputStream.readUnsignedByte();
             int protocol = (protocolFamily >> 4) & 0x0F;
             int family = protocolFamily & 0x0F;
-            
+
             // 读取address length（2字节，大端序）
             int addressLength = dataInputStream.readUnsignedShort();
-            
+
             // 根据address family解析地址
             String clientIp = null;
             int clientPort = 0;
-            
+
             if (family == 0x01) {
                 // IPv4: 源地址4字节 + 源端口2字节 + 目标地址4字节 + 目标端口2字节 = 12字节
                 byte[] srcAddressBytes = new byte[4];
                 dataInputStream.readFully(srcAddressBytes);
                 int srcPort = dataInputStream.readUnsignedShort();
-                
+
                 // 跳过目标地址和端口
                 dataInputStream.skipBytes(4 + 2);
-                
+
                 clientIp = String.format("%d.%d.%d.%d",
                         srcAddressBytes[0] & 0xff,
                         srcAddressBytes[1] & 0xff,
@@ -522,10 +524,10 @@ public class SocketService implements SmartLifecycle {
                 byte[] srcAddressBytes = new byte[16];
                 dataInputStream.readFully(srcAddressBytes);
                 int srcPort = dataInputStream.readUnsignedShort();
-                
+
                 // 跳过目标地址和端口
                 dataInputStream.skipBytes(16 + 2);
-                
+
                 // 构建IPv6地址字符串
                 StringBuilder ipBuilder = new StringBuilder();
                 for (int i = 0; i < 16; i += 2) {
@@ -545,13 +547,13 @@ public class SocketService implements SmartLifecycle {
 
             // 构建真实地址
             InetSocketAddress realAddress = new InetSocketAddress(clientIp, clientPort);
-            log.info("Parsed PROXY v2 header successfully, real client address: {}:{}, original: {}", 
+            log.info("Parsed PROXY v2 header successfully, real client address: {}:{}, original: {}",
                     clientIp, clientPort, socket.getRemoteSocketAddress());
-            
+
             // 计算PROXY v2头部总长度
             // 12字节(signature) + 4字节(version/command/protocol/length) + addressLength字节(地址数据)
             int totalHeaderLength = 12 + 4 + addressLength;
-            
+
             // 重置输入流到开始位置，然后跳过整个PROXY v2头部
             // 这样后续的PacketDecoder就能从实际应用数据开始读取
             try {
@@ -580,7 +582,7 @@ public class SocketService implements SmartLifecycle {
 
             return new ProxyHeaderResult(realAddress, null, inputStream);
         } catch (Exception e) {
-            log.warn("Failed to parse PROXY v2 header: {}, using original address: {}", 
+            log.warn("Failed to parse PROXY v2 header: {}, using original address: {}",
                     e.getMessage(), socket.getRemoteSocketAddress(), e);
             try {
                 inputStream.reset();
@@ -590,7 +592,7 @@ public class SocketService implements SmartLifecycle {
             return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, inputStream);
         }
     }
-    
+
     /**
      * 从已读取的字节数组中解析PROXY v2协议（备用方法）
      * @param socket 客户端Socket
@@ -602,25 +604,25 @@ public class SocketService implements SmartLifecycle {
             if (signature.length < 16) {
                 return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, bufferedInputStream);
             }
-            
+
             // 从signature数组中解析（假设已经读取了足够的字节）
             // 12字节: signature
             // 13字节: version/command
             int versionCommand = signature[12] & 0xFF;
             int version = (versionCommand >> 4) & 0x0F;
             int command = versionCommand & 0x0F;
-            
+
             if (version != 2 || command != 0x01) {
                 return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, bufferedInputStream);
             }
-            
+
             // 14字节: protocol/family
             int protocolFamily = signature[13] & 0xFF;
             int family = protocolFamily & 0x0F;
-            
+
             // 15-16字节: address length
             int addressLength = ((signature[14] & 0xFF) << 8) | (signature[15] & 0xFF);
-            
+
             if (family == 0x01 && signature.length >= 16 + 12) {
                 // IPv4
                 int offset = 16;
@@ -630,7 +632,7 @@ public class SocketService implements SmartLifecycle {
                         signature[offset + 2] & 0xff,
                         signature[offset + 3] & 0xff);
                 int clientPort = ((signature[offset + 4] & 0xFF) << 8) | (signature[offset + 5] & 0xFF);
-                
+
                 InetSocketAddress realAddress = new InetSocketAddress(clientIp, clientPort);
                 log.info("Parsed PROXY v2 from bytes, real client address: {}:{}", clientIp, clientPort);
                 return new ProxyHeaderResult(realAddress, null, bufferedInputStream);

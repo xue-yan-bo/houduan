@@ -5,6 +5,8 @@ import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.entity.Student;
 import org.springframework.data.domain.Page;
 
+import java.util.List;
+
 public interface ISmartDeviceUserRelationService {
     Long create(SmartDeviceUserRelation deviceUserRelation);
 
@@ -23,4 +25,9 @@ public interface ISmartDeviceUserRelationService {
     SmartDeviceUserRelation selectByIpAddress(String clientAddress);
 
     SmartDeviceUserRelation getByUseId(String userId);
+
+    public List<SmartDeviceUserRelation> selectByIpAddressAll();
+
+    public void synHardUserRedisData();
+
 }

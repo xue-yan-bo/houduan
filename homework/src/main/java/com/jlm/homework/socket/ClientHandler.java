@@ -17,6 +17,7 @@ import java.io.*;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -37,10 +38,10 @@ public class ClientHandler implements Runnable {
     private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
     private String redisKey;
     private java.io.BufferedInputStream proxyBufferedInputStream;
-    
+
     // Handlers
     private final Map<Byte, MessageHandler> handlers = new HashMap<>();
-    
+
     // 处理线程池，使用固定大小的线程池，增加线程数以提高并发处理能力
     private static final ExecutorService PROCESS_THREAD_POOL = new ThreadPoolExecutor(
             100, // 核心线程数
@@ -50,15 +51,15 @@ public class ClientHandler implements Runnable {
             new LinkedBlockingQueue<>(1000), // 有界队列，避免内存溢出
             new ThreadPoolExecutor.CallerRunsPolicy() // 拒绝策略：由调用者线程执行任务
     );
-    
+
     // Heartbeat
     private ScheduledExecutorService heartbeatScheduler;
     private static final byte HEARTBEAT_TYPE = 0x05;
-    private static final long HEARTBEAT_INTERVAL = 4; // 减少心跳间隔到2秒，保持连接更活跃
-    private static final int MAX_HEARTBEAT_FAILURES = 5; // 增加允许的心跳失败次数到5次
+    private static final long HEARTBEAT_INTERVAL = 8; // 减少心跳间隔到2秒，保持连接更活跃
+    private static final int MAX_HEARTBEAT_FAILURES = 20; // 增加允许的心跳失败次数到5次
     private int heartbeatFailureCount = 0; // 心跳失败计数器
     private volatile boolean isHeartbeatActive = true; // 心跳是否活跃
-    
+
     // 网络异常恢复
     private long lastNetworkExceptionTime = 0; // 上次网络异常时间
     private int networkExceptionCount = 0; // 网络异常计数
@@ -117,7 +118,7 @@ public class ClientHandler implements Runnable {
                 bufferedInputStream = new java.io.BufferedInputStream(in, 1024);
             }
             out = clientSocket.getOutputStream();
-            
+
             // 保持连接活跃，去掉超时限制
             clientSocket.setKeepAlive(true);
             // 设置TCP连接超时时间为0（无限），避免因超时而断开
@@ -132,7 +133,7 @@ public class ClientHandler implements Runnable {
             clientSocket.setPerformancePreferences(1, 10, 1);
             // 设置SO_LINGER为0，避免连接关闭时阻塞
             clientSocket.setSoLinger(false, 0);
-            
+
             // 优化TCP keepalive参数，保障长时间连接
             // 注意：Socket类已经通过setKeepAlive(true)启用了keepalive
             // 具体的keepalive参数（如空闲时间、间隔、次数）在不同平台上设置方式不同
@@ -145,11 +146,75 @@ public class ClientHandler implements Runnable {
             logClientConnection();
 
             // Load initial relation
+            // todo 优化项，数据放在redis里面，从redis获取，有更新时，同步更新redis
+            // 优化：该数据应在项目启动时加载到 Redis，此处仅作为容错或临时逻辑。
+            // 建议将 selectByIpAddressAll() 的调用移至 @PostConstruct 或 ApplicationRunner 中执行一次即可。
+            // 当前保留从 Redis 读取的逻辑，若 Redis 中无数据则查询数据库（仅在首次或未初始化时触发）。
+//            String cacheKey = "device_user_relation";
+//            List<SmartDeviceUserRelation> smartDeviceUserRelations = null;
+//
+//            if (redisTemplate != null) {
+//                try {
+//                    Object cachedData = redisTemplate.opsForValue().get(cacheKey);
+//                    if (cachedData instanceof List) {
+//                        smartDeviceUserRelations = (List<SmartDeviceUserRelation>) cachedData;
+//                    }
+//                } catch (Exception e) {
+//                    log.warn("Failed to get device_user_relation from Redis: {}", e.getMessage());
+//                }
+//            }
+//
+//            if (smartDeviceUserRelations == null) {
+//                log.info("Cache missed for device_user_relation, loading from DB (should ideally be loaded at startup)...");
+//                smartDeviceUserRelations = smartDeviceUserRelationService.selectByIpAddressAll();
+//                if (redisTemplate != null && smartDeviceUserRelations != null) {
+//                    try {
+//                        redisTemplate.opsForValue().set(cacheKey, smartDeviceUserRelations, 24, java.util.concurrent.TimeUnit.HOURS);
+//                        log.info("硬件获取数据，更新hard_user关联数据: {}", cacheKey);
+//                    } catch (Exception e) {
+//                        log.error("Failed to cache device_user_relation to Redis: {}", e.getMessage(), e);
+//                    }
+//                }
+//            }
+//
+//            // Load initial relation
+//            // 从已加载的 smartDeviceUserRelations 列表中查找匹配的关系，避免查询数据库
+//            SmartDeviceUserRelation relation = null;
+//            if (smartDeviceUserRelations != null) {
+////                String clientIP = sessionContext.getClientIP();
+//                String mac = sessionContext.getMac();
+//                // 优先匹配 IP 地址
+////                for (SmartDeviceUserRelation item : smartDeviceUserRelations) {
+////                    if (item != null && clientIP != null && clientIP.equals(item.getIpAddress())) {
+////                        relation = item;
+////                        break;
+////                    }
+////                }
+//
+//                // 如果 IP 未匹配且 MAC 存在，则尝试匹配设备码
+//                if (relation == null && StringUtils.isNotBlank(mac)) {
+//                    for (SmartDeviceUserRelation item : smartDeviceUserRelations) {
+//                        if (item != null && mac.equals(item.getDeviceCode())) {
+//                            relation = item;
+//                            break;
+//                        }
+//                    }
+//                }
+//            }
+//            if(relation != null){
+//                sessionContext.setRelation(relation);
+//            }else {
+//                // 无设备绑定信息，不处理
+//                log.error("无设备绑定信息，不处理");
+//                return;
+//            }
+
+            /*// Load initial relation
             SmartDeviceUserRelation relation = smartDeviceUserRelationService.selectByIpAddress(sessionContext.getClientIP());
             if(relation==null&&StringUtils.isNotBlank(sessionContext.getMac())){
                 relation = smartDeviceUserRelationService.selectByDeviceCode(sessionContext.getMac());
             }
-            sessionContext.setRelation(relation);
+            sessionContext.setRelation(relation);*/
 
             // 2. Setup Packet Decoder
             decoder = new PacketDecoder(bufferedInputStream);
@@ -172,7 +237,7 @@ public class ClientHandler implements Runnable {
                         //log.info("Socket is not connected, exiting loop. Client: {}", sessionContext.getClientIP());
                         break;
                     }
-                    
+
                     // 检查心跳是否活跃
                     if (!isHeartbeatActive) {
                         //log.warn("Heartbeat is not active, checking connection status. Client: {}", sessionContext.getClientIP());
@@ -196,7 +261,7 @@ public class ClientHandler implements Runnable {
                             break;
                         }
                     }
-                    
+
                     // 定期检查连接状态（每100次循环检查一次）
                     connectionCheckCount++;
                     if (connectionCheckCount >= 100) {
@@ -207,7 +272,7 @@ public class ClientHandler implements Runnable {
                                 //log.warn("Connection check failed, socket is closed or not connected. Client: {}", sessionContext.getClientIP());
                                 break;
                             }
-                            
+
                             // 检查网络延迟
                             long startTime = System.currentTimeMillis();
                             // 发送一个小的测试数据包
@@ -215,13 +280,13 @@ public class ClientHandler implements Runnable {
                             out.flush();
                             long endTime = System.currentTimeMillis();
                             long networkDelay = endTime - startTime;
-                            
+
                             if (networkDelay > 1000) {
                                 networkFluctuationCount++;
                                 lastNetworkFluctuationTime = System.currentTimeMillis();
                                 //log.warn("Network delay detected: {}ms, fluctuation count: {}. Client: {}",
                                 //        networkDelay, networkFluctuationCount, sessionContext.getClientIP());
-                                
+
                                 // 如果网络延迟严重，调整心跳间隔
                                 if (networkFluctuationCount >= 3) {
                                     //log.warn("Persistent network fluctuation detected, increasing heartbeat interval. Client: {}", sessionContext.getClientIP());
@@ -237,7 +302,7 @@ public class ClientHandler implements Runnable {
                         } catch (Exception e) {
                             String errorMsg = e.getMessage();
                             // 检查是否是连接断开错误
-                            if (errorMsg != null && (errorMsg.contains("断开的管道") || errorMsg.contains("Broken pipe") || 
+                            if (errorMsg != null && (errorMsg.contains("断开的管道") || errorMsg.contains("Broken pipe") ||
                                     errorMsg.contains("Connection reset") || errorMsg.contains("Socket closed"))) {
                                 //log.warn("Connection check detected disconnection: {}. Client: {}", errorMsg, sessionContext.getClientIP());
                                 isHeartbeatActive = false;
@@ -247,10 +312,10 @@ public class ClientHandler implements Runnable {
                             //log.warn("Connection check error: {}. Client: {}", errorMsg, sessionContext.getClientIP());
                         }
                     }
-                    
+
                     // 不再设置Socket超时，因为已经在初始化时设置为0（无限）
                     // 这样可以避免因超时而断开连接
-                    
+
                     Packet packet = decoder.readNextPacket();
                     if (packet == null) {
                         // Socket仍然连接，可能是暂时没有数据，短暂休眠后继续
@@ -258,7 +323,7 @@ public class ClientHandler implements Runnable {
                         Thread.sleep(1);
                         continue;
                     }
-                    
+
                     // 处理蓝牙数据标记
                     if (packet.isBluetooth()) {
                         handleBluetoothPreProcess(packet);
@@ -291,24 +356,24 @@ public class ClientHandler implements Runnable {
                     // IO异常可能表示连接断开，但也可能是临时错误
                     String errorMsg = e.getMessage();
                     //log.warn("IO exception: {}", errorMsg);
-                    
+
                     // 检查是否是"断开的管道"错误
                     if (errorMsg != null && (errorMsg.contains("断开的管道") || errorMsg.contains("Broken pipe") || errorMsg.contains("Connection reset"))) {
                         //log.warn("Connection reset or broken pipe detected, closing connection. Client: {}", sessionContext.getClientIP());
                         isHeartbeatActive = false;
                         break;
                     }
-                    
+
                     // 检查Socket状态，只有在真正断开时才退出
                     if (clientSocket == null || clientSocket.isClosed()) {
                         //log.info("Socket is closed, exiting loop. Client: {}", sessionContext.getClientIP());
                         isHeartbeatActive = false;
                         break;
                     }
-                    
+
                     // 处理网络异常
                     handleNetworkException(e);
-                    
+
                     // 如果Socket仍然连接，可能是临时错误，短暂休眠后继续
                     try {
                         Thread.sleep(100);
@@ -317,18 +382,18 @@ public class ClientHandler implements Runnable {
                         isHeartbeatActive = false;
                         break;
                     }
-                    
+
                     // 继续循环，不要立即退出
                     continue;
                 } catch (Exception e) {
                     // 其他异常，记录并继续
                     log.error("ClientHandler exception, continuing...: {}", e.getMessage(), e);
-                    
+
                     // 处理网络相关异常
                     if (e instanceof java.net.SocketException || e instanceof java.net.SocketTimeoutException) {
                         handleNetworkException(e);
                     }
-                    
+
                     // 短暂休眠，避免异常风暴
                     try {
                         Thread.sleep(100);
@@ -348,7 +413,7 @@ public class ClientHandler implements Runnable {
             // 关闭资源
             cancelHeartbeat();
             isHeartbeatActive = false; // 确保心跳调度器不会继续运行
-            
+
             try {
                 if (in != null) {
                     in.close();
@@ -365,15 +430,15 @@ public class ClientHandler implements Runnable {
             } catch (IOException e) {
                 log.info("Error closing socket: {}", e.getMessage());
             }
-            
+
             // 清理其他资源，避免内存泄漏
             if (handlers != null) {
                 handlers.clear(); // 清理处理器映射
             }
-            
+
             // 释放引用
             preReadBytes = null;
-            
+
             //log.info("Client connection closed: {}", sessionContext.getClientIP());
         }
     }
@@ -385,25 +450,25 @@ public class ClientHandler implements Runnable {
         if (relation != null && StringUtils.isNotEmpty(relation.getUserId())) {
             try {
                 Long userId = Long.parseLong(relation.getUserId());
-                
+
                 // 保存作业模式的未写入记录
                 if (!sessionContext.getStudentsWriteRecords().isEmpty() && sessionContext.getHomeId() != null && sessionContext.getPageNum() != null) {
                     handlerService.saveWriteRecords(userId, sessionContext.getHomeId(), "1", sessionContext.getPageNum(), sessionContext.getStudentsWriteRecords(), false);
                     //log.info("Saved unsaved homework notes for user {}: {}", userId, sessionContext.getStudentsWriteRecords().size());
                 }
-                
+
                 // 保存订正模式的未写入记录
                 if (!sessionContext.getStudentsEmendRecords().isEmpty() && sessionContext.getHomeId() != null && sessionContext.getPageNum() != null) {
                     handlerService.saveWriteRecords(userId, sessionContext.getHomeId(), "2", sessionContext.getPageNum(), sessionContext.getStudentsEmendRecords(), false);
                     //log.info("Saved unsaved emend notes for user {}: {}", userId, sessionContext.getStudentsEmendRecords().size());
                 }
-                
+
                 // 保存字帖模式的未写入记录
                 if (!sessionContext.getStudentsCopybookRecords().isEmpty() && sessionContext.getCopybookId() != null && sessionContext.getPageNum() != null) {
                     handlerService.saveStudentsCopybookRecords(userId, sessionContext.getCopybookId(), sessionContext.getPageNum(), sessionContext.getStudentsCopybookRecords(), false);
                     //log.info("Saved unsaved copybook notes for user {}: {}", userId, sessionContext.getStudentsCopybookRecords().size());
                 }
-                
+
                 // 保存反馈模式的未写入记录
                 if (!sessionContext.getStudentsFeedbackRecords().isEmpty() && sessionContext.getCurrentMenu() != null) {
                     MenuItemT itemT = sessionContext.getCurrentMenu().getPItems().get(sessionContext.getCurrentMenu().getSelectItem());
@@ -411,7 +476,7 @@ public class ClientHandler implements Runnable {
                     handlerService.saveFeedbackRecords(sessionContext.getFeedbackId(),userId, name, sessionContext.getStudentsFeedbackRecords());
                     //log.info("Saved unsaved feedback notes for user {}: {}", userId, sessionContext.getStudentsFeedbackRecords().size());
                 }
-                
+
                 // 保存错题模式的未写入记录
                 if (!sessionContext.getUploadErrorTitleRecords().isEmpty() && sessionContext.getCurrentMenu() != null) {
                     MenuItemT itemT = sessionContext.getCurrentMenu().getPItems().get(sessionContext.getCurrentMenu().getSelectItem());
@@ -419,7 +484,7 @@ public class ClientHandler implements Runnable {
                     handlerService.saveErrorTitleRecords(sessionContext.getErrorTitleId(),userId, name, sessionContext.getUploadErrorTitleRecords());
                     //log.info("Saved unsaved error title notes for user {}: {}", userId, sessionContext.getUploadErrorTitleRecords().size());
                 }
-                
+
                 // 保存 lastList 中的记录
                 if (!sessionContext.getLastList().isEmpty()) {
                     if (sessionContext.getCopybookId() != null && sessionContext.getPageNum() != null && sessionContext.getPageNum() > 1) {
@@ -430,7 +495,7 @@ public class ClientHandler implements Runnable {
                         //log.info("Saved unsaved lastList notes for user {}: {}", userId, sessionContext.getLastList().size());
                     }
                 }
-                
+
                 // 保存课堂模式的未写入记录（清空studentClassRecords，避免内存占用过高）
                 if (!sessionContext.getStudentClassRecords().isEmpty()) {
                     //log.info("Saved unsaved classroom notes for user {}: {}", userId, sessionContext.getStudentClassRecords().size());
@@ -439,7 +504,7 @@ public class ClientHandler implements Runnable {
                     // 保存修改后的SessionContext回Redis
                     saveSessionContextToRedis();
                 }
-                
+
             } catch (Exception e) {
                 //log.warn("Failed to save unsaved notes: {}", e.getMessage());
             }
@@ -501,12 +566,28 @@ public class ClientHandler implements Runnable {
             new Thread(() -> {
                 try {
                     // 直接保存当前的SessionContext，不进行合并操作，减少网络I/O
-                    redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                    redisTemplate.opsForValue().set("hard:"+sessionContext.getMac(), sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+//                    redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
                     // 减少日志输出，避免影响性能
                     // log.info("Saved session context to Redis for client: {}", sessionContext.getClientIP());
                 } catch (Exception e) {
                     // 减少日志输出，避免影响性能
                     // log.warn("Failed to save session context to Redis: {}", e.getMessage());
+                }
+            }).start();
+        }
+    }
+
+    public void saveHardDataToRedis(String hexdata) {
+        if (redisTemplate != null && redisKey != null) {
+            new Thread(() -> {
+                try {
+                    String listKey = "hard:list:hexdata"; // 或者固定 key，如 "hard:sessions"
+                    redisTemplate.opsForList().rightPush(listKey, hexdata);
+                    // 可选：设置过期时间（注意：List 本身不能直接设 TTL，需额外调用 expire）
+                    redisTemplate.expire(listKey, 24, java.util.concurrent.TimeUnit.HOURS);
+                } catch (Exception e) {
+                    // log.warn("Failed to push session context to Redis list: {}", e.getMessage());
                 }
             }).start();
         }
@@ -543,7 +624,7 @@ public class ClientHandler implements Runnable {
                     cancelHeartbeat();
                     return;
                 }
-                
+
                 // 先检查Socket连接状态
                 if (clientSocket == null || clientSocket.isClosed()) {
                     //log.info("Socket is closed, stopping heartbeat");
@@ -551,7 +632,7 @@ public class ClientHandler implements Runnable {
                     cancelHeartbeat();
                     return;
                 }
-                
+
                 // 检查输出流是否可用
                 if (out == null) {
                     //log.warn("OutputStream is null, stopping heartbeat");
@@ -559,18 +640,18 @@ public class ClientHandler implements Runnable {
                     cancelHeartbeat();
                     return;
                 }
-                
+
                 // 尝试发送心跳
                 sendHeartbeat(out);
-                
+
                 // 心跳发送成功，重置失败计数
                 heartbeatFailureCount = 0;
-                
+
             } catch (IOException e) {
                 // 心跳失败，增加失败计数
                 heartbeatFailureCount++;
                 //log.warn("Heartbeat failed (attempt {} of {}): {}", heartbeatFailureCount, MAX_HEARTBEAT_FAILURES, e.getMessage());
-                
+
                 // 如果是"断开的管道"错误，直接关闭连接
                 if (e.getMessage() != null && (e.getMessage().contains("断开的管道") || e.getMessage().contains("Broken pipe"))) {
                     //log.info("Broken pipe detected, closing connection immediately");
@@ -586,7 +667,7 @@ public class ClientHandler implements Runnable {
                     }
                     return;
                 }
-                
+
                 // 如果心跳失败次数超过阈值，关闭连接
                 if (heartbeatFailureCount >= MAX_HEARTBEAT_FAILURES) {
                     log.error("Heartbeat failed {} times, closing connection", MAX_HEARTBEAT_FAILURES);
@@ -618,7 +699,7 @@ public class ClientHandler implements Runnable {
         timestampBytes[1] = (byte) (timestamp >> 16);
         timestampBytes[2] = (byte) (timestamp >> 8);
         timestampBytes[3] = (byte) timestamp;
-        
+
         int checksum = 0;
 
         if (sessionContext.isBluetooth() && sessionContext.getMac() != null) {
@@ -629,20 +710,20 @@ public class ClientHandler implements Runnable {
             fullPacket[1] = 0x56; // 同步头
             fullPacket[2] = 0x06; // 长度 (MAC 6 + 数据 5)
             fullPacket[3] = HEARTBEAT_TYPE; // 心跳类型
-            
+
             // 添加MAC地址
             byte[] macByte = ParseTcpDataUtil.hexStringToByteArray(sessionContext.getMac());
             System.arraycopy(macByte, 0, fullPacket, 4, 6);
-            
+
             // 添加应用层心跳数据
             fullPacket[10] = heartbeatData; // 心跳标志
             // 添加时间戳
             System.arraycopy(timestampBytes, 0, fullPacket, 11, 4);
-            
+
             // 计算校验和
             checksum = calculateChecksum(fullPacket, 0, 14);
             fullPacket[15] = (byte) (checksum & 0xFF);
-            
+
             out.write(fullPacket);
         } else {
             // 普通设备心跳包
@@ -652,12 +733,12 @@ public class ClientHandler implements Runnable {
             fullPacket[1] = 0x56; // 同步头
             fullPacket[2] = 0x05; // 长度 (数据 5)
             fullPacket[3] = HEARTBEAT_TYPE; // 心跳类型
-            
+
             // 添加应用层心跳数据
             fullPacket[4] = heartbeatData; // 心跳标志
             // 添加时间戳
             System.arraycopy(timestampBytes, 0, fullPacket, 5, 4);
-            
+
             // 计算校验和
             checksum = calculateChecksum(fullPacket, 0, 8);
             fullPacket[9] = (byte) (checksum & 0xFF);
@@ -667,7 +748,7 @@ public class ClientHandler implements Runnable {
         // 记录心跳发送时间
         sessionContext.setLastHeartbeatTime(System.currentTimeMillis());
     }
-    
+
     private int calculateChecksum(byte[] data, int start, int end) {
         int sum = 0;
         for (int i = start; i <= end; i++) {
@@ -681,27 +762,27 @@ public class ClientHandler implements Runnable {
             heartbeatScheduler.shutdownNow();
         }
     }
-    
+
     /**
      * 处理网络异常
      * @param e 异常对象
      */
     private void handleNetworkException(Exception e) {
         long currentTime = System.currentTimeMillis();
-        
+
         // 检查是否是网络恢复
         if (currentTime - lastNetworkExceptionTime > NETWORK_RECOVERY_THRESHOLD) {
             networkExceptionCount = 0;
             log.info("Network recovered, resetting exception count. Client: {}", sessionContext.getClientIP());
         }
-        
+
         // 增加网络异常计数
         networkExceptionCount++;
         lastNetworkExceptionTime = currentTime;
-        
+
         //log.warn("Network exception detected (count: {}), error: {}. Client: {}",
         //        networkExceptionCount, e.getMessage(), sessionContext.getClientIP());
-        
+
         // 如果网络异常次数过多，考虑关闭连接
         if (networkExceptionCount >= MAX_NETWORK_EXCEPTIONS) {
             //log.warn("Too many network exceptions ({}) detected, closing connection. Client: {}",

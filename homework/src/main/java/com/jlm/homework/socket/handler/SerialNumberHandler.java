@@ -39,11 +39,17 @@ public class SerialNumberHandler implements MessageHandler {
         MacParseResult result = ParseTcpDataUtil.parseSerialNumberTcpPacket(packet.getRawData());
         log.info("Serial Number Data Parsed: {}", result);
         context.setMac(result.getMac());
+
+
+
         // 保存SessionContext到Redis
         if (clientHandler != null) {
             clientHandler.saveSessionContextToRedis();
         }
         SmartDeviceUserRelation deviceUserRelation = smartDeviceUserRelationService.selectByDeviceCode(result.getMac().toString());
+
+        context.setRelation(deviceUserRelation);
+
         if (deviceUserRelation != null) {
             deviceUserRelation.setIpAddress(context.getClientIP());
             smartDeviceUserRelationService.update(deviceUserRelation);
@@ -73,7 +79,7 @@ public class SerialNumberHandler implements MessageHandler {
                 // 会话已关闭，跳过发送
             }
         }
-        
+
         // Echo back
         try {
             sender.sendRaw(packet.getRawData());

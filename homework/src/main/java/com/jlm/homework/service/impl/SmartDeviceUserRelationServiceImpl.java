@@ -10,8 +10,10 @@ import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.service.IUserService;
 import jakarta.annotation.Resource;
 import com.alibaba.cloud.commons.lang.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,6 +23,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelationService {
     @Resource
     private SmartDeviceUserRelationRepository smartDeviceUserRelationRepository;
@@ -28,6 +31,9 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
     private StudentFeignClient studentFeignClient;
     @Autowired
     private IUserService userService;
+    @Autowired
+    private RedisTemplate redisTemplate;
+
     @Override
     public Long create(SmartDeviceUserRelation deviceUserRelation) {
         if(StringUtils.isNotEmpty(deviceUserRelation.getDeviceCode())){
@@ -152,6 +158,13 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
     }
 
     @Override
+    public List<SmartDeviceUserRelation> selectByIpAddressAll(){
+        List<SmartDeviceUserRelation> rets = smartDeviceUserRelationRepository.findAll();
+        return rets;
+    }
+
+
+    @Override
     public SmartDeviceUserRelation getByUseId(String userId) {
         SmartDeviceUserRelation relation=new SmartDeviceUserRelation();
         relation.setUserId(userId);
@@ -162,5 +175,34 @@ public class SmartDeviceUserRelationServiceImpl implements ISmartDeviceUserRelat
             deviceUserRelation=optional.get();
         }
         return deviceUserRelation;
+    }
+
+    @Override
+    public void synHardUserRedisData(){
+        List<SmartDeviceUserRelation> smartDeviceUserRelations = null;
+        String cacheKey = "device_user_relation";
+        if (redisTemplate != null) {
+            try {
+                Object cachedData = redisTemplate.opsForValue().get(cacheKey);
+                if (cachedData instanceof List) {
+                    smartDeviceUserRelations = (List<SmartDeviceUserRelation>) cachedData;
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get device_user_relation from Redis: {}", e.getMessage());
+            }
+        }
+
+        if (smartDeviceUserRelations == null) {
+            log.info("Cache missed for device_user_relation, loading from DB (should ideally be loaded at startup)...");
+            smartDeviceUserRelations = selectByIpAddressAll();
+            if (redisTemplate != null && smartDeviceUserRelations != null) {
+                try {
+                    redisTemplate.opsForValue().set(cacheKey, smartDeviceUserRelations, 24, java.util.concurrent.TimeUnit.HOURS);
+                    log.info("更新关联信息，获取数据，更新hard_user关联数据: {}", cacheKey);
+                } catch (Exception e) {
+                    log.error("Failed to cache device_user_relation to Redis: {}", e.getMessage(), e);
+                }
+            }
+        }
     }
 }

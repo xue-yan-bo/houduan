@@ -22,10 +22,10 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 @Component
 public class SocketService implements SmartLifecycle {
-    
+
     // Redis key prefix for client handler mapping
     private static final String REDIS_KEY_PREFIX = "socket:client:";
-    
+
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
     @Autowired
@@ -56,7 +56,7 @@ public class SocketService implements SmartLifecycle {
     private final AtomicLong rejectedTaskCount = new AtomicLong(0);
     // 最大连接数
     private static final int DEFAULT_MAX_CONNECTIONS = 1000;
-    
+
     // 连接状态监控
     private ScheduledExecutorService monitorScheduler;
     private static final long MONITOR_INTERVAL = 30; // 监控间隔，30秒
@@ -84,7 +84,7 @@ public class SocketService implements SmartLifecycle {
                 },
                 new ThreadPoolExecutor.CallerRunsPolicy() // 拒绝策略：由调用者线程执行
         );
-        
+
         // 允许核心线程超时
         threadPool.allowCoreThreadTimeOut(true);
         
@@ -95,9 +95,8 @@ public class SocketService implements SmartLifecycle {
                 serverSocket.setReceiveBufferSize(128 * 1024); // 增加接收缓冲区到128KB
                 serverSocket.setPerformancePreferences(1, 10, 1); // 优先考虑延迟，提高响应速度
                 running = true;
-                log.info("Socket server started on port {}, corePoolSize: {}, maxPoolSize: {}, queueCapacity: {}", 
-                        socketPort, corePoolSize, maxPoolSize, queueCapacity);
-                
+                //log.info("Socket server started on port {}", socketPort);
+
                 // 启动连接状态监控
                 startConnectionMonitor();
 
@@ -117,7 +116,7 @@ public class SocketService implements SmartLifecycle {
                             }
                             continue;
                         }
-                        
+
                        // log.info("New client connected, raw address: {}", socket.getRemoteSocketAddress());
 
                         // 解析代理头，获取真实客户端地址
@@ -136,13 +135,13 @@ public class SocketService implements SmartLifecycle {
                         InetSocketAddress realAddress = proxyResult.getRealAddress();
                         String clientAddress = realAddress.getHostString();
                         int clientPort = realAddress.getPort();
-                        
+
                         //log.info("Client connected with real address: {}", clientAddress);
-                        
+
                         // 使用Redis获取或创建SessionContext
                         SessionContext sessionContext = null;
                         String redisKey = REDIS_KEY_PREFIX + clientAddress;
-                        
+
                         // 从Redis获取SessionContext
                         Object sessionObj = redisTemplate.opsForValue().get(redisKey);
                         if (sessionObj instanceof SessionContext) {
@@ -152,18 +151,20 @@ public class SocketService implements SmartLifecycle {
                             // 创建新的SessionContext
                             sessionContext = new SessionContext();
                             // 保存到Redis，设置过期时间为24小时
-                            redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                            redisTemplate.opsForValue().set("hard:" + sessionContext.getMac(), sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+//                            redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
                             //log.debug("Created new session context and saved to Redis for client: {}", clientAddress);
                         }
-                        
+
                         // 设置真实客户端地址到SessionContext
                         sessionContext.setRemoteAddress(realAddress);
                         sessionContext.setClientIP(clientAddress);
                         sessionContext.setClientPort(clientPort);
                         // 保存修改后的SessionContext回Redis
-                        redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                        redisTemplate.opsForValue().set("hard:" + sessionContext.getMac(), sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+//                        redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
                         //log.debug("Saved session context to Redis for client: {}", clientAddress);
-                        
+
                         // 提交客户端连接到线程池处理
                         ClientHandler clientHandler = new ClientHandler(socket, messagingTemplate,
                                 smartDeviceUserRelationService, handlerService, sessionContext, proxyResult.getPreReadBytes(),
@@ -234,7 +235,7 @@ public class SocketService implements SmartLifecycle {
             try {
                 int currentConnections = connectionCount.get();
                 long rejectedTasks = rejectedTaskCount.get();
-                
+
                 // 获取线程池状态
                 int activeThreads = threadPool.getActiveCount();
                 int poolSize = threadPool.getPoolSize();
@@ -244,23 +245,23 @@ public class SocketService implements SmartLifecycle {
                 long totalTasks = threadPool.getTaskCount();
                 int queueSize = threadPool.getQueue().size();
                 int queueRemainingCapacity = threadPool.getQueue().remainingCapacity();
-                
+
                 // 记录详细的状态信息
                 log.info("Socket server status: connections={}, activeThreads={}, poolSize={}/{}, " +
                         "queueSize={}/{}, completedTasks={}, rejectedTasks={}",
                         currentConnections, activeThreads, poolSize, maximumPoolSize,
                         queueSize, queueCapacity, completedTasks, rejectedTasks);
-                
+
                 // 检查线程池健康状态
                 if (queueSize > queueCapacity * 0.8) {
                     log.warn("Thread pool queue is nearly full: {}/{}", queueSize, queueCapacity);
                 }
-                
+
                 if (activeThreads >= maximumPoolSize * 0.9) {
-                    log.warn("Thread pool is nearly exhausted: activeThreads={}, maxPoolSize={}", 
+                    log.warn("Thread pool is nearly exhausted: activeThreads={}, maxPoolSize={}",
                             activeThreads, maximumPoolSize);
                 }
-                
+
                 // 检查服务器Socket状态
                 if (serverSocket != null && !serverSocket.isClosed()) {
                     if (serverSocket.isBound()) {
@@ -274,7 +275,7 @@ public class SocketService implements SmartLifecycle {
             }
         }, MONITOR_INTERVAL, MONITOR_INTERVAL, TimeUnit.SECONDS);
     }
-    
+
     /**
      * 停止连接状态监控
      */
@@ -304,7 +305,7 @@ public class SocketService implements SmartLifecycle {
         stop();
         callback.run();
     }
-    
+
     /**
      * 解析代理头，获取真实客户端地址
      * @param socket 客户端Socket连接
@@ -323,10 +324,10 @@ public class SocketService implements SmartLifecycle {
 
         try {
             bytesRead = bufferedInputStream.read(signature);
-            
+
             // 默认使用Socket远程地址
             InetSocketAddress realAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
-            
+
             // 记录原始地址用于调试
             String originalAddress = realAddress.getHostString();
             //log.debug("Parsing proxy header, original socket address: {}", originalAddress);
@@ -359,7 +360,7 @@ public class SocketService implements SmartLifecycle {
                         // 传递已读取的signature数据，避免重复读取
                         return parseProxyV2(socket, bufferedInputStream, signature, bytesRead);
                     }
-                    
+
                     // 检查PROXY v1协议
                     String sigStr = new String(signature, 0, Math.min(5, bytesRead));
                     if (sigStr.startsWith("PROXY")) {
@@ -395,7 +396,7 @@ public class SocketService implements SmartLifecycle {
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to read proxy header signature: {}, using original address: {}", e.getMessage(), 
+            log.warn("Failed to read proxy header signature: {}, using original address: {}", e.getMessage(),
                     socket.getRemoteSocketAddress());
             // 重置输入流
             try {
@@ -410,7 +411,7 @@ public class SocketService implements SmartLifecycle {
             );
         }
     }
-    
+
     /**
      * 检测是否为PROXY v2协议签名
      * PROXY v2协议签名：0x0D 0x0A 0x0D 0x0A 0x00 0x0D 0x0A 0x51 0x55 0x49 0x54 0x0A
@@ -519,7 +520,7 @@ public class SocketService implements SmartLifecycle {
      * @return 解析结果
      * @throws IOException 解析异常
      */
-    private ProxyHeaderResult parseProxyV2(Socket socket, java.io.BufferedInputStream inputStream, 
+    private ProxyHeaderResult parseProxyV2(Socket socket, java.io.BufferedInputStream inputStream,
                                           byte[] signature, int bytesRead) throws IOException {
         try {
             // 重置输入流到标记位置（开始位置）
@@ -614,7 +615,7 @@ public class SocketService implements SmartLifecycle {
 
             // 构建真实地址
             InetSocketAddress realAddress = new InetSocketAddress(clientIp, clientPort);
-            log.info("Parsed PROXY v2 header successfully, real client address: {}:{}, original: {}", 
+            log.info("Parsed PROXY v2 header successfully, real client address: {}:{}, original: {}",
                     clientIp, clientPort, socket.getRemoteSocketAddress());
             
             // 计算PROXY v2头部总长度
@@ -649,7 +650,7 @@ public class SocketService implements SmartLifecycle {
 
             return new ProxyHeaderResult(realAddress, null, inputStream);
         } catch (Exception e) {
-            log.warn("Failed to parse PROXY v2 header: {}, using original address: {}", 
+            log.warn("Failed to parse PROXY v2 header: {}, using original address: {}",
                     e.getMessage(), socket.getRemoteSocketAddress(), e);
             try {
                 inputStream.reset();

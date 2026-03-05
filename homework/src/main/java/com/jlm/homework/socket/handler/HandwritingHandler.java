@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 
 @Slf4j
@@ -54,8 +55,23 @@ public class HandwritingHandler implements MessageHandler {
         }
     }
 
+    private void saveHardToRedis(String hex) {
+        if (clientHandler != null) {
+            clientHandler.saveHardDataToRedis(hex);
+        }
+    }
+
+
+
     @Override
     public void handle(SessionContext context, Packet packet, ResponseSender sender) {
+
+        // todo 写入redis，核查丢包问题
+        byte[] rawData = packet.getRawData();
+        saveHardToRedis(HexFormat.of().formatHex(rawData));
+//        if(1==1) return;
+
+
         List<HandwritingParseResult> results;
         try {
             if (packet.getType() == 0x01) {
@@ -68,7 +84,7 @@ public class HandwritingHandler implements MessageHandler {
 
             for (HandwritingParseResult result : results) {
                 SmartDeviceUserRelation relation = context.getRelation();
-                
+
                 if (relation != null) {
                     //log.info("Processing handwriting data for user: {}", relation.getUserId());
                     processRecord(context, result, relation, sender);
@@ -103,7 +119,7 @@ public class HandwritingHandler implements MessageHandler {
                     }
                 }
             }
-            
+
             // 每处理100条笔记记录后保存一次SessionContext到Redis，减少Redis操作的频率
             if (context.getRelation() != null && context.getStudentClassRecords().size() % 100 == 0) {
                 saveSessionContextToRedis(context);
@@ -322,7 +338,7 @@ public class HandwritingHandler implements MessageHandler {
                     log.debug("WebSocket session closed for user {}, skipping message", userId);
                     return;
                 }
-                
+
                 retryCount++;
                 if (retryCount >= maxRetries) {
                     log.warn("Failed to send writing data after {} retries: {}", maxRetries, e.getMessage());

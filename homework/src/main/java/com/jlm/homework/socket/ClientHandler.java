@@ -152,7 +152,7 @@ public class ClientHandler implements Runnable {
             }else if(relation==null&&StringUtils.isNotBlank(sessionContext.getMac())){
                 relation = smartDeviceUserRelationService.selectByDeviceCode(sessionContext.getMac());
             }
-            sessionContext.setRelation(relation);*/
+            sessionContext.setRelation(relation);
 
             // 2. Setup Packet Decoder
             decoder = new PacketDecoder(bufferedInputStream);

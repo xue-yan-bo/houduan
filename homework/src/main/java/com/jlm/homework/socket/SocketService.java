@@ -151,8 +151,8 @@ public class SocketService implements SmartLifecycle {
                             // 创建新的SessionContext
                             sessionContext = new SessionContext();
                             // 保存到Redis，设置过期时间为24小时
-                            redisTemplate.opsForValue().set("hard:" + sessionContext.getMac(), sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
-//                            redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                            //redisTemplate.opsForValue().set("hard:" + sessionContext.getMac(), sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                            redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
                             //log.debug("Created new session context and saved to Redis for client: {}", clientAddress);
                         }
 
@@ -161,8 +161,8 @@ public class SocketService implements SmartLifecycle {
                         sessionContext.setClientIP(clientAddress);
                         sessionContext.setClientPort(clientPort);
                         // 保存修改后的SessionContext回Redis
-                        redisTemplate.opsForValue().set("hard:" + sessionContext.getMac(), sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
-//                        redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                        //redisTemplate.opsForValue().set("hard:" + sessionContext.getMac(), sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+                        redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
                         //log.debug("Saved session context to Redis for client: {}", clientAddress);
 
                         // 提交客户端连接到线程池处理
@@ -175,7 +175,7 @@ public class SocketService implements SmartLifecycle {
                                 clientHandler.run();
                             } finally {
                                 // 连接处理完成后，减少连接计数
-                                connectionCount.decrementAndGet();
+                                //connectionCount.decrementAndGet();
                                 //log.info("Client connection closed, current connections: {}", connectionCount.get());
                             }
                         });

@@ -145,8 +145,10 @@ public class ClientHandler implements Runnable {
             logClientConnection();
 
             // Load initial relation
-            SmartDeviceUserRelation relation = smartDeviceUserRelationService.selectByIpAddress(sessionContext.getClientIP());
-            if(relation==null&&StringUtils.isNotBlank(sessionContext.getMac())){
+            SmartDeviceUserRelation relation = sessionContext.getRelation();
+            if(relation == null) {
+                relation = smartDeviceUserRelationService.selectByIpAddress(sessionContext.getClientIP());
+            }else if(relation==null&&StringUtils.isNotBlank(sessionContext.getMac())){
                 relation = smartDeviceUserRelationService.selectByDeviceCode(sessionContext.getMac());
             }
             sessionContext.setRelation(relation);
@@ -250,7 +252,6 @@ public class ClientHandler implements Runnable {
                     
                     // 不再设置Socket超时，因为已经在初始化时设置为0（无限）
                     // 这样可以避免因超时而断开连接
-                    
                     Packet packet = decoder.readNextPacket();
                     if (packet == null) {
                         // Socket仍然连接，可能是暂时没有数据，短暂休眠后继续
@@ -588,7 +589,7 @@ public class ClientHandler implements Runnable {
                 }
                 
                 // 如果心跳失败次数超过阈值，关闭连接
-                if (heartbeatFailureCount >= MAX_HEARTBEAT_FAILURES) {
+                /* if (heartbeatFailureCount >= MAX_HEARTBEAT_FAILURES) {
                     log.error("Heartbeat failed {} times, closing connection", MAX_HEARTBEAT_FAILURES);
                     isHeartbeatActive = false;
                     cancelHeartbeat();
@@ -600,7 +601,7 @@ public class ClientHandler implements Runnable {
                     } catch (IOException ex) {
                         // 忽略关闭异常
                     }
-                }
+                } */
             } catch (Exception e) {
                 // 其他异常，记录并继续
                 log.error("Unexpected error in heartbeat: {}", e.getMessage(), e);
@@ -698,14 +699,10 @@ public class ClientHandler implements Runnable {
         // 增加网络异常计数
         networkExceptionCount++;
         lastNetworkExceptionTime = currentTime;
-        
-        //log.warn("Network exception detected (count: {}), error: {}. Client: {}",
-        //        networkExceptionCount, e.getMessage(), sessionContext.getClientIP());
+
         
         // 如果网络异常次数过多，考虑关闭连接
         if (networkExceptionCount >= MAX_NETWORK_EXCEPTIONS) {
-            //log.warn("Too many network exceptions ({}) detected, closing connection. Client: {}",
-            //        networkExceptionCount, sessionContext.getClientIP());
             isHeartbeatActive = false;
             // 这里不立即断开，让主循环自然退出
         }

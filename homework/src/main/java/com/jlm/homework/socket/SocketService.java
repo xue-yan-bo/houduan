@@ -15,10 +15,9 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @Component
@@ -36,7 +35,7 @@ public class SocketService implements SmartLifecycle {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    private ExecutorService threadPool;
+    private ThreadPoolExecutor threadPool;
     private ServerSocket serverSocket;
     private boolean running = false;
 
@@ -44,9 +43,17 @@ public class SocketService implements SmartLifecycle {
     private int socketPort; // 可以通过配置文件管理端口
     @Value("${socket.server.maxConnections:10}")
     private int maxConnections;
+    @Value("${socket.server.corePoolSize:50}")
+    private int corePoolSize; // 核心线程数
+    @Value("${socket.server.maxPoolSize:500}")
+    private int maxPoolSize; // 最大线程数
+    @Value("${socket.server.queueCapacity:2000}")
+    private int queueCapacity; // 队列容量
 
     // 连接计数器
     private final AtomicInteger connectionCount = new AtomicInteger(0);
+    // 拒绝任务计数器
+    private final AtomicLong rejectedTaskCount = new AtomicLong(0);
     // 最大连接数
     private static final int DEFAULT_MAX_CONNECTIONS = 1000;
     
@@ -56,18 +63,40 @@ public class SocketService implements SmartLifecycle {
 
     @Override
     public void start() {
-        // 使用更合理的线程池大小，默认最大1000连接
-        int threadPoolSize = Math.min(maxConnections, DEFAULT_MAX_CONNECTIONS);
-        threadPool = Executors.newFixedThreadPool(threadPoolSize);
+        // 使用ThreadPoolExecutor，配置合理的参数
+        // 核心线程数：50，最大线程数：500，队列容量：2000
+        // 使用CallerRunsPolicy拒绝策略，当队列满时由调用者线程执行任务
+        threadPool = new ThreadPoolExecutor(
+                corePoolSize,
+                maxPoolSize,
+                60L, // 空闲线程存活时间
+                TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(queueCapacity),
+                new ThreadFactory() {
+                    private final AtomicInteger threadNumber = new AtomicInteger(1);
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread t = new Thread(r, "socket-handler-" + threadNumber.getAndIncrement());
+                        t.setDaemon(false);
+                        t.setPriority(Thread.NORM_PRIORITY);
+                        return t;
+                    }
+                },
+                new ThreadPoolExecutor.CallerRunsPolicy() // 拒绝策略：由调用者线程执行
+        );
+        
+        // 允许核心线程超时
+        threadPool.allowCoreThreadTimeOut(true);
         
         new Thread(() -> {
             try {
                 serverSocket = new ServerSocket(socketPort);
                 serverSocket.setReuseAddress(true);
-                serverSocket.setReceiveBufferSize(64 * 1024); // 设置接收缓冲区为64KB
+                serverSocket.setReceiveBufferSize(128 * 1024); // 增加接收缓冲区到128KB
                 serverSocket.setPerformancePreferences(1, 10, 1); // 优先考虑延迟，提高响应速度
                 running = true;
-                //log.info("Socket server started on port {}", socketPort);
+                log.info("Socket server started on port {}, corePoolSize: {}, maxPoolSize: {}, queueCapacity: {}", 
+                        socketPort, corePoolSize, maxPoolSize, queueCapacity);
                 
                 // 启动连接状态监控
                 startConnectionMonitor();
@@ -77,9 +106,9 @@ public class SocketService implements SmartLifecycle {
                         Socket socket = serverSocket.accept();
                         // 检查连接数是否超过限制
                         int currentConnections = connectionCount.incrementAndGet();
-                        if (currentConnections > threadPoolSize) {
-                            //log.warn("Connection limit reached: {}, closing new connection from {}",
-                             //       threadPoolSize, socket.getRemoteSocketAddress());
+                        if (currentConnections > maxPoolSize) {
+                            log.warn("Connection limit reached: {}, closing new connection from {}",
+                                    maxPoolSize, socket.getRemoteSocketAddress());
                             connectionCount.decrementAndGet();
                             try {
                                 socket.close();
@@ -175,6 +204,22 @@ public class SocketService implements SmartLifecycle {
             }
             // 停止连接状态监控
             stopConnectionMonitor();
+            // 优雅关闭线程池
+            if (threadPool != null && !threadPool.isShutdown()) {
+                threadPool.shutdown(); // 不再接受新任务
+                try {
+                    // 等待已提交的任务完成
+                    if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+                        threadPool.shutdownNow(); // 强制关闭
+                        if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+                            log.warn("Thread pool did not terminate");
+                        }
+                    }
+                } catch (InterruptedException ie) {
+                    threadPool.shutdownNow();
+                    Thread.currentThread().interrupt();
+                }
+            }
         } catch (IOException e) {
             log.error("Error closing server socket: {}", e.getMessage());
         }
@@ -184,26 +229,50 @@ public class SocketService implements SmartLifecycle {
      * 启动连接状态监控
      */
     private void startConnectionMonitor() {
-        monitorScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+        monitorScheduler = Executors.newSingleThreadScheduledExecutor();
         monitorScheduler.scheduleAtFixedRate(() -> {
-            int currentConnections = connectionCount.get();
-            /*log.info("Socket server status: current connections = {}, max connections = {}",
-                    currentConnections, Math.min(maxConnections, DEFAULT_MAX_CONNECTIONS));*/
-            
-            // 检查服务器Socket状态
-            if (serverSocket != null && !serverSocket.isClosed()) {
-                try {
-                    // 检查服务器Socket是否可用
+            try {
+                int currentConnections = connectionCount.get();
+                long rejectedTasks = rejectedTaskCount.get();
+                
+                // 获取线程池状态
+                int activeThreads = threadPool.getActiveCount();
+                int poolSize = threadPool.getPoolSize();
+                int corePoolSize = threadPool.getCorePoolSize();
+                int maximumPoolSize = threadPool.getMaximumPoolSize();
+                long completedTasks = threadPool.getCompletedTaskCount();
+                long totalTasks = threadPool.getTaskCount();
+                int queueSize = threadPool.getQueue().size();
+                int queueRemainingCapacity = threadPool.getQueue().remainingCapacity();
+                
+                // 记录详细的状态信息
+                log.info("Socket server status: connections={}, activeThreads={}, poolSize={}/{}, " +
+                        "queueSize={}/{}, completedTasks={}, rejectedTasks={}",
+                        currentConnections, activeThreads, poolSize, maximumPoolSize,
+                        queueSize, queueCapacity, completedTasks, rejectedTasks);
+                
+                // 检查线程池健康状态
+                if (queueSize > queueCapacity * 0.8) {
+                    log.warn("Thread pool queue is nearly full: {}/{}", queueSize, queueCapacity);
+                }
+                
+                if (activeThreads >= maximumPoolSize * 0.9) {
+                    log.warn("Thread pool is nearly exhausted: activeThreads={}, maxPoolSize={}", 
+                            activeThreads, maximumPoolSize);
+                }
+                
+                // 检查服务器Socket状态
+                if (serverSocket != null && !serverSocket.isClosed()) {
                     if (serverSocket.isBound()) {
                         //log.debug("Server socket is bound and listening on port {}", socketPort);
                     } else {
                         log.warn("Server socket is not bound");
                     }
-                } catch (Exception e) {
-                    log.warn("Error checking server socket status: {}", e.getMessage());
                 }
+            } catch (Exception e) {
+                log.warn("Error in connection monitor: {}", e.getMessage());
             }
-        }, MONITOR_INTERVAL, MONITOR_INTERVAL, java.util.concurrent.TimeUnit.SECONDS);
+        }, MONITOR_INTERVAL, MONITOR_INTERVAL, TimeUnit.SECONDS);
     }
     
     /**

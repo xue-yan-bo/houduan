@@ -188,6 +188,7 @@ public class CopybookServiceImpl implements ICopybookService {
                         record.setStudentName(student.getStudentName());
                         record.setSubmitStatus(0);
                         record.setCreateTime(new Date());
+                        record.setDeadline(copybook.getDeadline());
                         copybookStudentRecordRepository.save(record);
                     }
                 }

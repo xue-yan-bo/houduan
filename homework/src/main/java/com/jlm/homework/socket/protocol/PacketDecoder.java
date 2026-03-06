@@ -177,7 +177,15 @@ public class PacketDecoder {
                     }
                 }
             } catch (IOException e) {
-                // 记录IO异常，但继续尝试
+                // 检查是否是连接中止相关的异常
+                String errorMessage = e.getMessage();
+                if (errorMessage != null && (errorMessage.contains("中止了一个已建立的连接") || errorMessage.contains("Connection reset") || errorMessage.contains("Broken pipe"))) {
+                    // 连接已中止，直接返回false
+                    log.debug("Connection closed, stopping read attempts: {}", errorMessage);
+                    return false;
+                }
+                
+                // 其他IO异常，记录并继续尝试
                 log.warn("IO error while reading data (attempt {} of {}): {}", attempts, MAX_ATTEMPTS, e.getMessage());
                 attempts++;
                 

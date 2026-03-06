@@ -14,9 +14,9 @@ socket:
 spring:
   datasource:
     # 开发环境使用专门的数据库
-    url: ${DEV_DATABASE_URL:jdbc:mysql://localhost:3306/homework_dev?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    url: ${DEV_DATABASE_URL:jdbc:mysql://192.168.1.251:3306/jlm-homework-design?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
     username: ${DEV_DATABASE_USERNAME:root}
-    password: ${DEV_DATABASE_PASSWORD:root123}
+    password: ${DEV_DATABASE_PASSWORD:jlm@1234}
     hikari:
       # 开发环境使用较小的连接池
       maximum-pool-size: 10
@@ -26,7 +26,6 @@ spring:
     port: 5672
     username: root
     password: jlm@1234
-  
 
   jpa:
     # 开发环境显示SQL
@@ -82,8 +81,6 @@ ZHIPU_IMAGE_MODEL: "Cogview-3-Flash"
 TONGYI_API_KEY: "sk-4e8c4687ad3046c69151b21aa2b56861"
 ##1.1 多模态图文分析 qwen-vl-max
 TONGYI_MODEL: "qwen-vl-max"
-
-
 
 # 开发环境日志配置
 logging:

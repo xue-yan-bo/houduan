@@ -6,7 +6,10 @@
 socket:
   server:
     port: 80
-    maxConnections: 10
+    maxConnections: 500
+    corePoolSize: 50
+    maxPoolSize: 500
+    queueCapacity: 2000
 spring:
   cloud:
     nacos:

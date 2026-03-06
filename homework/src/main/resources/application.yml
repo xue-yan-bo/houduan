@@ -21,7 +21,7 @@ spring:
     nacos:
       # 服务器地址 - 支持环境变量配置， 启动了？
 
-      server-addr: ${NACOS_SERVER_ADDR:localhost:8848},localhost:8848
+      server-addr: 192.168.1.38:8848
       # 服务发现配置
       discovery:
         enabled: true

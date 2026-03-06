@@ -130,6 +130,7 @@ public class HomeworkResultServiceImpl implements IHomeworkResultService {
             if("1".equals(message.getType())) {
                 studentsHomework.setAiAudit(JSONArray.toJSONString(bigDtoList));
                 studentsHomework.setScore(message.getTotalScore());
+                studentsHomework.setAuditStatus(2);
             } else if ("2".equals(message.getType())){
                 studentsHomework.setAiAudit2(JSONArray.toJSONString(bigDtoList));
             }

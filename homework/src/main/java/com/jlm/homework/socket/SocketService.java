@@ -41,7 +41,7 @@ public class SocketService implements SmartLifecycle {
 
     @Value("${socket.server.port:6000}")
     private int socketPort; // 可以通过配置文件管理端口
-    @Value("${socket.server.maxConnections:10}")
+    @Value("${socket.server.maxConnections:500}")
     private int maxConnections;
     @Value("${socket.server.corePoolSize:50}")
     private int corePoolSize; // 核心线程数
@@ -105,9 +105,9 @@ public class SocketService implements SmartLifecycle {
                         Socket socket = serverSocket.accept();
                         // 检查连接数是否超过限制
                         int currentConnections = connectionCount.incrementAndGet();
-                        if (currentConnections > maxPoolSize) {
+                        if (currentConnections > maxConnections) {
                             log.warn("Connection limit reached: {}, closing new connection from {}",
-                                    maxPoolSize, socket.getRemoteSocketAddress());
+                                    maxConnections, socket.getRemoteSocketAddress());
                             connectionCount.decrementAndGet();
                             try {
                                 socket.close();
@@ -175,8 +175,8 @@ public class SocketService implements SmartLifecycle {
                                 clientHandler.run();
                             } finally {
                                 // 连接处理完成后，减少连接计数
-                                //connectionCount.decrementAndGet();
-                                //log.info("Client connection closed, current connections: {}", connectionCount.get());
+                                connectionCount.decrementAndGet();
+                                log.debug("Client connection closed, current connections: {}", connectionCount.get());
                             }
                         });
                         //log.info("Submitted client handler for client: {}, current connections: {}", clientAddress, connectionCount.get());

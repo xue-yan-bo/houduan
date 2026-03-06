@@ -116,6 +116,13 @@ public class CopybookStudentRecord {
     @Transient
     private String createTimeStr;
 
+
+    /**
+     * 截止时间
+     */
+    @Column(name = "deadline")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date deadline;
     /**
      * 学生写作记录
      */

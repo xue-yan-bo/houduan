@@ -102,4 +102,11 @@ public class Copybook {
     private Date createTime;
     @Transient
     private String createTimeStr;
+
+    /**
+     * 截止时间
+     */
+    @Column(name = "deadline")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date deadline;
 }

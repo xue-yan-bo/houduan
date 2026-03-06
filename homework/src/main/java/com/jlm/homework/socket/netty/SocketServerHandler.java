@@ -196,26 +196,26 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
 
     private void saveUnsavedData() {
         try {
-            if (sessionContext.getRelation() != null && 
+            if (sessionContext.getRelation() != null &&
                 sessionContext.getRelation().getUserId() != null) {
-                
+
                 Long userId = Long.parseLong(sessionContext.getRelation().getUserId());
 
-                if (!sessionContext.getStudentsWriteRecords().isEmpty() && 
-                    sessionContext.getHomeId() != null && 
+                if (!sessionContext.getStudentsWriteRecords().isEmpty() &&
+                    sessionContext.getHomeId() != null &&
                     sessionContext.getPageNum() != null) {
                     handlerService.saveWriteRecords(
-                        userId, sessionContext.getHomeId(), "1", 
-                        sessionContext.getPageNum(), 
+                        userId, sessionContext.getHomeId(), "1",
+                        sessionContext.getPageNum(),
                         sessionContext.getStudentsWriteRecords(), false);
                 }
 
                 if (!sessionContext.getStudentsCopybookRecords().isEmpty() &&
-                    sessionContext.getCopybookId() != null && 
+                    sessionContext.getCopybookId() != null &&
                     sessionContext.getPageNum() != null) {
                     handlerService.saveWriteRecords(
-                        userId, sessionContext.getCopybookId(), "2", 
-                        sessionContext.getPageNum(), 
+                        userId, sessionContext.getCopybookId(), "2",
+                        sessionContext.getPageNum(),
                         sessionContext.getStudentsCopybookRecords(), false);
                 }
             }
@@ -234,7 +234,16 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
 
     public void saveHardDataToRedis(String hex) {
         try {
-            redisTemplate.opsForValue().set("hard:" + sessionContext.getMac(), hex, 1, TimeUnit.HOURS);
+//            redisTemplate.opsForValue().set("hard:" + sessionContext.getMac(), hex, 1, TimeUnit.HOURS);
+            String key = "hard:list:" + sessionContext.getMac();
+
+// 1. 将 hex 添加到 list 的右侧（也可以用 leftPush）
+            redisTemplate.opsForList().rightPush(key, hex);
+
+// 2. 设置整个 key（即这个 list）1 小时后过期
+            redisTemplate.expire(key, 1, TimeUnit.HOURS);
+
+
         } catch (Exception e) {
             log.error("Error saving hard data to Redis: {}", e.getMessage(), e);
         }

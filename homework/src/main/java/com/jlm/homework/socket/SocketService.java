@@ -1,3 +1,4 @@
+/*
 package com.jlm.homework.socket;
 
 import com.jlm.homework.service.IHandlerService;
@@ -226,9 +227,11 @@ public class SocketService implements SmartLifecycle {
         }
     }
     
-    /**
+    */
+/**
      * 启动连接状态监控
-     */
+     *//*
+
     private void startConnectionMonitor() {
         monitorScheduler = Executors.newSingleThreadScheduledExecutor();
         monitorScheduler.scheduleAtFixedRate(() -> {
@@ -276,9 +279,11 @@ public class SocketService implements SmartLifecycle {
         }, MONITOR_INTERVAL, MONITOR_INTERVAL, TimeUnit.SECONDS);
     }
 
-    /**
+    */
+/**
      * 停止连接状态监控
-     */
+     *//*
+
     private void stopConnectionMonitor() {
         if (monitorScheduler != null && !monitorScheduler.isShutdown()) {
             monitorScheduler.shutdownNow();
@@ -306,12 +311,14 @@ public class SocketService implements SmartLifecycle {
         callback.run();
     }
 
-    /**
+    */
+/**
      * 解析代理头，获取真实客户端地址
      * @param socket 客户端Socket连接
      * @return 代理头解析结果，包含真实地址和预读取的字节
      * @throws IOException 解析过程中发生IO异常
-     */
+     *//*
+
     private ProxyHeaderResult parseProxyHeader(Socket socket) throws IOException {
         InputStream inputStream = socket.getInputStream();
         // 使用BufferedInputStream包装输入流，以便支持标记操作和提高读取性能
@@ -412,13 +419,15 @@ public class SocketService implements SmartLifecycle {
         }
     }
 
-    /**
+    */
+/**
      * 检测是否为PROXY v2协议签名
      * PROXY v2协议签名：0x0D 0x0A 0x0D 0x0A 0x00 0x0D 0x0A 0x51 0x55 0x49 0x54 0x0A
      * 简化检测：前5字节为 0x0D 0x0A 0x0D 0x0A 0x00
      * @param signature 签名字节
      * @return 是否为PROXY v2协议
-     */
+     *//*
+
     private boolean isProxyV2Signature(byte[] signature) {
         if (signature == null || signature.length < 12) {
             return false;
@@ -444,13 +453,15 @@ public class SocketService implements SmartLifecycle {
         }
     }
     
-    /**
+    */
+/**
      * 解析PROXY v1协议
      * @param socket 客户端Socket
      * @param inputStream 输入流
      * @return 解析结果
      * @throws IOException 解析异常
-     */
+     *//*
+
     private ProxyHeaderResult parseProxyV1(Socket socket, InputStream inputStream) throws IOException {
         java.io.BufferedInputStream bufferedInputStream = null;
         try {
@@ -505,7 +516,8 @@ public class SocketService implements SmartLifecycle {
         }
     }
     
-    /**
+    */
+/**
      * 解析PROXY v2协议
      * PROXY v2协议格式：
      * - 0-11字节：固定头部（12字节signature）
@@ -519,7 +531,8 @@ public class SocketService implements SmartLifecycle {
      * @param bytesRead 已读取的字节数
      * @return 解析结果
      * @throws IOException 解析异常
-     */
+     *//*
+
     private ProxyHeaderResult parseProxyV2(Socket socket, java.io.BufferedInputStream inputStream,
                                           byte[] signature, int bytesRead) throws IOException {
         try {
@@ -661,12 +674,14 @@ public class SocketService implements SmartLifecycle {
         }
     }
     
-    /**
+    */
+/**
      * 从已读取的字节数组中解析PROXY v2协议（备用方法）
      * @param socket 客户端Socket
      * @param signature 已读取的签名字节数组
      * @return 解析结果
-     */
+     *//*
+
     private ProxyHeaderResult parseProxyV2FromBytes(Socket socket, byte[] signature, java.io.BufferedInputStream bufferedInputStream) {
         try {
             if (signature.length < 16) {
@@ -711,3 +726,4 @@ public class SocketService implements SmartLifecycle {
         return new ProxyHeaderResult((InetSocketAddress) socket.getRemoteSocketAddress(), null, bufferedInputStream);
     }
 }
+*/

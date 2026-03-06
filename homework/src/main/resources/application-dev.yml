@@ -6,10 +6,13 @@ server:
 socket:
   server:
     port: 6000
-    maxConnections: 50
+    maxConnections: 500
     corePoolSize: 50
     maxPoolSize: 500
     queueCapacity: 2000
+    bossThreads: 1
+    workerThreads: 0
+    idleTimeout: 300
 # 开发环境数据库配置覆盖
 spring:
   datasource:

@@ -91,7 +91,7 @@ public class ClientHandler implements Runnable {
 
     private void initHandlers() {
         // Dependencies for handlers
-        HandwritingHandler handwritingHandler = new HandwritingHandler(messagingTemplate, handlerService, smartDeviceUserRelationService,this);
+        /*HandwritingHandler handwritingHandler = new HandwritingHandler(messagingTemplate, handlerService, smartDeviceUserRelationService,this);
         ButtonHandler buttonHandler = new ButtonHandler(messagingTemplate, handlerService, responseSender, smartDeviceUserRelationService, this);
         SerialNumberHandler serialNumberHandler = new SerialNumberHandler(smartDeviceUserRelationService, messagingTemplate, this);
 
@@ -99,7 +99,7 @@ public class ClientHandler implements Runnable {
         handlers.put((byte) 0x81, handwritingHandler); // Handwriting Bluetooth
         handlers.put((byte) 0x02, buttonHandler);      // Button
         handlers.put((byte) 0x82, buttonHandler);      // Button Bluetooth
-        handlers.put((byte) 0x03, serialNumberHandler); // Serial Number
+        handlers.put((byte) 0x03, serialNumberHandler); // Serial Number*/
     }
 
     @Override

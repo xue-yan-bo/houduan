@@ -10,6 +10,9 @@ socket:
     corePoolSize: 50
     maxPoolSize: 500
     queueCapacity: 2000
+    bossThreads: 1
+    workerThreads: 0
+    idleTimeout: 300
 spring:
   cloud:
     nacos:

@@ -1,5 +1,6 @@
 package com.jlm.homework.socket.handler;
 
+import com.jlm.homework.socket.netty.SocketServerHandler;
 import com.jlm.homework.socket.websocket.SafeWebSocketService;
 import com.jlm.homework.socket.websocket.WebSocketSessionManager;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
@@ -15,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.List;
 
 @Slf4j
@@ -24,7 +24,7 @@ public class HandwritingHandler implements MessageHandler {
     private final SimpMessagingTemplate messagingTemplate;
     private final IHandlerService handlerService;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
-    private final ClientHandler clientHandler;
+    private final SocketServerHandler clientHandler;
 
 
     public HandwritingHandler(SimpMessagingTemplate messagingTemplate,
@@ -39,7 +39,7 @@ public class HandwritingHandler implements MessageHandler {
     public HandwritingHandler(SimpMessagingTemplate messagingTemplate,
                               IHandlerService handlerService,
                               ISmartDeviceUserRelationService smartDeviceUserRelationService,
-                              ClientHandler clientHandler) {
+                              SocketServerHandler clientHandler) {
         this.messagingTemplate = messagingTemplate;
         this.handlerService = handlerService;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
@@ -68,7 +68,7 @@ public class HandwritingHandler implements MessageHandler {
 
         // todo 写入redis，核查丢包问题
         byte[] rawData = packet.getRawData();
-        saveHardToRedis(HexFormat.of().formatHex(rawData));
+        saveHardToRedis(com.jlm.homework.util.ParseTcpDataUtil.bytesToHexString(rawData));
 //        if(1==1) return;
 
 

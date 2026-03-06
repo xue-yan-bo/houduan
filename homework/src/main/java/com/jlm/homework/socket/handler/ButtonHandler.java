@@ -11,6 +11,7 @@ import com.jlm.homework.socket.ClassroomResult;
 import com.jlm.homework.socket.boardmenu.MenuItemT;
 import com.jlm.homework.socket.boardmenu.MenuT;
 import com.jlm.homework.socket.context.SessionContext;
+import com.jlm.homework.socket.netty.SocketServerHandler;
 import com.jlm.homework.socket.protocol.Packet;
 import com.jlm.homework.util.ParseTcpDataUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -27,13 +28,13 @@ public class ButtonHandler implements MessageHandler {
     private final IHandlerService handlerService;
     private final ResponseSender responseSender;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
-    private final com.jlm.homework.socket.ClientHandler clientHandler;
+    private final SocketServerHandler clientHandler;
 
     public ButtonHandler(SimpMessagingTemplate messagingTemplate,
                          IHandlerService handlerService,
                          ResponseSender responseSender,
                          ISmartDeviceUserRelationService smartDeviceUserRelationService,
-                         com.jlm.homework.socket.ClientHandler clientHandler) {
+                         SocketServerHandler clientHandler) {
         this.messagingTemplate = messagingTemplate;
         this.handlerService = handlerService;
         this.responseSender = responseSender;

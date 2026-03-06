@@ -4,6 +4,7 @@ import com.jlm.homework.entity.SmartDeviceUserRelation;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.socket.MacParseResult;
 import com.jlm.homework.socket.context.SessionContext;
+import com.jlm.homework.socket.netty.SocketServerHandler;
 import com.jlm.homework.socket.protocol.Packet;
 import com.jlm.homework.util.ParseTcpDataUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +18,9 @@ public class SerialNumberHandler implements MessageHandler {
 
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
     private final SimpMessagingTemplate messagingTemplate;
-    private final com.jlm.homework.socket.ClientHandler clientHandler;
+    private final SocketServerHandler clientHandler;
 
-    public SerialNumberHandler(ISmartDeviceUserRelationService smartDeviceUserRelationService,
+    /*public SerialNumberHandler(ISmartDeviceUserRelationService smartDeviceUserRelationService,
                                SimpMessagingTemplate messagingTemplate) {
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
         this.messagingTemplate = messagingTemplate;
@@ -32,6 +33,14 @@ public class SerialNumberHandler implements MessageHandler {
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
         this.messagingTemplate = messagingTemplate;
         this.clientHandler = clientHandler;
+    }*/
+
+    public SerialNumberHandler(ISmartDeviceUserRelationService smartDeviceUserRelationService,
+                               SimpMessagingTemplate messagingTemplate,
+                               SocketServerHandler socketServerHandler) {
+        this.smartDeviceUserRelationService = smartDeviceUserRelationService;
+        this.messagingTemplate = messagingTemplate;
+        this.clientHandler = socketServerHandler;
     }
 
     @Override

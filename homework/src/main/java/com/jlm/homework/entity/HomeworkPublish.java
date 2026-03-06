@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 
 import lombok.Data;
 import com.alibaba.cloud.commons.lang.StringUtils;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 @Entity
 @Table(name = "homework_publish")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@DynamicUpdate
 public class HomeworkPublish implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

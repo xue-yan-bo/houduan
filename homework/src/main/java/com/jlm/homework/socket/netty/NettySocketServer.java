@@ -113,21 +113,21 @@ public class NettySocketServer implements SmartLifecycle {
                             pipeline.addLast("packetFrameDecoder", new PacketFrameDecoder());
 
                             // 使用原始地址作为临时地址，真实地址会在 SocketServerHandler 中更新
-                            InetSocketAddress originalAddress = (InetSocketAddress) ch.remoteAddress();
-                            String originalIp = originalAddress.getHostString();
+                            /*InetSocketAddress originalAddress = (InetSocketAddress) ch.remoteAddress();
+                            String originalIp = originalAddress.getHostString();*/
 
                             // 创建 SessionContext，后续会更新为真实地址
-                            SessionContext sessionContext = new SessionContext();
+                            /*SessionContext sessionContext = new SessionContext();
                             sessionContext.setRemoteAddress(originalAddress);
                             sessionContext.setClientIP(originalIp);
-                            sessionContext.setClientPort(originalAddress.getPort());
+                            sessionContext.setClientPort(originalAddress.getPort());*/
 
                             // 传递 REDIS_KEY_PREFIX，真实的 Redis key 会在 SocketServerHandler 中根据真实 IP 构建
                             pipeline.addLast("socketServerHandler", new SocketServerHandler(
                                 messagingTemplate,
                                 smartDeviceUserRelationService,
                                 handlerService,
-                                sessionContext,
+                                null,
                                 redisTemplate,
                                 REDIS_KEY_PREFIX,
                                 connectionCount,

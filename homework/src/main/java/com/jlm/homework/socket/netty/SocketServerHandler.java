@@ -56,7 +56,7 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
         this.messagingTemplate = messagingTemplate;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
         this.handlerService = handlerService;
-        this.sessionContext = sessionContext;
+        this.sessionContext = null;
         this.redisTemplate = redisTemplate;
         this.redisKeyPrefix = redisKeyPrefix;
         this.connectionCount = connectionCount;
@@ -83,7 +83,7 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
         
         // 根据真实 IP 构建 Redis key
         redisKey = redisKeyPrefix + realIp;
-        log.info("Redis key for client: {}", redisKey);
+        //log.info("Redis key for client: {}", redisKey);
 
         // 从 Redis 获取或创建 SessionContext
         Object sessionObj = redisTemplate.opsForValue().get(redisKey);

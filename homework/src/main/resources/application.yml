@@ -161,18 +161,20 @@ springdoc:
 # 日志配置
 logging:
   level:
-    root: INFO
+    root: OFF
     com.jlm.homework: INFO
-    com.jlm.remote: DEBUG
+    com.jlm.remote: INFO
     org.springframework.cloud: INFO
     com.alibaba.nacos: INFO
-    org.springframework.cloud.loadbalancer: DEBUG
+    org.springframework: OFF
+    org.springframework.web: OFF
+    org.springframework.cloud.loadbalancer: INFO
     # OpenFeign 日志
-    com.jlm.homework.feign: DEBUG
+    com.jlm.homework.feign: INFO
     # OpenAPI日志
     org.springdoc: INFO
     # SQL日志（开发环境可开启）
-    org.hibernate.SQL: DEBUG
+    org.hibernate.SQL: INFO
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"

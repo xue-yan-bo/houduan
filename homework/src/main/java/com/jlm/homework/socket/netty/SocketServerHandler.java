@@ -30,10 +30,12 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
     private final SimpMessagingTemplate messagingTemplate;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
     private final IHandlerService handlerService;
-    private final SessionContext sessionContext;
+    private SessionContext sessionContext;
     private final RedisTemplate<String, Object> redisTemplate;
-    private final String redisKey;
+    private final String redisKeyPrefix;
+    private String redisKey;
     private final AtomicInteger connectionCount;
+    private final ProxyProtocolDecoder proxyDecoder;
 
     private NettyResponseSender responseSender;
     private final Map<Byte, MessageHandler> handlers = new HashMap<>();
@@ -48,20 +50,59 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
             IHandlerService handlerService,
             SessionContext sessionContext,
             RedisTemplate<String, Object> redisTemplate,
-            String redisKey,
-            AtomicInteger connectionCount) {
+            String redisKeyPrefix,
+            AtomicInteger connectionCount,
+            ProxyProtocolDecoder proxyDecoder) {
         this.messagingTemplate = messagingTemplate;
         this.smartDeviceUserRelationService = smartDeviceUserRelationService;
         this.handlerService = handlerService;
         this.sessionContext = sessionContext;
         this.redisTemplate = redisTemplate;
-        this.redisKey = redisKey;
+        this.redisKeyPrefix = redisKeyPrefix;
         this.connectionCount = connectionCount;
+        this.proxyDecoder = proxyDecoder;
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        log.info("Channel active: {}", ctx.channel().remoteAddress());
+        // 获取原始地址
+        InetSocketAddress originalAddress = (InetSocketAddress) ctx.channel().remoteAddress();
+        log.info("Channel active: {}", originalAddress);
+
+        // 尝试获取真实地址
+        InetSocketAddress realAddress = originalAddress;
+        if (proxyDecoder != null) {
+            InetSocketAddress proxyAddress = proxyDecoder.getRealAddress();
+            if (proxyAddress != null) {
+                realAddress = proxyAddress;
+                log.info("Using real client address from proxy: {}", realAddress);
+            }
+        }
+
+        String realIp = realAddress.getHostString();
+        
+        // 根据真实 IP 构建 Redis key
+        redisKey = redisKeyPrefix + realIp;
+        log.info("Redis key for client: {}", redisKey);
+
+        // 从 Redis 获取或创建 SessionContext
+        Object sessionObj = redisTemplate.opsForValue().get(redisKey);
+        if (sessionObj instanceof SessionContext) {
+            sessionContext = (SessionContext) sessionObj;
+            log.debug("Found existing session context in Redis for client: {}", realIp);
+        } else {
+            // 创建新的 SessionContext
+            sessionContext = new SessionContext();
+            log.debug("Created new session context for client: {}", realIp);
+        }
+
+        // 更新 SessionContext 中的地址信息
+        sessionContext.setRemoteAddress(realAddress);
+        sessionContext.setClientIP(realIp);
+        sessionContext.setClientPort(realAddress.getPort());
+
+        // 保存 SessionContext 到 Redis
+        redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
 
         responseSender = new NettyResponseSender(ctx, sessionContext);
 

@@ -263,39 +263,125 @@ public class HandwritingHandler implements MessageHandler {
     private final java.util.concurrent.atomic.AtomicInteger classroomModeCounter = new java.util.concurrent.atomic.AtomicInteger(0);
     // 每处理多少条笔记记录后保存一次到Redis
     private static final int CLASSROOM_MODE_SAVE_INTERVAL = 1000;
-    // 课堂模式笔记记录最大数量，超过后清空
-    private static final int CLASSROOM_MODE_MAX_RECORDS = 4000;
-    // 消息发送线程池，使用更大的线程池大小
-    private static final java.util.concurrent.ExecutorService SEND_THREAD_POOL = java.util.concurrent.Executors.newFixedThreadPool(1000);
+
+    // 消息发送线程池，使用合理大小
+    private static final java.util.concurrent.ExecutorService SEND_THREAD_POOL = java.util.concurrent.Executors.newFixedThreadPool(50);
+    // 每个用户的消息队列
+    private static final java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.BlockingQueue<MessageTask>> USER_MESSAGE_QUEUES = new java.util.concurrent.ConcurrentHashMap<>();
+    // 消息处理器映射
+    private static final java.util.concurrent.ConcurrentHashMap<String, Thread> USER_MESSAGE_HANDLERS = new java.util.concurrent.ConcurrentHashMap<>();
+    // 队列容量
+    private static final int QUEUE_CAPACITY = 10000;
+
+    // 启动用户消息处理线程
+    private void startUserMessageHandler(String userId) {
+        if (!USER_MESSAGE_HANDLERS.containsKey(userId)) {
+            Thread handlerThread = new Thread(() -> {
+                java.util.concurrent.BlockingQueue<MessageTask> queue = USER_MESSAGE_QUEUES.get(userId);
+                if (queue == null) return;
+                
+                while (!Thread.currentThread().isInterrupted()) {
+                    try {
+                        MessageTask task = queue.take();
+                        task.execute();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    } catch (Exception e) {
+                        log.error("Error processing message task for user {}: {}", userId, e.getMessage(), e);
+                    }
+                }
+                // 清理资源
+                USER_MESSAGE_HANDLERS.remove(userId);
+                USER_MESSAGE_QUEUES.remove(userId);
+            }, "message-processor-" + userId);
+            
+            handlerThread.setDaemon(true);
+            handlerThread.start();
+            USER_MESSAGE_HANDLERS.put(userId, handlerThread);
+        }
+    }
+
+    // 确保用户消息队列存在
+    private java.util.concurrent.BlockingQueue<MessageTask> ensureUserQueue(String userId) {
+        return USER_MESSAGE_QUEUES.computeIfAbsent(userId, k -> {
+            java.util.concurrent.BlockingQueue<MessageTask> queue = new java.util.concurrent.LinkedBlockingQueue<>(QUEUE_CAPACITY);
+            startUserMessageHandler(userId);
+            return queue;
+        });
+    }
 
     private void handleClassroomMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation, ResponseSender sender) {
         result.setUserId(relation.getUserId());
-        // 创建result对象的深拷贝，避免异步发送时数据被修改
-        HandwritingParseResult resultCopy = deepCopyResult(result);
-        // 直接发送消息，避免队列积压
-        //log.info("Sending writing data for user: {}, X: {}, Y: {}, Pressure: {}, Timestamp: {}",
-        //        relation.getUserId(), result.getX(), result.getY(), result.getPressure(), result.getTimestamp());
-        sendWritingDataWithRetry(relation.getUserId(), resultCopy);
-
-        // 优化同步块，减少锁竞争
-        // 合并两个同步块为一个，减少锁的获取和释放次数
-        synchronized (context) {
-            context.getStudentClassRecords().add(result);
-            //log.info("Added writing data to session context, current size: {}", context.getStudentClassRecords().size());
-
-            // 定期清空 studentClassRecords，避免内存占用过高
-            if (context.getStudentClassRecords().size() > CLASSROOM_MODE_MAX_RECORDS) {
-                //log.info("Clearing classroom records to avoid memory overflow: {}", context.getStudentClassRecords().size());
-                context.getStudentClassRecords().clear();
-            }
+        
+        // 创建消息任务并加入用户队列
+        String userId = relation.getUserId();
+        MessageTask task = new MessageTask(userId, result, messagingTemplate);
+        java.util.concurrent.BlockingQueue<MessageTask> userQueue = ensureUserQueue(userId);
+        
+        if (!userQueue.offer(task)) {
+            // 队列已满，直接处理
+            log.warn("Message queue full for user {}, processing directly", userId);
+            task.execute();
         }
 
         // 减少保存频率，每处理CLASSROOM_MODE_SAVE_INTERVAL条记录保存一次
         if (classroomModeCounter.incrementAndGet() >= CLASSROOM_MODE_SAVE_INTERVAL) {
-            // 保存SessionContext到Redis
-            saveSessionContextToRedis(context);
+            // 异步保存SessionContext到Redis
+            SEND_THREAD_POOL.submit(() -> {
+                try {
+                    saveSessionContextToRedis(context);
+                } catch (Exception e) {
+                    log.error("Error saving session context: {}", e.getMessage(), e);
+                }
+            });
             // 重置计数器
             classroomModeCounter.set(0);
+        }
+    }
+
+    // 消息任务类
+    private static class MessageTask {
+        private final String userId;
+        private final HandwritingParseResult result;
+        private final SimpMessagingTemplate messagingTemplate;
+
+        public MessageTask(String userId, HandwritingParseResult result, SimpMessagingTemplate messagingTemplate) {
+            this.userId = userId;
+            this.result = result;
+            this.messagingTemplate = messagingTemplate;
+        }
+
+        public void execute() {
+            int maxRetries = 2; // 减少重试次数
+            int retryCount = 0;
+
+            while (retryCount < maxRetries) {
+                try {
+                    messagingTemplate.convertAndSend("/topic/writingData/" + userId, result);
+                    return;
+                } catch (Exception e) {
+                    // 检查是否是会话关闭相关的异常
+                    if (e instanceof IllegalStateException && e.getMessage().contains("session is closed")) {
+                        log.debug("WebSocket session closed for user {}, skipping message", userId);
+                        return;
+                    }
+
+                    retryCount++;
+                    if (retryCount >= maxRetries) {
+                        log.warn("Failed to send writing data after {} retries: {}", maxRetries, e.getMessage());
+                        return;
+                    }
+
+                    // 短暂延迟后重试
+                    try {
+                        Thread.sleep(50 * retryCount); // 减少延迟时间
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+            }
         }
     }
 
@@ -319,42 +405,7 @@ public class HandwritingHandler implements MessageHandler {
         return copy;
     }
 
-    /**
-     * 发送书写数据，带重试机制
-     * @param userId 用户ID
-     * @param result 书写数据
-     */
-    private void sendWritingDataWithRetry(String userId, HandwritingParseResult result) {
-        int maxRetries = 3;
-        int retryCount = 0;
 
-        while (retryCount < maxRetries) {
-            try {
-                messagingTemplate.convertAndSend("/topic/writingData/" + userId, result);
-                return;
-            } catch (Exception e) {
-                // 检查是否是会话关闭相关的异常
-                if (e instanceof IllegalStateException && e.getMessage().contains("session is closed")) {
-                    log.debug("WebSocket session closed for user {}, skipping message", userId);
-                    return;
-                }
-
-                retryCount++;
-                if (retryCount >= maxRetries) {
-                    log.warn("Failed to send writing data after {} retries: {}", maxRetries, e.getMessage());
-                    return;
-                }
-
-                // 短暂延迟后重试
-                try {
-                    Thread.sleep(100 * retryCount);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-            }
-        }
-    }
 
     private StudentsWriteRecord createRecord(HandwritingParseResult result) {
         StudentsWriteRecord writeRecord = new StudentsWriteRecord();

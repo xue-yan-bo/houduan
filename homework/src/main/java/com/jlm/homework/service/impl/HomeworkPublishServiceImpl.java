@@ -113,7 +113,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                     studentsHomeworkNewService.createStudentsHomeworkByHomeworkPublish(homeworkPublish);
                     homeworkPublish.setPublishStatus(1);
                     homeworkPublish.setAuditStatus(1);
-                    homeworkPublishRepository.save(homeworkPublish);
+                    homeworkPublishRepository.updatePublishStatus(homeworkPublish.getId(),1);
                 }
             };
             timer.schedule(task, homeworkPublish.getPublishTime());
@@ -125,7 +125,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 public void run() {
                     studentsHomeworkNewService.endStudentsHomework(homeworkPublish);
                     homeworkPublish.setPublishStatus(2);
-                    homeworkPublishRepository.save(homeworkPublish);
+                    homeworkPublishRepository.updatePublishStatus(homeworkPublish.getId(),2);
                 }
             };
             timer.schedule(task1, homeworkPublish.getDeadline());
@@ -340,7 +340,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                         public void run() {
                             studentsHomeworkNewService.createStudentsHomeworkByHomeworkPublish(homeworkPublish);
                             homeworkPublish.setPublishStatus(1);
-                            homeworkPublishRepository.save(homeworkPublish);
+                            homeworkPublishRepository.updatePublishStatus(homeworkPublish.getId(),1);
                         }
                     };
                     timer.schedule(task, homeworkPublish.getPublishTime());
@@ -363,7 +363,7 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                     public void run() {
                         studentsHomeworkNewService.endStudentsHomework(homeworkPublish);
                         homeworkPublish.setPublishStatus(2);
-                        homeworkPublishRepository.save(homeworkPublish);
+                        homeworkPublishRepository.updatePublishStatus(homeworkPublish.getId(),2);
                     }
                 };
                 timer.schedule(task1, homeworkPublish.getDeadline());

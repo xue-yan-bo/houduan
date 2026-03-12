@@ -166,8 +166,8 @@ logging:
     com.jlm.remote: INFO
     org.springframework.cloud: INFO
     com.alibaba.nacos: INFO
-    org.springframework: OFF
-    org.springframework.web: OFF
+    org.springframework: INFO
+    org.springframework.web: INFO
     org.springframework.cloud.loadbalancer: INFO
     # OpenFeign 日志
     com.jlm.homework.feign: INFO

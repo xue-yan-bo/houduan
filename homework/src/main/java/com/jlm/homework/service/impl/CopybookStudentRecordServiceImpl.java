@@ -278,6 +278,21 @@ public class CopybookStudentRecordServiceImpl implements ICopybookStudentRecordS
                         throw new RuntimeException(e);
                     }
                 }
+
+                if(StringUtils.isNotEmpty(copybookStudentRecord.getSubmitTimeStr())){
+
+                    try {
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                        String startdate = copybookStudentRecord.getSubmitTimeStr() + " 00:00:00";
+                        String enddate = copybookStudentRecord.getSubmitTimeStr() + " 23:59:59";
+                        Date startdateDate = sdf.parse(startdate);
+                        Date enddateDate = sdf.parse(enddate);
+                        Predicate con = criteriaBuilder.between(root.get("submitTime").as(Date.class),startdateDate,enddateDate);
+                        list.add(con);
+                    } catch (ParseException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
                 Predicate[] p =  new Predicate[list.size()];
                 return criteriaBuilder.and(list.toArray(p));
             }

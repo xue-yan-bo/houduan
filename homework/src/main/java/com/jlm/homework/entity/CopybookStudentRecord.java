@@ -106,6 +106,8 @@ public class CopybookStudentRecord {
     @Column(name = "submit_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date submitTime;
+    @Transient
+    private String submitTimeStr;
     /**
      * 创建时间
      */

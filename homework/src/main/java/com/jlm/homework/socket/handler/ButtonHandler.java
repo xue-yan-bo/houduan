@@ -20,6 +20,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Slf4j
 public class ButtonHandler implements MessageHandler {
@@ -29,6 +31,9 @@ public class ButtonHandler implements MessageHandler {
     private final ResponseSender responseSender;
     private final ISmartDeviceUserRelationService smartDeviceUserRelationService;
     private final SocketServerHandler clientHandler;
+    
+    // 异步执行线程池
+    private static final ExecutorService ASYNC_EXECUTOR = Executors.newFixedThreadPool(5);
 
     public ButtonHandler(SimpMessagingTemplate messagingTemplate,
                          IHandlerService handlerService,
@@ -72,12 +77,11 @@ public class ButtonHandler implements MessageHandler {
             handleClassroomButtons(context, result, relation);
             try {
                 handleNavigationButtons(context, result, relation, sender);
-                // 保存SessionContext到Redis
                 if (clientHandler != null) {
                     clientHandler.saveSessionContextToRedis();
                 }
-            } catch (IOException e) {
-                log.error("Error handling navigation buttons", e);
+            } catch (Exception e) {
+                log.error("Error handling navigation buttons for client {}: {}", context.getClientIP(), e.getMessage(), e);
             }
         } else {
             // Relation is null, maybe log or handle?
@@ -171,9 +175,43 @@ public class ButtonHandler implements MessageHandler {
     }
 
     private void handleHomeworkOk(SessionContext context, SmartDeviceUserRelation relation, SimpleDateFormat sdf) throws IOException {
-         if (context.getCurrentMenu().equals(context.getHomeworkMenu()) && context.getConfirmCount() == 1) {
-             // Level 2: Select Homework
-             String name = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem()).getDesc().trim();
+         MenuT currentMenu = context.getCurrentMenu();
+         MenuT homeworkMenu = context.getHomeworkMenu();
+         
+         if (currentMenu == null) {
+             log.warn("handleHomeworkOk: currentMenu is null, resetting context");
+             resetContext(context);
+             responseSender.sendMenuUpdate(context);
+             return;
+         }
+         
+         boolean isHomeworkMenuLevel = (currentMenu == homeworkMenu) && context.getConfirmCount() == 1;
+         
+         if (isHomeworkMenuLevel) {
+             if (currentMenu.getPItems() == null || currentMenu.getPItems().isEmpty()) {
+                 log.warn("handleHomeworkOk: homework menu items is empty");
+                 resetContext(context);
+                 responseSender.sendMenuUpdate(context);
+                 return;
+             }
+             
+             int selectItem = currentMenu.getSelectItem() != null ? currentMenu.getSelectItem() : 0;
+             if (selectItem >= currentMenu.getPItems().size()) {
+                 log.warn("handleHomeworkOk: selectItem {} out of bounds {}", selectItem, currentMenu.getPItems().size());
+                 resetContext(context);
+                 responseSender.sendMenuUpdate(context);
+                 return;
+             }
+             
+             String name = currentMenu.getPItems().get(selectItem).getDesc();
+             if (name == null) {
+                 log.warn("handleHomeworkOk: selected item desc is null");
+                 resetContext(context);
+                 responseSender.sendMenuUpdate(context);
+                 return;
+             }
+             name = name.trim();
+             
              if (context.getWork2Boards() == null || context.getWork2Boards().isEmpty()) {
                  Long studentId = Long.parseLong(relation.getUserId());
                  context.setWork2Boards(handlerService.getHomeWork2Board(name, sdf.format(new Date()), studentId));
@@ -197,6 +235,13 @@ public class ButtonHandler implements MessageHandler {
                      }
                  }
                  
+                 if (itemTList.isEmpty()) {
+                     log.warn("handleHomeworkOk: no homework items found for subject: {}", name);
+                     resetContext(context);
+                     responseSender.sendMenuUpdate(context);
+                     return;
+                 }
+                 
                  MenuT menuT = new MenuT(context.getHomeworkMenu(), itemTList, 0, 0, Math.min(3, itemTList.size()), itemTList.size());
                  context.setCurrentMenu(menuT);
                  context.getCurrentMenu().setShowStartItem(0);
@@ -210,25 +255,63 @@ public class ButtonHandler implements MessageHandler {
                  responseSender.sendMenuUpdate(context);
              }
          } else {
-             MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
+             if (currentMenu.getPItems() == null || currentMenu.getPItems().isEmpty()) {
+                 log.warn("handleHomeworkOk: current menu items is empty in else branch");
+                 resetContext(context);
+                 responseSender.sendMenuUpdate(context);
+                 return;
+             }
+             
+             int selectItem = currentMenu.getSelectItem() != null ? currentMenu.getSelectItem() : 0;
+             if (selectItem >= currentMenu.getPItems().size()) {
+                 log.warn("handleHomeworkOk: selectItem {} out of bounds {} in else branch", selectItem, currentMenu.getPItems().size());
+                 resetContext(context);
+                 responseSender.sendMenuUpdate(context);
+                 return;
+             }
+             
+             MenuItemT itemT = currentMenu.getPItems().get(selectItem);
              String name = itemT.getDesc();
+             if (name == null) {
+                 log.warn("handleHomeworkOk: item desc is null in else branch");
+                 resetContext(context);
+                 responseSender.sendMenuUpdate(context);
+                 return;
+             }
+             
              Long homeworkId = itemT.getObjectId();
              Integer pageN = 1;
              String homeworkName;
              if(name.contains(" ")) {
                  int num = name.lastIndexOf(" ");
                  homeworkName = name.substring(0, num);
-
-                 pageN = Integer.valueOf(name.substring(num+1, name.length()));
+                 try {
+                     pageN = Integer.valueOf(name.substring(num+1, name.length()));
+                 } catch (NumberFormatException e) {
+                     log.warn("handleHomeworkOk: failed to parse page number from: {}", name);
+                     pageN = 1;
+                 }
              }else{
                  homeworkName = name;
                  pageN = 1;
              }
              context.setHomeId(homeworkId);
              context.setPageNum(pageN);
-             // 检查数据完整性
              if (context.getStudentsWriteRecords() != null && !context.getStudentsWriteRecords().isEmpty()) {
-                 handlerService.saveWriteRecords(Long.parseLong(relation.getUserId()), homeworkId, "1", pageN, context.getStudentsWriteRecords(), true);
+                 // 创建副本，避免resetContext后数据被清空
+                 final Long studentId = Long.parseLong(relation.getUserId());
+                 final Long finalHomeworkId = homeworkId;
+                 final Integer finalPageN = pageN;
+                 final List<com.jlm.homework.entity.StudentsWriteRecord> recordsCopy = new ArrayList<>(context.getStudentsWriteRecords());
+                 
+                 // 异步执行保存操作
+                 ASYNC_EXECUTOR.submit(() -> {
+                     try {
+                         handlerService.saveWriteRecords(studentId, finalHomeworkId, "1", finalPageN, recordsCopy, true);
+                     } catch (Exception e) {
+                         log.error("Failed to save write records asynchronously: {}", e.getMessage(), e);
+                     }
+                 });
              }
              resetContext(context);
              responseSender.sendMenuUpdate(context);
@@ -373,6 +456,7 @@ public class ButtonHandler implements MessageHandler {
              context.setFeedbackId(feedbackId); // 保存返回的feedbackId，用于下次更新
              context.setStudentsFeedbackRecords(new ArrayList<>());
              // 不重置feedbackId，保留它用于后续更新
+             resetContext(context);
              responseSender.sendMenuUpdate(context);
         } else {
             handleMenuNavigation(context);
@@ -1131,11 +1215,11 @@ public class ButtonHandler implements MessageHandler {
         context.setConfirmCount(0);
         context.setHomeId(null);
         // 保留feedbackId，用于后续更新操作
-        // context.setFeedbackId(null);
+         context.setFeedbackId(null);
         context.setErrorTitleId(null);
         context.setPageNum(null);
         // 保留feedbackSubject，用于后续操作
-        // context.setFeedbackSubject(null);
+        context.setFeedbackSubject(null);
         context.setErrorTitleSubject(null);
         context.setWork2Boards(new ArrayList<>());
         context.setCopybookBoards(new ArrayList<>());

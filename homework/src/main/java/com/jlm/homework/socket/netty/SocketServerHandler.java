@@ -39,6 +39,7 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
 
     private NettyResponseSender responseSender;
     private final Map<Byte, MessageHandler> handlers = new HashMap<>();
+    private boolean realAddressResolved = false;
 
     private ScheduledFuture<?> heartbeatFuture;
     private static final byte HEARTBEAT_TYPE = 0x05;
@@ -69,40 +70,14 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
         InetSocketAddress originalAddress = (InetSocketAddress) ctx.channel().remoteAddress();
         log.info("Channel active: {}", originalAddress);
 
-        // 尝试获取真实地址
-        InetSocketAddress realAddress = originalAddress;
-        if (proxyDecoder != null) {
-            InetSocketAddress proxyAddress = proxyDecoder.getRealAddress();
-            if (proxyAddress != null) {
-                realAddress = proxyAddress;
-                log.info("Using real client address from proxy: {}", realAddress);
-            }
-        }
+        // 初始化 SessionContext（临时使用原始地址）
+        sessionContext = new SessionContext();
+        sessionContext.setRemoteAddress(originalAddress);
+        sessionContext.setClientIP(originalAddress.getHostString());
+        sessionContext.setClientPort(originalAddress.getPort());
 
-        String realIp = realAddress.getHostString();
-        
-        // 根据真实 IP 构建 Redis key
-        redisKey = redisKeyPrefix + realIp;
-        //log.info("Redis key for client: {}", redisKey);
-
-        // 从 Redis 获取或创建 SessionContext
-        Object sessionObj = redisTemplate.opsForValue().get(redisKey);
-        if (sessionObj instanceof SessionContext) {
-            sessionContext = (SessionContext) sessionObj;
-            log.debug("Found existing session context in Redis for client: {}", realIp);
-        } else {
-            // 创建新的 SessionContext
-            sessionContext = new SessionContext();
-            log.debug("Created new session context for client: {}", realIp);
-        }
-
-        // 更新 SessionContext 中的地址信息
-        sessionContext.setRemoteAddress(realAddress);
-        sessionContext.setClientIP(realIp);
-        sessionContext.setClientPort(realAddress.getPort());
-
-        // 保存 SessionContext 到 Redis
-        redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+        // 临时构建 Redis key
+        redisKey = redisKeyPrefix + originalAddress.getHostString();
 
         responseSender = new NettyResponseSender(ctx, sessionContext);
 
@@ -140,6 +115,48 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
         if (!(msg instanceof ByteBuf)) {
             ctx.fireChannelRead(msg);
             return;
+        }
+
+        // 第一次收到数据时，尝试解析真实 IP
+        if (!realAddressResolved && proxyDecoder != null) {
+            InetSocketAddress originalAddress = (InetSocketAddress) ctx.channel().remoteAddress();
+            InetSocketAddress realAddress = originalAddress;
+            
+            InetSocketAddress proxyAddress = proxyDecoder.getRealAddress();
+            if (proxyAddress != null) {
+                realAddress = proxyAddress;
+                log.info("Using real client address from proxy: {}", realAddress);
+            }
+            
+            // 无论是否有代理，都使用真实 IP 构建 Redis key
+            String realIp = realAddress.getHostString();
+            redisKey = redisKeyPrefix + realIp;
+            log.info("Redis key for client: {}", redisKey);
+            
+            // 从 Redis 获取或创建 SessionContext
+            Object sessionObj = redisTemplate.opsForValue().get(redisKey);
+            if (sessionObj instanceof SessionContext) {
+                sessionContext = (SessionContext) sessionObj;
+                log.debug("Found existing session context in Redis for client: {}", realIp);
+            } else {
+                sessionContext = new SessionContext();
+                log.debug("Created new session context for client: {}", realIp);
+            }
+            
+            // 更新 SessionContext 中的地址信息
+            sessionContext.setRemoteAddress(realAddress);
+            sessionContext.setClientIP(realIp);
+            sessionContext.setClientPort(realAddress.getPort());
+            
+            // 保存 SessionContext 到 Redis
+            redisTemplate.opsForValue().set(redisKey, sessionContext, 24, java.util.concurrent.TimeUnit.HOURS);
+            
+            // 更新 responseSender 使用新的 sessionContext
+            if (responseSender != null) {
+                responseSender = new NettyResponseSender(ctx, sessionContext);
+            }
+            
+            realAddressResolved = true;
         }
 
         ByteBuf packet = (ByteBuf) msg;

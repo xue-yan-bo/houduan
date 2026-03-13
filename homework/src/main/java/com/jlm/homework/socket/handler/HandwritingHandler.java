@@ -15,6 +15,7 @@ import com.jlm.homework.util.ParseTcpDataUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,13 +66,13 @@ public class HandwritingHandler implements MessageHandler {
 
     @Override
     public void handle(SessionContext context, Packet packet, ResponseSender sender) {
-
+        //log.info("Redis时间开始:"+ LocalDateTime.now());
         // todo 写入redis，核查丢包问题
-        byte[] rawData = packet.getRawData();
-        saveHardToRedis(com.jlm.homework.util.ParseTcpDataUtil.bytesToHexString(rawData));
+        /*byte[] rawData = packet.getRawData();
+        saveHardToRedis(com.jlm.homework.util.ParseTcpDataUtil.bytesToHexString(rawData));*/
 //        if(1==1) return;
 
-
+        //log.info("解析时间开始:"+ LocalDateTime.now());
         List<HandwritingParseResult> results;
         try {
             if (packet.getType() == 0x01) {
@@ -316,7 +317,10 @@ public class HandwritingHandler implements MessageHandler {
         
         // 创建消息任务并加入用户队列
         String userId = relation.getUserId();
-        MessageTask task = new MessageTask(userId, result, messagingTemplate);
+        //log.info("ws发送时间开始:"+ LocalDateTime.now());
+        messagingTemplate.convertAndSend("/topic/writingData/" + userId, result);
+        //log.info("ws发送时间结束:"+ LocalDateTime.now());
+        /*MessageTask task = new MessageTask(userId, result, messagingTemplate);
         java.util.concurrent.BlockingQueue<MessageTask> userQueue = ensureUserQueue(userId);
         
         if (!userQueue.offer(task)) {
@@ -337,7 +341,7 @@ public class HandwritingHandler implements MessageHandler {
             });
             // 重置计数器
             classroomModeCounter.set(0);
-        }
+        }*/
     }
 
     // 消息任务类

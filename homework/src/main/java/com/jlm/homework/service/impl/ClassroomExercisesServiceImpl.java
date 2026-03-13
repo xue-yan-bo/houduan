@@ -201,7 +201,10 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
 
         }else if(classroomExercisesId!=0){
             classroomExercises=classroomExercisesRepository.findById(classroomExercisesId).get();
-            useStatus = classroomExercises.getUseStatus();
+            if(classroomExercises.getUseStatus()!=null) {
+                useStatus = classroomExercises.getUseStatus();
+            }
+            classroomExercises.setUseStatus(1);
             if(schoolId==null||schoolId==0) {
                 schoolId = classroomExercises.getSchoolId();
             }
@@ -308,13 +311,15 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         }
         if(studentList!=null&&studentList.size()>0){
             Student student = studentList.get(0);
+            classroomExercises.setUseStatus(1);
             if(classroomExercises.getClassNames()==null||classroomExercises.getClassNames().size()==0){
                 classroomExercises.setClassNames(Arrays.asList(student.getClassesName()));
                 classroomExercises.setGradeId(student.getGradeId());
                 classroomExercises.setGradeName(student.getGradeName());
                 classroomExercises.setUseStatus(1);
-                classroomExercisesRepository.save(classroomExercises);
+
             }
+            classroomExercisesRepository.save(classroomExercises);
         }
 
         for (Student student:studentList){

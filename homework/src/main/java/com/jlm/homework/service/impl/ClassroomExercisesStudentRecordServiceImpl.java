@@ -202,7 +202,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
 
                 List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
                 for (ClassroomExercisesStudentRecord record : studentRecordList) {
-                    aiParseWriteStrucRecord(record.getId());
+                    aiParseWriteRecord(record.getId());
                 }
             }
             return "异步-OK";

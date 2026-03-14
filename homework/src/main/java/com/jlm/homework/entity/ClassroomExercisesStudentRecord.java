@@ -95,7 +95,16 @@ public class ClassroomExercisesStudentRecord {
      */
     @Column(name = "hava_write")
     private Integer havaWrite;
-
+    /**
+     * 答题水平，如优秀、良好
+     */
+    @Column(name = "answer_level")
+    private String answerLevel;
+    /**
+     * 老师评语
+     */
+    @Column(name = "teacher_comment")
+    private String teacherComment;
     /**
      * 学生写作记录
      */

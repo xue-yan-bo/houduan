@@ -1729,7 +1729,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         search.setStudentId(studentId);
         search.setHomeworkPublishId(homeworkId);*/
         Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findById(homeworkId);
-        if(optional==null||optional.get()==null){
+        if(optional==null||optional.isEmpty()){
             return;
         }
         StudentsHomeworkNew studentsHomework=optional.get();

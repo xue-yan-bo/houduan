@@ -113,6 +113,23 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
 
         return recordList;
     }
+
+    public List<ClassroomExercisesStudentRecord> selectNoWriteDataByExercisesIdAndClass(Long classroomExercisesId, Long classId) {
+        ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
+        record.setClassroomExercisesId(classroomExercisesId);
+        record.setClassId(classId);
+        Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration", "createTime");
+        List<ClassroomExercisesStudentRecord> recordList = classroomExercisesStudentRecordRepository.findAll(Example.of(record), sort);
+        for (ClassroomExercisesStudentRecord studentRecord : recordList) {
+            List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
+            studentRecord.setStudentWriteDataList(writeDataList);
+
+            List<ClassroomTearcherApproveStu> tearcherApproveStuList = classroomTearcherApproveStuService.findByStudentRecordId(studentRecord.getId());
+            studentRecord.setTearcherApproveStuList(tearcherApproveStuList);
+        }
+
+        return recordList;
+    }
     @Override
     public List<ClassroomExercisesStudentRecord> studentRecordNoWriteData(Long classroomExercisesId, Long classId) {
         ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
@@ -153,7 +170,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             }
             recordList = selectByClassAndDate(classroomExercisesId, classId, now);
         } else {
-            recordList = selectByClassroomExercisesIdAndClass(classroomExercisesId, classId);
+            recordList = selectNoWriteDataByExercisesIdAndClass(classroomExercisesId, classId);
         }
         List<StudentWriteDto> writeDtos = exerciseWriteData.getStudentWriteList();
         ClassroomExercises exercises =classroomExercisesRepository.findById(exerciseWriteData.getClassroomExercisesId()).orElse(null);
@@ -162,17 +179,18 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             classroomExercisesRepository.save(exercises);
 
         }
-        if(exerciseWriteData.getTeacherWriteDto()!=null){
-            for(ClassroomTeacherWriteData teacherWriteData:exerciseWriteData.getTeacherWriteDto().getTeacherWriteDataList()){
-                teacherWriteData.setClassroomExercisesId(classroomExercisesId);
-                teacherWriteData.setCreateTime(new Date());
-                classroomTeacherWriteDataService.save(teacherWriteData);
-            }
-        }
+
         final Long exercisesId = classroomExercisesId;
         List<ClassroomExercisesStudentRecord> finalRecordList = recordList;
         List<ClassroomTearcherApproveStu> tearcherApproveStuList = exerciseWriteData.getTearcherApproveStuList();
         FutureTask<String> futureTask = new FutureTask<>(() -> {
+            if(exerciseWriteData.getTeacherWriteDto()!=null){
+                for(ClassroomTeacherWriteData teacherWriteData:exerciseWriteData.getTeacherWriteDto().getTeacherWriteDataList()){
+                    teacherWriteData.setClassroomExercisesId(exercisesId);
+                    teacherWriteData.setCreateTime(new Date());
+                    classroomTeacherWriteDataService.save(teacherWriteData);
+                }
+            }
             for (ClassroomExercisesStudentRecord record : finalRecordList) {
                 if (record.getEndFlag() == null || record.getEndFlag().equals("0")) {
                     record.setEndFlag(1);
@@ -185,6 +203,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 for (StudentWriteDto studentWriteDto : writeDtos) {
                     if (Long.compare(studentWriteDto.getStudentId(), record.getStudentId()) == 0) {
                         record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordList());
+                        record.setAnswerLevel(studentWriteDto.getAnswerLevel());
+                        record.setTeacherComment(studentWriteDto.getTeacherComment());
                         this.save(record);
                     }
                 }
@@ -444,6 +464,10 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
 
         try {
             List<ClassroomExercisesQuestion> questionList = classroomExercisesQuestionService.selectQuestionList(studentRecord.getClassroomExercisesId());
+            StringBuilder sb = new StringBuilder();
+            for(ClassroomExercisesQuestion question:questionList){
+                sb = sb.append(question.getTitleNumber()+"、 " +question.getQuestionContent() +" \n");
+            }
             List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
             if (writeDataList == null || writeDataList.size() <= 0) {
                 return;

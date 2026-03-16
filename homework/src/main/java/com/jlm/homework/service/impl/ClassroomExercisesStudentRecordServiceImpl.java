@@ -1,10 +1,9 @@
 package com.jlm.homework.service.impl;
 
 import com.jlm.agent.AIServ.ZhiPuAIAgent;
+import com.jlm.agent.domain.SubQuestionsEnt;
 import com.jlm.homework.config.ZhipuAIConfig;
-import com.jlm.homework.dto.ExerciseWriteData;
-import com.jlm.homework.dto.StudentWriteDto;
-import com.jlm.homework.dto.TeacherWriteDto;
+import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
 import com.jlm.homework.repository.ClassroomExercisesRepository;
 import com.jlm.homework.repository.ClassroomExercisesStudentAnswerRepository;
@@ -60,6 +59,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
     private AIUtil aiUtil;
     @Autowired
     private IStudentAICallService studentAICallService;
+    @Autowired
+    private IAiMidService aiMidService;
 
     @Resource
     private ClassroomExercisesStudentAnswerRepository classroomExercisesStudentAnswerRepository;
@@ -222,7 +223,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
 
                 List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
                 for (ClassroomExercisesStudentRecord record : studentRecordList) {
-                    aiParseWriteRecord(record.getId());
+                    aiParseWriteMid(record.getId());
                 }
             }
             return "异步-OK";
@@ -532,6 +533,111 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+    @Override
+    public void aiParseWriteMid(Long studentRecordId) {
+
+        Optional<ClassroomExercisesStudentRecord> optional = classroomExercisesStudentRecordRepository.findById(studentRecordId);
+        if (optional == null || !optional.isPresent()) {
+            return;
+        }
+        ClassroomExercisesStudentRecord studentRecord = optional.get();
+
+        List<ClassroomExercisesStudentAnswer> studentAnswerList = new ArrayList<>();
+
+        try {
+            List<ClassroomExercisesQuestion> questionList = classroomExercisesQuestionService.selectQuestionList(studentRecord.getClassroomExercisesId());
+            StringBuilder sb = new StringBuilder();
+            if(questionList!=null&&questionList.size()>0) {
+                sb = sb.append("试题具体如下： \n");
+                for (ClassroomExercisesQuestion question : questionList) {
+                    sb = sb.append(question.getTitleNumber() + "、 " + question.getQuestionContent() + " \n");
+                }
+            }
+            List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
+            if (writeDataList == null || writeDataList.size() <= 0) {
+                return;
+            }
+            BufferedImage image = WritingDataRenderer.drawWritingData(writeDataList.get(0).getStudentsWriteRecords(), 794, 1123);
+            String imageUrl = "随堂检测-" + studentRecord.getClassroomExercisesId() + "-" + studentRecord.getStudentName() + ".png";
+            CoordinateImageGenerator.saveImage(image, imageUrl);
+
+            List<AiFile> medias = new ArrayList<AiFile>();
+            String base64Str = encodeImageToBase64(imageUrl);
+            AiFile file = new AiFile();
+            file.setId("随堂检测-"+studentRecordId);
+            file.setFile(base64Str);
+            file.setFileType("image/png");
+            medias.add(file);
+
+            AIMidDto midDto=aiMidService.apiReview(studentRecordId+"",medias,"随堂检测",sb.toString());
+            if(midDto!=null&&StringUtils.isNotEmpty(midDto.getTaskId())){
+                studentRecord.setAiTaskId(midDto.getTaskId());
+                classroomExercisesStudentRecordRepository.save(studentRecord);
+            }
+           /* List<Media> medias = new ArrayList<Media>();
+            Media media = Media.builder().mimeType(MediaType.IMAGE_JPEG).data(base64Str).build();
+            medias.add(media);
+            *//*AI处理*//*
+            String userMessage = "结构化输出";
+            ZhiPuAIAgent.TopicJudgeReport topicReport = studentAICallService.obtainTeacherJudgeAnswer(userMessage, medias);*/
+            //System.out.println("学生书写答案：" + topicReport);
+
+
+
+
+            File fileImag = new File(imageUrl);
+            fileImag.delete();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void aiResultDeal(Long studentRecordId, List<SubQuestionsEnt> answers) {
+        List<ClassroomExercisesStudentAnswer> studentAnswerList = new ArrayList<>();
+        ClassroomExercisesStudentRecord studentRecord = classroomExercisesStudentRecordRepository.findById(studentRecordId).orElse(null);
+
+        List<ClassroomExercisesQuestion> questionList = classroomExercisesQuestionService.selectQuestionList(studentRecord.getClassroomExercisesId());
+        if (!CollectionUtils.isEmpty(answers)) {
+            for (SubQuestionsEnt temp : answers) {
+                ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
+                answer.setTitleNumber(Integer.valueOf(temp.getQuestion_id()));
+                answer.setStudentAnswer(String.join("  ", temp.getAnswer_text()));
+                String correct = temp.getIs_correct();
+
+                if ("true".equalsIgnoreCase(correct)) {
+                    answer.setRightFlag(1);
+                } else {
+                    answer.setRightFlag(0);
+                }
+                studentAnswerList.add(answer);
+            }
+        }
+
+        if (studentAnswerList.size() > 0) {
+            for (ClassroomExercisesStudentAnswer answer : studentAnswerList) {
+                for (ClassroomExercisesQuestion question : questionList) {
+                    if (answer.getTitleNumber().compareTo(question.getTitleNumber()) == 0) {
+                        answer.setExerciseQuestionId(question.getId());
+                        answer.setStudentId(studentRecord.getStudentId() + "");
+                        answer.setStudentName(studentRecord.getStudentName());
+                        answer.setClassroomExercisesId(studentRecord.getClassroomExercisesId());
+                        answer.setClassId(studentRecord.getClassId());
+                        answer.setClassName(studentRecord.getClassName());
+                        answer.setExercisesStudentRecordId(studentRecord.getId());
+                        answer.setQuestionContent(question.getQuestionContent());
+                        answer.setAnswer(question.getAnswer());
+                        answer.setSubject(question.getSubject());
+                        answer.setKnowledgePoint(question.getKnowledgePoint());
+                        answer.setCreateTime(new Date());
+                        classroomExercisesStudentAnswerRepository.save(answer);
+                    }
+
+                }
+            }
+        }
+
     }
 
     @Override

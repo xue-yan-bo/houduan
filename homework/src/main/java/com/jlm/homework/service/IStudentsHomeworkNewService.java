@@ -1,5 +1,6 @@
 package com.jlm.homework.service;
 
+import com.jlm.agent.domain.SubQuestionsEnt;
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.StudentsHomeworkNew;
@@ -61,6 +62,8 @@ public interface IStudentsHomeworkNewService {
     String aIauditStruc(Long studentsHomeworkId);
 
 
+    String aIauditMid(Long studentsHomeworkId);
+
     Long getSubmitNumByHomeworkPublishId(Long id);
 
 
@@ -80,5 +83,7 @@ public interface IStudentsHomeworkNewService {
     public void updateByPublishId(Long homeworkPublishId,String homeworkName, String topicImagesStr, Date deadline, Long dailyPracticeld, String dailyPracticeName, String dailyPracticePreview, String chapter, String knowledgePoint,Integer submitStatus);
 
     void updateSubmietNull(Long homeworkPublishId);
+
+    void  aiResultDeal(Long studentsHomeworkId,List<SubQuestionsEnt> answers);
 
 }

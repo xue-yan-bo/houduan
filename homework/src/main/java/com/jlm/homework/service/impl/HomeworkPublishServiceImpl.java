@@ -533,12 +533,13 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 String questionType = subQue.getQuestion_type();
                 String content = subQue.getQuestion_content();
                 List<String> knowledgePoints = subQue.getKnowledge_points();
-                List<String> correctAnswer = subQue.getCorrect_answer();
+                Object correctAnswerObj = subQue.getCorrect_answer();
+                String correctAnswer = formatCorrectAnswer(correctAnswerObj);
 
                 currentQuestion.setBigNumber(majorQuestionId); //大题号
                 currentQuestion.setSmallNumber(questionId);  //小题号
                 currentQuestion.setQuestionType(questionType); //问题类型
-                currentQuestion.setReferenceAnswer(CollectionUtils.isEmpty(correctAnswer) ? null : String.join(",,,", correctAnswer)); //答案
+                currentQuestion.setReferenceAnswer(correctAnswer); //答案
                 currentQuestion.setContent(content); //问题内容
                 currentQuestion.setKnowledgePoints(CollectionUtils.isEmpty(knowledgePoints) ? null : String.join(",", knowledgePoints)); //参考知识点
                 questionAnalysisList.add(currentQuestion);
@@ -548,6 +549,33 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             System.err.println("解析AI结果失败: " + e.getMessage());
         }
         return questionAnalysisList;
+    }
+
+    private String formatCorrectAnswer(Object correctAnswer) {
+        if (correctAnswer == null) {
+            return null;
+        }
+        
+        if (correctAnswer instanceof String) {
+            return (String) correctAnswer;
+        }
+        
+        if (correctAnswer instanceof List) {
+            List<?> list = (List<?>) correctAnswer;
+            if (list.isEmpty()) {
+                return null;
+            }
+            
+            List<String> stringList = new ArrayList<>();
+            for (Object item : list) {
+                if (item != null) {
+                    stringList.add(item.toString());
+                }
+            }
+            return String.join(",,,", stringList);
+        }
+        
+        return correctAnswer.toString();
     }
 
 

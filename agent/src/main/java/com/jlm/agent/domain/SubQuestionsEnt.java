@@ -12,7 +12,7 @@ public class SubQuestionsEnt {
     private String question_type;
     private String question_content;
     private List<String> knowledge_points;
-    private List<String> correct_answer;
+    private Object correct_answer;
     private String is_correct;
     private String feedback;
     private String score; //得分
@@ -74,11 +74,11 @@ public class SubQuestionsEnt {
         this.knowledge_points = knowledge_points;
     }
 
-    public List<String> getCorrect_answer() {
+    public Object getCorrect_answer() {
         return correct_answer;
     }
 
-    public void setCorrect_answer(List<String> correct_answer) {
+    public void setCorrect_answer(Object correct_answer) {
         this.correct_answer = correct_answer;
     }
 

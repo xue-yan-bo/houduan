@@ -40,7 +40,7 @@ public class AiCallback {
      *处理结果，0处理成功，1处理失败
      */
     @Column(name = "status")
-    private String status;
+    private Integer status;
     /**
      *处理信息
      */

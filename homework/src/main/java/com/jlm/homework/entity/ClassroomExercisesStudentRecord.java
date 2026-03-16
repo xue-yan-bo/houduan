@@ -106,6 +106,11 @@ public class ClassroomExercisesStudentRecord {
     @Column(name = "teacher_comment")
     private String teacherComment;
     /**
+     * AI中台任务id
+     */
+    @Column(name = "ai_task_id")
+    private String aiTaskId;
+    /**
      * 学生写作记录
      */
     @Transient

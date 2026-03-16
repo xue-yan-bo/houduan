@@ -319,6 +319,12 @@ public class StudentsHomeworkNew implements Serializable {
      */
     @Column(name = "submit_file_url2")
     private String submitFileUrl2;
+
+    /**
+     * AI中台任务id
+     */
+    @Column(name = "ai_task_id")
+    private String aiTaskId;
     /**
      * 作业相关文件
      */

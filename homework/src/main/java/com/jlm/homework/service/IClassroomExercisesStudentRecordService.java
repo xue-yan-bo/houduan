@@ -1,5 +1,6 @@
 package com.jlm.homework.service;
 
+import com.jlm.agent.domain.SubQuestionsEnt;
 import com.jlm.homework.dto.ExerciseWriteData;
 import com.jlm.homework.dto.StudentWriteDto;
 import com.jlm.homework.dto.TeacherWriteDto;
@@ -33,4 +34,11 @@ public interface IClassroomExercisesStudentRecordService {
     TeacherWriteDto getLiveStreamtRecordTeacher(Long classroomExercisesId);
 
     ClassroomExercisesStudentRecord getStudentRecordDetail(Long studentRecordId);
+    /**
+     * AI中台
+     * @param studentRecordId
+     */
+    void aiParseWriteMid(Long studentRecordId);
+
+    void aiResultDeal(Long studentRecordId, List<SubQuestionsEnt> answers);
 }

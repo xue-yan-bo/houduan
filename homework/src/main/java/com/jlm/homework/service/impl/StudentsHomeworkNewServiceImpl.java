@@ -2780,11 +2780,11 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         }
         return auditImages;
     }
-    public void  aiResultDeal(Long studentsHomeworkId,List<SubQuestionsEnt> answers){
+    public void  aiResultDeal(Long studentsHomeworkId,List<SubQuestionsEnt> answers) {
         StudentsHomeworkNew studentsHomework = this.getById(studentsHomeworkId);
         // 清理库中解析答案
         List<QuestionAnalysis> listByStudHomeId = questionAnalysisService.findListByStudHomeId(studentsHomeworkId);
-        if(CollectionUtils.isNotEmpty(listByStudHomeId)){
+        if (CollectionUtils.isNotEmpty(listByStudHomeId)) {
             questionAnalysisService.deleteByStudHomeId(studentsHomeworkId);
                     /*listByStudHomeId.forEach(analysis->{
                         questionAnalysisService.deleteById(analysis.getId());
@@ -2794,7 +2794,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         List<QuestionAnalysis> errorList = new ArrayList<>();
         Map<String, String> map = new HashMap<>();
         StringBuilder stringBuilder = new StringBuilder();
-        for(SubQuestionsEnt temp:answers) {
+        for (SubQuestionsEnt temp : answers) {
 
             // 若库里没有试题和答案，则直接用AI阅卷，返回的内容出结果
             QuestionAnalysis questionAnalysis = new QuestionAnalysis();
@@ -2817,10 +2817,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             questionAnalysis.setBigNumber(temp.getMajor_question_id());
             questionAnalysis.setSmallNumber(temp.getQuestion_id());
             questionAnalysis.setQuestionType(temp.getQuestion_type());
-            questionAnalysis.setKnowledgePoints(CollectionUtils.isNotEmpty(temp.getKnowledge_points())?String.join(",",temp.getKnowledge_points()):"");
+            questionAnalysis.setKnowledgePoints(CollectionUtils.isNotEmpty(temp.getKnowledge_points()) ? String.join(",", temp.getKnowledge_points()) : "");
             questionAnalysis.setAnalysis(temp.getFeedback());
-            questionAnalysis.setObtainedScore(temp.getScore() != null && temp.getScore().matches("\\d+")?Double.valueOf(temp.getScore()):0);
-            questionAnalysis.setScore(temp.getQuestion_score() == null && temp.getScore().matches("\\d+") ?Double.valueOf(temp.getQuestion_score()):0);
+            questionAnalysis.setObtainedScore(temp.getScore() != null && temp.getScore().matches("\\d+") ? Double.valueOf(temp.getScore()) : 0);
+            questionAnalysis.setScore(temp.getQuestion_score() == null && temp.getScore().matches("\\d+") ? Double.valueOf(temp.getQuestion_score()) : 0);
             List<String> answerText = temp.getAnswer_text();
             questionAnalysis.setStudentAnswer(answerText != null ? String.join(",,,", answerText) : "");
             questionAnalysis.setReferenceAnswer(formatCorrectAnswer(temp.getCorrect_answer()));
@@ -2858,9 +2858,8 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         }
 
 
-
         List<HomeworkAIBigDto> bigDtoList = new ArrayList<>();
-        for(String key:aiResultMap.keySet()){
+        for (String key : aiResultMap.keySet()) {
             String bigNumber = key.split(":")[0];
             String questionType = key.split(":")[1];
             HomeworkAIBigDto bigDto = new HomeworkAIBigDto();
@@ -2871,7 +2870,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         }
         studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoList));
         studentsHomeworkNewRepository.save(studentsHomework);
-        if(errorList!=null&&errorList.size()>0){
+        if (errorList != null && errorList.size() > 0) {
             for (QuestionAnalysis questionAnalysis : errorList) {
                 WrongTitleBook wrongTitleBook = new WrongTitleBook();
                 wrongTitleBook.setTitleBigNo(questionAnalysis.getBigNumber());
@@ -2890,10 +2889,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 wrongTitleBookService.addWrongBook(wrongTitleBook);
             }
         }
-
-        messagingTemplate.convertAndSend("/studentHomework/aiResult/"+studentsHomeworkId,bigDtoList);
+        if (bigDtoList != null) {
+            messagingTemplate.convertAndSend("/studentHomework/aiResult/" + studentsHomeworkId, bigDtoList);
+        }
     }
-
     private String formatCorrectAnswer(Object correctAnswer) {
         if (correctAnswer == null) {
             return "";

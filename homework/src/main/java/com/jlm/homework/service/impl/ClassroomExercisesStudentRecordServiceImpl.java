@@ -650,7 +650,9 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         }
 
         ClassroomExercisesStudentStatistics statistics=classroomExercisesStudentAnswerService.statisticsByClassroomExercisesId(studentRecord.getClassroomExercisesId());
-        messagingTemplate.convertAndSend("/classroom/aiResult/"+studentRecord.getClassroomExercisesId(),statistics);
+        if(statistics!=null) {
+            messagingTemplate.convertAndSend("/classroom/aiResult/" + studentRecord.getClassroomExercisesId(), statistics);
+        }
     }
 
     @Override

@@ -2831,16 +2831,25 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             if (judgeRes == null) {
                 questionAnalysis.setIsCorrect(null);
                 smallDto.setCorrectFlag("未答题");
+                if(StringUtils.isNotEmpty(questionAnalysis.getAnalysis())) {
+                    smallDto.setParse(questionAnalysis.getAnalysis());
+                }else{
+                    smallDto.setParse("无解析");
+                }
             } else {
                 questionAnalysis.setIsCorrect(judgeRes);
                 if (judgeRes) {
                     stringBuilder = stringBuilder.append("正确 ");
                     smallDto.setCorrectFlag("正确");
-                    smallDto.setParse(questionAnalysis.getAnalysis());
+
                 } else {
                     stringBuilder = stringBuilder.append("错误 ");
                     smallDto.setCorrectFlag("错误");
-                    smallDto.setParse(questionAnalysis.getAnalysis());
+                    if(StringUtils.isNotEmpty(questionAnalysis.getAnalysis())) {
+                        smallDto.setParse(questionAnalysis.getAnalysis());
+                    }else{
+                        smallDto.setParse("无解析");
+                    }
                     errorList.add(questionAnalysis);
                 }
             }

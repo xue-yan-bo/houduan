@@ -48,6 +48,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -432,66 +433,84 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public Page<StudentsHomeworkNew> getClassHomeworkStatistics(Integer pageNum, Integer pageSize,String subject, Long classId, String startDate,String endDate) {
+    public Page<StudentsHomeworkNew> getClassHomeworkStatistics(Integer pageNum, Integer pageSize, String subject, Long classId, String startDate, String endDate) {
+        if (pageNum == null || pageNum < 1) {
+            pageNum = 1;
+        }
+        if (pageSize == null || pageSize < 1) {
+            pageSize = 10;
+        }
 
-        Specification<HomeworkPublish> specification= new Specification<HomeworkPublish>() {
-
+        Specification<HomeworkPublish> specification = new Specification<HomeworkPublish>() {
             @Override
             public Predicate toPredicate(Root<HomeworkPublish> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                try {
-                    Predicate condition0 = null;
-                    if(StringUtils.isNotEmpty(subject)){
-                        condition0 =criteriaBuilder.equal(root.get("subject"), subject);
-                    }else {
-                        condition0 = criteriaBuilder.conjunction();
-                    }
-                    Predicate condition1 = null;
-                    if(classId!=null){
-                        condition1 =criteriaBuilder.like(root.get("classIds"), "%"+classId+"%");
-                    }else {
-                        condition1 = criteriaBuilder.conjunction();
-                    }
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    Calendar calendar = Calendar.getInstance();
-                    Predicate condition2 = null;
-                    if(StringUtils.isNotEmpty(startDate)){
-                        Date start = null;
-
-                        start = sdf.parse(startDate +" 00:00:00");
-
-                        calendar.setTime(start);
-
-                        Date end = sdf.parse(endDate +" 23:59:59");
-                        condition2 = criteriaBuilder.between(root.<Date>get("publishTime"),start,end);
-                    }else {
-                        condition2 = criteriaBuilder.conjunction();
-                    }
-                    Predicate condition3 = criteriaBuilder.isNotNull(root.get("submitStatus"));
-
-                    query.where(condition0,condition1,condition2,condition3);
-                } catch (ParseException e) {
-                    throw new RuntimeException(e);
+                List<Predicate> predicates = new ArrayList<>();
+                
+                if (StringUtils.isNotEmpty(subject)) {
+                    predicates.add(criteriaBuilder.equal(root.get("subject"), subject));
                 }
-                return null;
+                
+                if (classId != null) {
+                    predicates.add(criteriaBuilder.like(root.get("classIds"), "%" + classId + "%"));
+                }
+                
+                if (StringUtils.isNotEmpty(startDate) && StringUtils.isNotEmpty(endDate)) {
+                    try {
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                        Date start = sdf.parse(startDate + " 00:00:00");
+                        Date end = sdf.parse(endDate + " 23:59:59");
+                        predicates.add(criteriaBuilder.between(root.get("publishTime"), start, end));
+                    } catch (ParseException e) {
+                        log.error("日期解析失败: startDate={}, endDate={}", startDate, endDate, e);
+                    }
+                }
+                
+                return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
             }
         };
-        Sort sort = Sort.by(Sort.Direction.DESC,"id");
-        List<HomeworkPublish> homeworkPublishList=homeworkPublishRepository.findAll(specification,sort);
-        List<StudentsHomeworkNew> studentsHomeworkList = new ArrayList<>();
-        for(HomeworkPublish homeworkPublish:homeworkPublishList){
-            StudentsHomeworkNew  studentsHomeworkNew=new StudentsHomeworkNew();
-            studentsHomeworkNew.setHomeworkPublishId(homeworkPublish.getId());
-            studentsHomeworkNew.setClassesId(classId);
-            studentsHomeworkNew.setSubject(subject);
-            Sort sort1 = Sort.by(Sort.Direction.DESC,"accuracy","createTime");
-            List<StudentsHomeworkNew> studentsHomeworkNewList = studentsHomeworkNewRepository.findAll(Example.of(studentsHomeworkNew),sort1);
-            studentsHomeworkList.addAll(studentsHomeworkNewList);
+
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
+        List<HomeworkPublish> homeworkPublishList = homeworkPublishRepository.findAll(specification, sort);
+        
+        if (CollectionUtils.isEmpty(homeworkPublishList)) {
+            return Page.empty();
         }
-        Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNum);
-        int end = pageNum*pageSize>studentsHomeworkList.size()?studentsHomeworkList.size():pageNum*pageSize;
-        List<StudentsHomeworkNew> contect = studentsHomeworkList.subList((pageNum-1)*pageSize,end);
-        Page<StudentsHomeworkNew> page = new PageImpl<StudentsHomeworkNew>(contect,pageable,studentsHomeworkList.size());
-        return page;
+
+        List<Long> homeworkPublishIds = homeworkPublishList.stream()
+                .map(HomeworkPublish::getId)
+                .collect(Collectors.toList());
+
+        Specification<StudentsHomeworkNew> studentsSpec = new Specification<StudentsHomeworkNew>() {
+            @Override
+            public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> predicates = new ArrayList<>();
+                
+                predicates.add(root.get("homeworkPublishId").in(homeworkPublishIds));
+                
+                if (classId != null) {
+                    predicates.add(criteriaBuilder.equal(root.get("classesId"), classId));
+                }
+                
+                if (StringUtils.isNotEmpty(subject)) {
+                    predicates.add(criteriaBuilder.equal(root.get("subject"), subject));
+                }
+                
+                return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+            }
+        };
+
+        Sort studentSort = Sort.by(Sort.Direction.DESC, "accuracy", "createTime");
+        List<StudentsHomeworkNew> allStudentsHomeworkList = studentsHomeworkNewRepository.findAll(studentsSpec, studentSort);
+        
+        int total = allStudentsHomeworkList.size();
+        int startIndex = (pageNum - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, total);
+        
+        List<StudentsHomeworkNew> content = startIndex < total ? 
+                allStudentsHomeworkList.subList(startIndex, endIndex) : new ArrayList<>();
+        
+        Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
+        return new PageImpl<>(content, pageable, total);
     }
 
     @Override
@@ -2711,7 +2730,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 questionAnalysis.setKnowledgePoints(CollectionUtils.isNotEmpty(temp.getKnowledge_points())?String.join(",",temp.getKnowledge_points()):"");
                 questionAnalysis.setAnalysis(temp.getFeedback());
                 questionAnalysis.setObtainedScore(temp.getScore() != null && temp.getScore().matches("\\d+")?Double.valueOf(temp.getScore()):0);
-                questionAnalysis.setScore(temp.getQuestion_score() == null && temp.getScore().matches("\\d+") ?Double.valueOf(temp.getQuestion_score()):0);
+                questionAnalysis.setScore(temp.getQuestion_score() != null && temp.getQuestion_score().matches("\\d+") ?Double.valueOf(temp.getQuestion_score()):0);
                 List<String> answerText = temp.getAnswer_text();
                 questionAnalysis.setStudentAnswer(answerText != null ? String.join(",,,", answerText) : "");
                 questionAnalysis.setReferenceAnswer(formatCorrectAnswer(temp.getCorrect_answer()));
@@ -2820,7 +2839,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             questionAnalysis.setKnowledgePoints(CollectionUtils.isNotEmpty(temp.getKnowledge_points()) ? String.join(",", temp.getKnowledge_points()) : "");
             questionAnalysis.setAnalysis(temp.getFeedback());
             questionAnalysis.setObtainedScore(temp.getScore() != null && temp.getScore().matches("\\d+") ? Double.valueOf(temp.getScore()) : 0);
-            questionAnalysis.setScore(temp.getQuestion_score() == null && temp.getScore().matches("\\d+") ? Double.valueOf(temp.getQuestion_score()) : 0);
+            questionAnalysis.setScore(temp.getQuestion_score() != null && temp.getQuestion_score().matches("\\d+") ? Double.valueOf(temp.getQuestion_score()) : 0);
             List<String> answerText = temp.getAnswer_text();
             questionAnalysis.setStudentAnswer(answerText != null ? String.join(",,,", answerText) : "");
             questionAnalysis.setReferenceAnswer(formatCorrectAnswer(temp.getCorrect_answer()));
@@ -2836,12 +2855,17 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 }else{
                     smallDto.setParse("无解析");
                 }
+                errorList.add(questionAnalysis);
             } else {
                 questionAnalysis.setIsCorrect(judgeRes);
                 if (judgeRes) {
                     stringBuilder = stringBuilder.append("正确 ");
                     smallDto.setCorrectFlag("正确");
-
+                    if(StringUtils.isNotEmpty(questionAnalysis.getAnalysis())) {
+                        smallDto.setParse(questionAnalysis.getAnalysis());
+                    }else{
+                        smallDto.setParse("无解析");
+                    }
                 } else {
                     stringBuilder = stringBuilder.append("错误 ");
                     smallDto.setCorrectFlag("错误");

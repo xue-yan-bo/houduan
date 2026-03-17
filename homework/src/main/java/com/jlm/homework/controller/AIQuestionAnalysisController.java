@@ -37,9 +37,9 @@ public class AIQuestionAnalysisController {
     @GetMapping("/list")
     @Operation(summary = "作业AI分析结果详情列表")
     public List<QuestionAnalysis> teacherStartAnswer(@RequestParam(value = "homeworkPublishId") Long homeworkPublishId,
-                                                     @RequestParam(value = "classId") Long classId,
-                                                     @RequestParam(value = "bigNumber") String bigNumber,
-                                                     @RequestParam(value = "smallNumber") String smallNumber,
+                                                     @RequestParam(value = "classId", required = false) Long classId,
+                                                     @RequestParam(value = "bigNumber", required = false) String bigNumber,
+                                                     @RequestParam(value = "smallNumber", required = false) String smallNumber,
                                                      @RequestParam(value = "isCorrect", required = false )Boolean isCorrect) throws Throwable {
         List<QuestionAnalysis> list=questionAnalysisService.findQuestionAnalysis(homeworkPublishId,classId,bigNumber,smallNumber,isCorrect);
         return list;

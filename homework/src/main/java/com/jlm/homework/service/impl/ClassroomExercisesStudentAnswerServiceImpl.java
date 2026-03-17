@@ -127,7 +127,8 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                     answerWrongMap.put(studentAnswer.getTitleNumber(), 1);
                 }
             }
-            String key = studentAnswer.getTitleNumber() +":"+studentAnswer.getStudentAnswer();
+
+            String key = studentAnswer.getTitleNumber() +":"+(StringUtils.isEmpty(studentAnswer.getStudentAnswer())?"未作答":studentAnswer.getStudentAnswer());
             if(variousAnswersNum.containsKey(key)) {//答题数量
                 variousAnswersNum.put(key, variousAnswersNum.get(key) + 1);
             }else{
@@ -168,6 +169,9 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
             Map<String,Double> variousAnswersProp = new HashMap<>();
 
             for(String ansersKey:variousAnswersNum.keySet()){
+                if(!ansersKey.contains(":")){
+                    continue;
+                }
                 String titleN = ansersKey.split(":")[0];
                 String answerN = ansersKey.split(":")[1];
                 if("null".equals(titleN)) {

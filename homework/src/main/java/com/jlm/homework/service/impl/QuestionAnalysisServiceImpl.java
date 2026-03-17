@@ -15,6 +15,7 @@ import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -98,6 +99,7 @@ public class QuestionAnalysisServiceImpl implements IQuestionAnalysisService {
     }
 
     @Override
+    @Transactional
     public void deleteByStudHomeId(Long studentsHomeworkId) {
         Specification<QuestionAnalysis> specification = new Specification<QuestionAnalysis>() {
 

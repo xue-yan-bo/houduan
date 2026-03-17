@@ -97,6 +97,9 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
     @Override
     public ClassroomExercisesQuestion save(Long classroomExercisesId, ClassroomExercisesQuestion question) {
         question.setClassroomExercisesId(classroomExercisesId);
+        if(question.getCreateTime()==null){
+            question.setCreateTime(new Date());
+        }
         return classroomExercisesQuestionRepository.save(question);
     }
 
@@ -309,6 +312,9 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
 
     @Override
     public void saveQuestion(ClassroomExercisesQuestion cpQuestion) {
+        if(cpQuestion.getCreateTime()==null){
+            cpQuestion.setCreateTime(new Date());
+        }
         classroomExercisesQuestionRepository.save(cpQuestion);
     }
 

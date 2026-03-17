@@ -154,4 +154,10 @@ public class WrongTitleBook {
      */
     @Column(name = "question_type")
     private String questionType;
+
+    /**
+     * 科目
+     */
+    @Column(name = "subject")
+    private String subject;
 }

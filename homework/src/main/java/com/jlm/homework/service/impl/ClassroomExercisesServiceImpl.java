@@ -140,13 +140,14 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
                 } else {
                     questionIdMap.put(question.getQuestionType(), "" + question.getId());
                 }
-
-                String day = sdf.format(question.getCreateTime());
-                String key = question.getQuestionType()+":"+day;
-                if (dayExerciseTypeMap.containsKey(key)){
-                    dayExerciseTypeMap.put(key,dayExerciseTypeMap.get(key)+1);
-                }else {
-                    dayExerciseTypeMap.put(key,1);
+                if(question.getCreateTime()!=null) {
+                    String day = sdf.format(question.getCreateTime());
+                    String key = question.getQuestionType() + ":" + day;
+                    if (dayExerciseTypeMap.containsKey(key)) {
+                        dayExerciseTypeMap.put(key, dayExerciseTypeMap.get(key) + 1);
+                    } else {
+                        dayExerciseTypeMap.put(key, 1);
+                    }
                 }
             }
         }

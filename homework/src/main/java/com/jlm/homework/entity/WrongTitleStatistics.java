@@ -117,6 +117,12 @@ public class WrongTitleStatistics implements Serializable {
     @Column(name = "question_type")
     private String questionType;
 
+    /**
+     * 科目
+     */
+    @Column(name = "subject")
+    private String subject;
+
     public String getTitleContext() {
         if(StringUtils.isNotEmpty(titleContext)&&titleContext.contains("\\")){
             return titleContext.replace("\\","");

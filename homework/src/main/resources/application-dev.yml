@@ -119,3 +119,12 @@ minio:
   accessKey: admin
   secretKey: HTTPSxjlm@2017.cn
   bucketName: exercise
+
+ai-mid:
+  #156\243
+  baseUrl: http://192.168.1.156:18081
+  reviewUrl: /api/review
+  pollUrl: /api/poll?
+  historyUrl: /api/history?
+  aiCallbackUrl: http://192.168.1.29/prod-api/homework-board/api/aicallback
+  model: qwen3-vl-plus-2025-12-19

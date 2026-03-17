@@ -1506,7 +1506,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             Double time = 0.0;
             if(homework.getSubmitTime()!=null){
                 submitNum++;
-                if(homework.getStartTime()!=null){
+                if(homework.getStartTime()!=null&&homework.getStartTime().before(homework.getSubmitTime())){
                     time =Double.valueOf(homework.getSubmitTime().getTime()- homework.getStartTime().getTime())/1000/60;
 
                 }else if(homework.getCreateTime()!=null){
@@ -2836,9 +2836,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 if (judgeRes) {
                     stringBuilder = stringBuilder.append("正确 ");
                     smallDto.setCorrectFlag("正确");
+                    smallDto.setParse(questionAnalysis.getAnalysis());
                 } else {
                     stringBuilder = stringBuilder.append("错误 ");
                     smallDto.setCorrectFlag("错误");
+                    smallDto.setParse(questionAnalysis.getAnalysis());
+                    errorList.add(questionAnalysis);
                 }
             }
             String key = questionAnalysis.getBigNumber() + ":" + questionAnalysis.getQuestionType();

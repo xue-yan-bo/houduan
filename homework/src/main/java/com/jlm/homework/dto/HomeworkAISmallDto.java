@@ -7,4 +7,5 @@ import java.io.Serializable;
 public class HomeworkAISmallDto implements Serializable {
     private String smallNumber;
     private String correctFlag;
+    private String parse;
 }

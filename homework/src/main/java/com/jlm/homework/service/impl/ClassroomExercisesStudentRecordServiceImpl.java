@@ -22,6 +22,7 @@ import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.MediaType;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Base64Utils;
@@ -61,10 +62,13 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
     private IStudentAICallService studentAICallService;
     @Autowired
     private IAiMidService aiMidService;
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     @Resource
     private ClassroomExercisesStudentAnswerRepository classroomExercisesStudentAnswerRepository;
-
+    @Autowired
+    private IClassroomExercisesStudentAnswerService classroomExercisesStudentAnswerService;
     @Override
     public List<ClassroomExercisesStudentRecord> selectByClassroomExercisesId(Long classroomExercisesId) {
         ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
@@ -551,7 +555,10 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             if(questionList!=null&&questionList.size()>0) {
                 sb = sb.append("试题具体如下： \n");
                 for (ClassroomExercisesQuestion question : questionList) {
-                    sb = sb.append(question.getTitleNumber() + "、 " + question.getQuestionContent() + " \n");
+                    String questionContent = new String(Base64.getDecoder().decode(question.getQuestionContent()));
+                    String answer = new String(Base64.getDecoder().decode(question.getAnswer()));
+                    String titleStr = question.getTitleNumber() +".  "+questionContent + " 标准答案："+answer+" \n";
+                    sb = sb.append(question.getTitleNumber() + "、 " + titleStr + " \n");
                 }
             }
             List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
@@ -602,8 +609,12 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         if (!CollectionUtils.isEmpty(answers)) {
             for (SubQuestionsEnt temp : answers) {
                 ClassroomExercisesStudentAnswer answer = new ClassroomExercisesStudentAnswer();
-                answer.setTitleNumber(Integer.valueOf(temp.getQuestion_id()));
-                answer.setStudentAnswer(String.join("  ", temp.getAnswer_text()));
+                String questionId = temp.getQuestion_id();
+                if (questionId != null && !questionId.isEmpty()) {
+                    answer.setTitleNumber(Integer.valueOf(questionId));
+                }
+                List<String> answerText = temp.getAnswer_text();
+                answer.setStudentAnswer(answerText != null ? String.join("  ", answerText) : "");
                 String correct = temp.getIs_correct();
 
                 if ("true".equalsIgnoreCase(correct)) {
@@ -638,6 +649,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             }
         }
 
+        ClassroomExercisesStudentStatistics statistics=classroomExercisesStudentAnswerService.statisticsByClassroomExercisesId(studentRecord.getClassroomExercisesId());
+        messagingTemplate.convertAndSend("/classroom/aiResult/"+studentRecord.getClassroomExercisesId(),statistics);
     }
 
     @Override

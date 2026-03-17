@@ -24,7 +24,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic", "/queue")
+        registry.enableSimpleBroker("/topic", "/queue", "/studentHomework", "/classroom")
                 .setHeartbeatValue(new long[] {10000, 10000})
                 .setTaskScheduler(taskScheduler());;
 
@@ -46,6 +46,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 // 配置 SockJS 选项
                 .setHeartbeatTime(10000) // 10秒心跳
                 .setDisconnectDelay(30000); // 30秒断开延迟;
+        registry.addEndpoint("/websocket/{userId}/{sessionId}")
+                .setAllowedOriginPatterns("*")
+                .withSockJS()
+                .setHeartbeatTime(10000)
+                .setDisconnectDelay(30000);
     }
 
 

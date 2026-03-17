@@ -2886,6 +2886,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 wrongTitleBook.setStudentName(studentsHomework.getStudentName());
                 wrongTitleBook.setClassId(studentsHomework.getClassesId());
                 wrongTitleBook.setClassName(studentsHomework.getClassesName());
+                wrongTitleBook.setSubject(studentsHomework.getSubject());
                 wrongTitleBookService.addWrongBook(wrongTitleBook);
             }
         }

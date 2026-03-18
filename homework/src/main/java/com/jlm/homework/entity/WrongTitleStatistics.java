@@ -38,13 +38,13 @@ public class WrongTitleStatistics implements Serializable {
     @Column(name = "homework_publish_name")
     private String homeworkPublishName;
     /**
-     * 题图片路径
+     * 班级ID
      */
     @Column(name = "class_id")
     private Long classId;
 
     /**
-     * 题图片路径
+     * 题ID
      */
     @Column(name = "question_id")
     private Long questionId;

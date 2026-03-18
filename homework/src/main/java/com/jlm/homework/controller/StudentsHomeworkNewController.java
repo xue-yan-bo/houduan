@@ -262,4 +262,11 @@ public class StudentsHomeworkNewController {
     }
 
 
+
+    @GetMapping("/dealTongji")
+    public void  dealTongji(Long studentsHomeworkId){
+        studentsHomeworkNewService.dealTongji(studentsHomeworkId);
+
+    }
+
 }

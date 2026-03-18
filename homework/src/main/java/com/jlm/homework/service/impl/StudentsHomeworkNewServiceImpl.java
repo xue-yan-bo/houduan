@@ -1753,6 +1753,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         /*StudentsHomeworkNew search = new StudentsHomeworkNew();
         search.setStudentId(studentId);
         search.setHomeworkPublishId(homeworkId);*/
+        System.out.println("=========================保存笔记开始");
         Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findById(homeworkId);
         if(optional==null||optional.isEmpty()){
             return;
@@ -1784,10 +1785,13 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         HomeworkPublish homeworkPublish=homeworkPublishRepository.findById(studentsHomework.getHomeworkPublishId()).get();
         homeworkPublish.setAuditStatus(1);
         homeworkPublishRepository.save(homeworkPublish);
+        log.info("=========================异步处理AI智能审批"+homeworkId+"学生 id"+studentId);
         //异步处理AI智能审批
         if(isFinish){
             FutureTask<String> futureTask = new FutureTask<>(() -> {
+                System.out.println("=========================准备中台调用4，type========================="+type);
                 if("1".equals(type)){
+                    System.out.println("=========================准备中台调用3=========================");
                     aIauditMid(studentsHomework.getId());
                 }else {
                     String auditImages = "";
@@ -2494,10 +2498,15 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         StudentsHomeworkNew studentsHomework = this.getById(studentsHomeworkId);
         String auditImages = "";
         List<HomeworkStudentWriteData> homeworkStudentWriteDataList=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"1");
-
+        System.out.println("=========================准备中台调用2=========================");
         List<String> imageNames = null;
-        if(studentsHomework.getTopicImages()!=null&&studentsHomework.getTopicImages().size()>0
-                &&!studentsHomework.getTopicImagesStr().endsWith(".docx")&&!studentsHomework.getTopicImagesStr().endsWith(".doc")){
+        System.out.println("========================="+studentsHomework.getTopicImages()+"=========================");
+        String topicImagesStr = studentsHomework.getTopicImagesStr();
+        boolean isDocFile = StringUtils.isNotEmpty(topicImagesStr) && 
+                (topicImagesStr.endsWith(".docx") || topicImagesStr.endsWith(".doc"));
+        System.out.println("=========================topicImagesStr: "+topicImagesStr+", isDocFile: "+isDocFile+"=========================");
+        if(studentsHomework.getTopicImages()!=null&&studentsHomework.getTopicImages().size()>0 && !isDocFile){
+            System.out.println("=========================准备中台调用2.1========================="+studentsHomework.getTopicImagesStr());
             try {
                 imageNames = new ArrayList<>();
                 for(int i=0;i<studentsHomework.getTopicImages().size();i++) {
@@ -2524,6 +2533,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             }
 
         }else if(StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())) {
+            System.out.println("========================="+studentsHomework.getDailyPracticePreview()+"=========================");
             try {
                 String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
                 DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
@@ -2538,7 +2548,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             imageNames = Arrays.asList(studentsHomework.getSubmitFileUrl().split(","));
 
         }
-
+        System.out.println("=========================准备中台调用2.1========================="+imageNames.size());
         if(imageNames!=null&&imageNames.size()>0) {
             try {
 
@@ -2559,6 +2569,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         continue;
                     }
                 }
+                System.out.println("=============================准备中台调用1=============================");
                 AIMidDto midDto=aiMidService.apiReview(studentsHomeworkId+"",medias,"作业批改",null);
                 if(midDto!=null&&StringUtils.isNotEmpty(midDto.getTaskId())){
                     studentsHomework.setAiTaskId(midDto.getTaskId());
@@ -2567,7 +2578,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-
+            System.out.println("=========================图片删除=========================");
             for (String image : imageNames) {
                 File imageFile = new File(image);
                 imageFile.delete();
@@ -2575,7 +2586,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             }
         }
 
-
+        System.out.println("=========================完成=========================");
         return auditImages;
     }
 
@@ -2799,32 +2810,36 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         }
         return auditImages;
     }
-    public void  aiResultDeal(Long studentsHomeworkId,List<SubQuestionsEnt> answers) {
+    public void aiResultDeal(Long studentsHomeworkId, List<SubQuestionsEnt> answers) {
+        if (studentsHomeworkId == null) {
+            return;
+        }
+        
+        if (CollectionUtils.isEmpty(answers)) {
+            return;
+        }
+        
         StudentsHomeworkNew studentsHomework = this.getById(studentsHomeworkId);
+        if (studentsHomework == null) {
+            return;
+        }
+        
         // 清理库中解析答案
         List<QuestionAnalysis> listByStudHomeId = questionAnalysisService.findListByStudHomeId(studentsHomeworkId);
         if (CollectionUtils.isNotEmpty(listByStudHomeId)) {
             questionAnalysisService.deleteByStudHomeId(studentsHomeworkId);
-                    /*listByStudHomeId.forEach(analysis->{
-                        questionAnalysisService.deleteById(analysis.getId());
-                    });*/
         }
+        
         Map<String, List<HomeworkAISmallDto>> aiResultMap = new HashMap<>();
+        List<QuestionAnalysis> questionAnalysisList = new ArrayList<>();
         List<QuestionAnalysis> errorList = new ArrayList<>();
         Map<String, String> map = new HashMap<>();
         StringBuilder stringBuilder = new StringBuilder();
+        
         for (SubQuestionsEnt temp : answers) {
-
             // 若库里没有试题和答案，则直接用AI阅卷，返回的内容出结果
             QuestionAnalysis questionAnalysis = new QuestionAnalysis();
             questionAnalysis.setId(null);
-            if (StringUtils.isNotEmpty(questionAnalysis.getBigNumber()) && !map.containsKey(questionAnalysis.getBigNumber())) {
-                stringBuilder = stringBuilder.append(questionAnalysis.getBigNumber()).append("、").append(questionAnalysis.getQuestionType());
-                map.put(questionAnalysis.getBigNumber(), questionAnalysis.getQuestionType());
-            }
-            if (StringUtils.isNotEmpty(questionAnalysis.getSmallNumber())) {
-                stringBuilder = stringBuilder.append(questionAnalysis.getSmallNumber()).append(".");
-            }
             questionAnalysis.setHomeworkPublishId(studentsHomework.getHomeworkPublishId());
             questionAnalysis.setStudentsHomeworkId(studentsHomework.getId());
             questionAnalysis.setClassesId(studentsHomework.getClassesId());
@@ -2841,69 +2856,74 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             questionAnalysis.setObtainedScore(temp.getScore() != null && temp.getScore().matches("\\d+") ? Double.valueOf(temp.getScore()) : 0);
             questionAnalysis.setScore(temp.getQuestion_score() != null && temp.getQuestion_score().matches("\\d+") ? Double.valueOf(temp.getQuestion_score()) : 0);
             List<String> answerText = temp.getAnswer_text();
-            questionAnalysis.setStudentAnswer(answerText != null ? String.join(",,,", answerText) : "");
+            questionAnalysis.setStudentAnswer(answerText != null ? String.join(",,,", answerText) : "未作答");
             questionAnalysis.setReferenceAnswer(formatCorrectAnswer(temp.getCorrect_answer()));
-
+            
+            // 构建stringBuilder
+            if (StringUtils.isNotEmpty(questionAnalysis.getBigNumber()) && !map.containsKey(questionAnalysis.getBigNumber())) {
+                stringBuilder.append(questionAnalysis.getBigNumber()).append("、").append(questionAnalysis.getQuestionType());
+                map.put(questionAnalysis.getBigNumber(), questionAnalysis.getQuestionType());
+            }
+            if (StringUtils.isNotEmpty(questionAnalysis.getSmallNumber())) {
+                stringBuilder.append(questionAnalysis.getSmallNumber()).append(".");
+            }
+            
             HomeworkAISmallDto smallDto = new HomeworkAISmallDto();
             smallDto.setSmallNumber(questionAnalysis.getSmallNumber());
+            
             Boolean judgeRes = Boolean.valueOf(temp.getIs_correct());
             if (judgeRes == null) {
                 questionAnalysis.setIsCorrect(null);
                 smallDto.setCorrectFlag("未答题");
-                if(StringUtils.isNotEmpty(questionAnalysis.getAnalysis())) {
-                    smallDto.setParse(questionAnalysis.getAnalysis());
-                }else{
-                    smallDto.setParse("无解析");
-                }
+                smallDto.setParse(StringUtils.isNotEmpty(questionAnalysis.getAnalysis()) ? questionAnalysis.getAnalysis() : "无解析");
                 errorList.add(questionAnalysis);
             } else {
                 questionAnalysis.setIsCorrect(judgeRes);
                 if (judgeRes) {
-                    stringBuilder = stringBuilder.append("正确 ");
+                    stringBuilder.append("正确 ");
                     smallDto.setCorrectFlag("正确");
-                    if(StringUtils.isNotEmpty(questionAnalysis.getAnalysis())) {
-                        smallDto.setParse(questionAnalysis.getAnalysis());
-                    }else{
-                        smallDto.setParse("无解析");
-                    }
+                    smallDto.setParse(StringUtils.isNotEmpty(questionAnalysis.getAnalysis()) ? questionAnalysis.getAnalysis() : "无解析");
                 } else {
-                    stringBuilder = stringBuilder.append("错误 ");
+                    stringBuilder.append("错误 ");
                     smallDto.setCorrectFlag("错误");
-                    if(StringUtils.isNotEmpty(questionAnalysis.getAnalysis())) {
-                        smallDto.setParse(questionAnalysis.getAnalysis());
-                    }else{
-                        smallDto.setParse("无解析");
-                    }
+                    smallDto.setParse(StringUtils.isNotEmpty(questionAnalysis.getAnalysis()) ? questionAnalysis.getAnalysis() : "无解析");
                     errorList.add(questionAnalysis);
                 }
             }
-            String key = questionAnalysis.getBigNumber() + ":" + questionAnalysis.getQuestionType();
-            if (aiResultMap.containsKey(key)) {
-                List<HomeworkAISmallDto> smallDtoList = aiResultMap.get(key);
-                smallDtoList.add(smallDto);
-                aiResultMap.put(key, smallDtoList);
-            } else {
-                List<HomeworkAISmallDto> smallDtoList = new ArrayList<>();
-                smallDtoList.add(smallDto);
-                aiResultMap.put(key, smallDtoList);
-            }
-            questionAnalysisService.save(questionAnalysis);
+            
+            // 构建aiResultMap
+            String key = questionAnalysis.getBigNumber() + ":" + (StringUtils.isNotEmpty(questionAnalysis.getQuestionType())?questionAnalysis.getQuestionType():"未作答");
+            aiResultMap.computeIfAbsent(key, k -> new ArrayList<>()).add(smallDto);
+            questionAnalysisList.add(questionAnalysis);
         }
-
-
+        
+        // 批量保存QuestionAnalysis
+        if (!questionAnalysisList.isEmpty()) {
+            questionAnalysisService.saveAll(questionAnalysisList);
+        }
+        
+        // 构建bigDtoList
         List<HomeworkAIBigDto> bigDtoList = new ArrayList<>();
-        for (String key : aiResultMap.keySet()) {
-            String bigNumber = key.split(":")[0];
-            String questionType = key.split(":")[1];
-            HomeworkAIBigDto bigDto = new HomeworkAIBigDto();
-            bigDto.setBigNumber(bigNumber);
-            bigDto.setQuestionType(questionType);
-            bigDto.setSmallDtoList(aiResultMap.get(key));
-            bigDtoList.add(bigDto);
+        for (Map.Entry<String, List<HomeworkAISmallDto>> entry : aiResultMap.entrySet()) {
+            String[] keyParts = entry.getKey().split(":");
+            if (keyParts.length == 2) {
+                String bigNumber = keyParts[0];
+                String questionType = keyParts[1];
+                HomeworkAIBigDto bigDto = new HomeworkAIBigDto();
+                bigDto.setBigNumber(bigNumber);
+                bigDto.setQuestionType(questionType);
+                bigDto.setSmallDtoList(entry.getValue());
+                bigDtoList.add(bigDto);
+            }
         }
+        
+        // 更新studentsHomework
         studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoList));
         studentsHomeworkNewRepository.save(studentsHomework);
-        if (errorList != null && errorList.size() > 0) {
+
+        
+        // 处理错题本
+        if (CollectionUtils.isNotEmpty(errorList)) {
             for (QuestionAnalysis questionAnalysis : errorList) {
                 WrongTitleBook wrongTitleBook = new WrongTitleBook();
                 wrongTitleBook.setTitleBigNo(questionAnalysis.getBigNumber());
@@ -2922,11 +2942,67 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 wrongTitleBook.setSubject(studentsHomework.getSubject());
                 wrongTitleBookService.addWrongBook(wrongTitleBook);
             }
+
         }
-        if (bigDtoList != null) {
-            messagingTemplate.convertAndSend("/studentHomework/aiResult/" + studentsHomeworkId, bigDtoList);
+        
+        // 发送WebSocket消息
+        if (!bigDtoList.isEmpty()) {
+            try {
+                messagingTemplate.convertAndSend("/studentHomework/aiResult/" + studentsHomeworkId, bigDtoList);
+                log.info("aiResultDeal: sent WebSocket message for studentsHomeworkId={}", studentsHomeworkId);
+            } catch (Exception e) {
+                log.error("aiResultDeal: failed to send WebSocket message", e);
+            }
         }
     }
+
+    @Override
+    public void dealTongji(Long studentsHomeworkId) {
+        if (studentsHomeworkId == null) {
+            return;
+        }
+        
+        List<QuestionAnalysis> analysisList = questionAnalysisService.findListByStudHomeId(studentsHomeworkId);
+        if (CollectionUtils.isEmpty(analysisList)) {
+            return;
+        }
+        
+        Map<String, HomeworkAIBigDto> map = new HashMap<>();
+        
+        for (QuestionAnalysis analysis : analysisList) {
+            String key = analysis.getBigNumber() + ":" + analysis.getQuestionType();
+            HomeworkAISmallDto smallDto = new HomeworkAISmallDto();
+            smallDto.setSmallNumber(analysis.getSmallNumber());
+            
+            if (analysis.getIsCorrect() != null && analysis.getIsCorrect()) {
+                smallDto.setCorrectFlag("正确");
+            } else if (analysis.getIsCorrect() != null && !analysis.getIsCorrect()) {
+                smallDto.setCorrectFlag("错误");
+            } else {
+                smallDto.setCorrectFlag("未作答");
+            }
+            
+            smallDto.setParse(analysis.getAnalysis());
+            
+            map.computeIfAbsent(key, k -> {
+                HomeworkAIBigDto bigDto = new HomeworkAIBigDto();
+                bigDto.setBigNumber(analysis.getBigNumber());
+                bigDto.setQuestionType(analysis.getQuestionType());
+                bigDto.setSmallDtoList(new ArrayList<>());
+                return bigDto;
+            }).getSmallDtoList().add(smallDto);
+        }
+        
+        List<HomeworkAIBigDto> bigDtoList = new ArrayList<>(map.values());
+        
+        StudentsHomeworkNew studentsHomework = studentsHomeworkNewRepository.findById(studentsHomeworkId).orElse(null);
+        if (studentsHomework != null) {
+            studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoList));
+            studentsHomeworkNewRepository.save(studentsHomework);
+
+        }
+    }
+
     private String formatCorrectAnswer(Object correctAnswer) {
         if (correctAnswer == null) {
             return "";

@@ -31,6 +31,11 @@ public class QuestionAnalysisServiceImpl implements IQuestionAnalysisService {
     }
 
     @Override
+    public void saveAll(List<QuestionAnalysis> questionAnalysisList) {
+        questionAnalysisRepository.saveAll(questionAnalysisList);
+    }
+
+    @Override
     public List<AIQuestionAnalysisDto> findAIQuestionStatistics(Long homeworkPublishId, Long classesId) {
         List<AIQuestionAnalysisDto> analysisDtoList = new ArrayList<>();
         QuestionAnalysis search = new QuestionAnalysis();

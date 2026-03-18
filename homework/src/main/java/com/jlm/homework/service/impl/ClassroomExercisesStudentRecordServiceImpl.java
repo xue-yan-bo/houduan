@@ -328,10 +328,10 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
 
         Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration","createTime");
         List<ClassroomExercisesStudentRecord> recordList = classroomExercisesStudentRecordRepository.findAll(specification,sort);
-        for(ClassroomExercisesStudentRecord studentRecord:recordList){
+        /*for(ClassroomExercisesStudentRecord studentRecord:recordList){
             List<ClassroomStudentWriteData> writeDataList=classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
             studentRecord.setStudentWriteDataList(writeDataList);
-        }
+        }*/
         return recordList;
     }
 

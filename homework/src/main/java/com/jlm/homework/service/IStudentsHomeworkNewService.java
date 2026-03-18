@@ -5,10 +5,12 @@ import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.entity.StudentsWriteRecord;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
@@ -62,7 +64,7 @@ public interface IStudentsHomeworkNewService {
     String aIauditStruc(Long studentsHomeworkId);
 
 
-    String aIauditMid(Long studentsHomeworkId);
+    String aIauditMid(Long studentsHomeworkId) throws IOException, InvalidFormatException;
 
     Long getSubmitNumByHomeworkPublishId(Long id);
 
@@ -86,4 +88,5 @@ public interface IStudentsHomeworkNewService {
 
     void  aiResultDeal(Long studentsHomeworkId,List<SubQuestionsEnt> answers);
 
+    void dealTongji(Long studentsHomeworkId);
 }

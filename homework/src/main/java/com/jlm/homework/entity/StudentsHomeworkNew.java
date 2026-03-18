@@ -10,6 +10,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -223,17 +224,27 @@ public class StudentsHomeworkNew implements Serializable {
     private String topicImagesStr;
 
     public List<String> getTopicImages() {
-        if(!StringUtils.isEmpty(topicImagesStr)){
-            topicImages = Arrays.asList(topicImagesStr.split(" ,"));
+        if (topicImages == null && StringUtils.isNotEmpty(topicImagesStr)) {
+            topicImages = new ArrayList<>(Arrays.asList(topicImagesStr.split(" ,")));
         }
         return topicImages;
     }
-    public void setTopicImagesStr(String topicImagesStr) {
-        if(topicImages!=null&&!topicImages.isEmpty()){
+
+    public void setTopicImages(List<String> topicImages) {
+        this.topicImages = topicImages;
+        if (topicImages != null && !topicImages.isEmpty()) {
             this.topicImagesStr = String.join(" ,", topicImages);
-        }else{
-            this.topicImagesStr = topicImagesStr;
+        } else {
+            this.topicImagesStr = null;
         }
+    }
+
+    public String getTopicImagesStr() {
+        return topicImagesStr;
+    }
+
+    public void setTopicImagesStr(String topicImagesStr) {
+        this.topicImagesStr = topicImagesStr;
     }
 
     /**

@@ -61,7 +61,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     public Page<WrongTitleBook> findByStudentId(Long studentId,Integer pageNum,Integer pageSize,String source,Integer commandFlag) {
         pageNum = pageNum == null ? 0 : pageNum-1;
         pageSize = pageSize == null ? 10 : pageSize;
-        Sort sort = Sort.by(Sort.Direction.DESC, "id");
+        Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
         Specification<WrongTitleBook> specification= new Specification<WrongTitleBook>() {
 

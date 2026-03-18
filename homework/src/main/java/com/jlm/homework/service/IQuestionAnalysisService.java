@@ -8,6 +8,8 @@ import java.util.List;
 public interface IQuestionAnalysisService {
     void save(QuestionAnalysis questionAnalysis);
 
+    void saveAll(List<QuestionAnalysis> questionAnalysisList);
+
     List<AIQuestionAnalysisDto> findAIQuestionStatistics(Long homeworkPublishId, Long classesId);
     List<QuestionAnalysis> findQuestionAnalysis(Long homeworkPublishId, Long classesId,String bigNumber,String smallNumber,Boolean isCorrect);
 

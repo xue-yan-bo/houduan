@@ -1789,11 +1789,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         //异步处理AI智能审批
         if(isFinish){
             FutureTask<String> futureTask = new FutureTask<>(() -> {
-                System.out.println("=========================准备中台调用4，type========================="+type);
-                if("1".equals(type)){
-                    System.out.println("=========================准备中台调用3=========================");
-                    aIauditMid(studentsHomework.getId());
-                }else {
+                try {
+                    System.out.println("=========================准备中台调用4，type========================="+type);
+                    if("1".equals(type)){
+                        System.out.println("=========================准备中台调用3=========================");
+                        aIauditMid(studentsHomework.getId());
+                    }else {
                     String auditImages = "";
                     List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
                     //异步处理AI智能审批
@@ -1881,6 +1882,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         studentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoAll));
                     }
                     studentsHomeworkNewRepository.save(studentsHomework);
+                }
+                } catch (Exception e) {
+                    log.error("=========================aIauditMid异步调用异常: "+e.getMessage(), e);
+                    e.printStackTrace();
                 }
                 return "异步-OK";
 
@@ -2495,37 +2500,54 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Transactional
     public String aIauditMid(Long studentsHomeworkId) {
+        //System.out.println("=========================aIauditMid开始，studentsHomeworkId: "+studentsHomeworkId+"=========================");
         StudentsHomeworkNew studentsHomework = this.getById(studentsHomeworkId);
+        //System.out.println("=========================getById完成，studentsHomework: "+(studentsHomework!=null?studentsHomework.getId():"null")+"=========================");
         String auditImages = "";
         List<HomeworkStudentWriteData> homeworkStudentWriteDataList=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"1");
-        System.out.println("=========================准备中台调用2=========================");
+        //System.out.println("=========================准备中台调用2=========================");
         List<String> imageNames = null;
-        System.out.println("========================="+studentsHomework.getTopicImages()+"=========================");
+        //System.out.println("========================="+studentsHomework.getTopicImages()+"=========================");
         String topicImagesStr = studentsHomework.getTopicImagesStr();
         boolean isDocFile = StringUtils.isNotEmpty(topicImagesStr) && 
                 (topicImagesStr.endsWith(".docx") || topicImagesStr.endsWith(".doc"));
-        System.out.println("=========================topicImagesStr: "+topicImagesStr+", isDocFile: "+isDocFile+"=========================");
+        //System.out.println("=========================topicImagesStr: "+topicImagesStr+", isDocFile: "+isDocFile+"=========================");
         if(studentsHomework.getTopicImages()!=null&&studentsHomework.getTopicImages().size()>0 && !isDocFile){
-            System.out.println("=========================准备中台调用2.1========================="+studentsHomework.getTopicImagesStr());
+            //System.out.println("=========================准备中台调用2.1========================="+studentsHomework.getTopicImagesStr());
             try {
                 imageNames = new ArrayList<>();
+                Map<Integer, HomeworkStudentWriteData> pageDataMap = new HashMap<>();
+                for(HomeworkStudentWriteData data : homeworkStudentWriteDataList){
+                    if(data.getPageNum() != null){
+                        pageDataMap.put(data.getPageNum(), data);
+                    }
+                }
+                
                 for(int i=0;i<studentsHomework.getTopicImages().size();i++) {
                     String imageUrl = studentsHomework.getTopicImages().get(i);
-
-
-                    for(HomeworkStudentWriteData writeData1:homeworkStudentWriteDataList){
-                        if(writeData1.getPageNum()==(i+1)&&StringUtils.isNotEmpty(imageUrl)) {
-                            List<StudentsWriteRecord> records = writeData1.getStudentsWriteRecords();
-                            BufferedImage resultImage = null;
-
-                            resultImage = ImageOverlayUtil.overlayWritingDataFromUrl(imageUrl, records);
-
-                            // 保存结果图片
-                            String imageName = studentsHomework.getHomeworkPublishName()+"_"+studentsHomework.getStudentName()+"_"+writeData1.getPageNum()+"页作业.png";
+                    if(StringUtils.isEmpty(imageUrl)){
+                        continue;
+                    }
+                    
+                    int pageNum = i + 1;
+                    HomeworkStudentWriteData writeData = pageDataMap.get(pageNum);
+                    
+                    if(writeData != null){
+                        List<StudentsWriteRecord> records = writeData.getStudentsWriteRecords();
+                        //System.out.println("=========================aIauditMid-two-2, imageUrl: "+imageUrl+", records size: "+(records!=null?records.size():"null")+"=========================");
+                        try {
+                            BufferedImage resultImage = ImageOverlayUtil.overlayWritingDataFromUrl(imageUrl, records);
+                            ///System.out.println("=========================aIauditMid-two-3=========================");
+                            String imageName = studentsHomework.getHomeworkPublishName()+"_"+studentsHomework.getStudentName()+"_"+pageNum+"页作业.png";
                             CoordinateImageGenerator.saveImage(resultImage, imageName);
                             imageNames.add(imageName);
-
+                        } catch (Exception e) {
+                            //System.out.println("=========================aIauditMid-two-异常: "+e.getMessage()+"=========================");
+                            e.printStackTrace();
+                            imageNames.add(imageUrl);
                         }
+                    } else {
+                        imageNames.add(imageUrl);
                     }
                 }
             } catch (Exception e) {
@@ -2533,7 +2555,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             }
 
         }else if(StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())) {
-            System.out.println("========================="+studentsHomework.getDailyPracticePreview()+"=========================");
+            //System.out.println("========================="+studentsHomework.getDailyPracticePreview()+"=========================");
             try {
                 String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
                 DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
@@ -2548,7 +2570,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             imageNames = Arrays.asList(studentsHomework.getSubmitFileUrl().split(","));
 
         }
-        System.out.println("=========================准备中台调用2.1========================="+imageNames.size());
+        //System.out.println("=========================准备中台调用2.1========================="+imageNames.size());
         if(imageNames!=null&&imageNames.size()>0) {
             try {
 
@@ -2569,7 +2591,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         continue;
                     }
                 }
-                System.out.println("=============================准备中台调用1=============================");
+                //System.out.println("=============================准备中台调用1=============================");
                 AIMidDto midDto=aiMidService.apiReview(studentsHomeworkId+"",medias,"作业批改",null);
                 if(midDto!=null&&StringUtils.isNotEmpty(midDto.getTaskId())){
                     studentsHomework.setAiTaskId(midDto.getTaskId());
@@ -2578,7 +2600,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            System.out.println("=========================图片删除=========================");
+            //System.out.println("=========================图片删除=========================");
             for (String image : imageNames) {
                 File imageFile = new File(image);
                 imageFile.delete();
@@ -2586,7 +2608,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             }
         }
 
-        System.out.println("=========================完成=========================");
+        //System.out.println("=========================完成=========================");
         return auditImages;
     }
 

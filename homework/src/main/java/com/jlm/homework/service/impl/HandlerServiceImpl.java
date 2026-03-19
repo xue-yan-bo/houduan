@@ -61,7 +61,7 @@ public class HandlerServiceImpl implements IHandlerService {
     public void saveWriteRecords(Long studentId, Long homeworkId, String type, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords, Boolean isFinish) {
         System.out.println("开始保存笔记");
         studentsHomeworkNewService.saveWriteRecords(studentId,homeworkId,type,pageN,studentsWriteRecords,isFinish);
-        if(isFinish){
+        /*if(isFinish){
             // 异步发送消息到MQ，避免阻塞处理线程
             java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
@@ -82,7 +82,7 @@ public class HandlerServiceImpl implements IHandlerService {
                     log.error("Failed to send MQ message", e);
                 }
             });
-        }
+        }*/
 
     }
 

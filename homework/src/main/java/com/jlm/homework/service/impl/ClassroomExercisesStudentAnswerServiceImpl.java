@@ -52,6 +52,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                 studentAnswer.setRightFlag(1);
             }else{
                 ClassroomExercisesQuestion question = classroomExercisesQuestionRepository.findById(studentAnswer.getExerciseQuestionId()).get();
+                ClassroomExercises classroomExercises = classroomExercisesRepository.findById(studentAnswer.getClassroomExercisesId()).get();
                 WrongTitleBook wrongTitleBook = new WrongTitleBook();
                 wrongTitleBook.setSource("随堂检测");
                 wrongTitleBook.setExercisesRecordId(studentAnswer.getClassroomExercisesId());
@@ -66,6 +67,10 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                 wrongTitleBook.setCreateTime(new Date());
                 wrongTitleBook.setClassId(studentAnswer.getClassId());
                 wrongTitleBook.setClassName(studentAnswer.getClassName());
+                // 确保设置学校ID
+                if (wrongTitleBook.getSchoolId() == null && classroomExercises.getSchoolId() != null) {
+                    wrongTitleBook.setSchoolId(classroomExercises.getSchoolId());
+                }
                 wrongTitleBookService.save(wrongTitleBook);
             }
 

@@ -118,6 +118,10 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                     wrongTitleBook.setStudentName(finalStudentsHomework.getStudentName());
                                     wrongTitleBook.setClassId(finalStudentsHomework.getClassesId());
                                     wrongTitleBook.setClassName(finalStudentsHomework.getClassesName());
+                                    // 确保设置学校ID
+                                    if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
+                                        wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
+                                    }
                                     wrongTitleBook.setTitleImage(question.getCroppedUrl());
                                     wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                                     wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
@@ -158,6 +162,10 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                             wrongTitleBook.setStudentName(finalStudentsHomework.getStudentName());
                             wrongTitleBook.setClassId(finalStudentsHomework.getClassesId());
                             wrongTitleBook.setClassName(finalStudentsHomework.getClassesName());
+                            // 确保设置学校ID
+                            if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
+                                wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
+                            }
                             wrongTitleBook.setTitleImage(question.getCroppedUrl());
                             wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                             wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
@@ -193,6 +201,13 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             if(soWrongTitle!=null&&soWrongTitle.isPresent()){
                 wrongTitleBook.setId(soWrongTitle.get().getId());
                 isNew = false;
+            }
+        }
+        // 添加：如果 schoolId 为空，根据 studentId 获取
+        if (wrongTitleBook.getSchoolId() == null && wrongTitleBook.getStudentId() != null) {
+            ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(wrongTitleBook.getStudentId());
+            if (resultDto != null && resultDto.getData() != null) {
+                wrongTitleBook.setSchoolId(resultDto.getData().getSchoolId());
             }
         }
         wrongTitleBook.setCreateTime(new Date());

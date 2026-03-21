@@ -34,17 +34,17 @@ public class WrongTitleBook {
     /**
      * 作业名称 （作业）
      */
-    @Column(name = "homework_publish_name")
-    private String homeworkPublishName;
+     @Column(name = "homework_publish_name")
+     private String homeworkPublishName;
      /**
      * 学生作业ID （作业）
      */
-    @Column(name = "students_homework_id")
+     @Column(name = "students_homework_id")
      private Long studentsHomeworkId;
      /**
      * 练习记录ID
      */
-    @Column(name = "exercises_record_id")
+     @Column(name = "exercises_record_id")
      private Long exercisesRecordId;
 
     /**
@@ -62,8 +62,11 @@ public class WrongTitleBook {
      */
      @Column(name = "student_name")
      private String studentName;
-
-
+    /**
+     * 学校ID
+     */
+     @Column(name = "school_id")
+     private Long schoolId;
      /**
       * 班级ID
       */

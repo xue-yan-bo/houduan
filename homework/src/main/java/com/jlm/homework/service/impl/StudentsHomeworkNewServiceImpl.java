@@ -2062,6 +2062,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                     wrongTitleBook.setStudentName(finalStudentsHomework.getStudentName());
                                     wrongTitleBook.setClassId(finalStudentsHomework.getClassesId());
                                     wrongTitleBook.setClassName(finalStudentsHomework.getClassesName());
+                                    // 确保设置学校ID
+                                    if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
+                                        wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
+                                    }
                                     wrongTitleBook.setTitleImage(question.getCroppedUrl());
                                     wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                                     wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
@@ -2101,6 +2105,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             wrongTitleBook.setStudentName(finalStudentsHomework.getStudentName());
                             wrongTitleBook.setClassId(finalStudentsHomework.getClassesId());
                             wrongTitleBook.setClassName(finalStudentsHomework.getClassesName());
+                            // 确保设置学校ID
+                            if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
+                                wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
+                            }
                             wrongTitleBook.setTitleImage(question.getCroppedUrl());
                             wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                             wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
@@ -2492,6 +2500,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 wrongTitleBook.setStudentName(studentsHomework.getStudentName());
                 wrongTitleBook.setClassId(studentsHomework.getClassesId());
                 wrongTitleBook.setClassName(studentsHomework.getClassesName());
+                // 确保设置学校ID
+                if (wrongTitleBook.getSchoolId() == null && studentsHomework.getSchoolId() != null) {
+                    wrongTitleBook.setSchoolId(studentsHomework.getSchoolId());
+                }
                 wrongTitleBookService.addWrongBook(wrongTitleBook);
             }
         }
@@ -2827,6 +2839,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 wrongTitleBook.setStudentName(studentsHomework.getStudentName());
                 wrongTitleBook.setClassId(studentsHomework.getClassesId());
                 wrongTitleBook.setClassName(studentsHomework.getClassesName());
+                // 确保设置学校ID
+                if (wrongTitleBook.getSchoolId() == null && studentsHomework.getSchoolId() != null) {
+                    wrongTitleBook.setSchoolId(studentsHomework.getSchoolId());
+                }
                 wrongTitleBookService.addWrongBook(wrongTitleBook);
             }
         }
@@ -2961,6 +2977,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 wrongTitleBook.setStudentName(studentsHomework.getStudentName());
                 wrongTitleBook.setClassId(studentsHomework.getClassesId());
                 wrongTitleBook.setClassName(studentsHomework.getClassesName());
+                if (wrongTitleBook.getSchoolId() == null && studentsHomework.getSchoolId() != null) {
+                    wrongTitleBook.setSchoolId(studentsHomework.getSchoolId());
+                }
                 wrongTitleBook.setSubject(studentsHomework.getSubject());
                 wrongTitleBookService.addWrongBook(wrongTitleBook);
             }
@@ -3154,6 +3173,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             wrongTitleBook.setStudentName(finalStudentsHomework.getStudentName());
                             wrongTitleBook.setClassId(finalStudentsHomework.getClassesId());
                             wrongTitleBook.setClassName(finalStudentsHomework.getClassesName());
+                            // 确保设置学校ID
+                            if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
+                                wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
+                            }
                             wrongTitleBookService.addWrongBook(wrongTitleBook);
                         }
                     }

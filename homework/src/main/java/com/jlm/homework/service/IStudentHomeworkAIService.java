@@ -1,6 +1,8 @@
 package com.jlm.homework.service;
 
 import com.jlm.agent.domain.SubQuestionsEnt;
+import com.jlm.homework.dto.AccuracyDto;
+import com.jlm.homework.entity.StudentsHomeworkNew;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 
 import java.io.IOException;
@@ -55,4 +57,16 @@ public interface IStudentHomeworkAIService {
      * @param answers AI返回的答案列表
      */
     void aiResultDeal(Long studentsHomeworkId, List<SubQuestionsEnt> answers);
+    /**
+     * 处理AI审批（用于非中台调用的情况）
+     */
+    void processAIApproval(StudentsHomeworkNew studentsHomework, String type);
+
+    void dealTongji(Long studentsHomeworkId);
+
+    void appSubmitAI(StudentsHomeworkNew finalStudentsHomework);
+
+    void appEmendSubmitAI(StudentsHomeworkNew finalStudentsHomework);
+
+
 }

@@ -315,10 +315,23 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             }
         };
         Page<HomeworkPublish> page = homeworkPublishRepository.findAll(specification, pageable);
-        for (HomeworkPublish publish : page.getContent()) {
-            Long submitNum = studentsHomeworkNewService.getSubmitNumByHomeworkPublishId(publish.getId());
-            publish.setSubmitNum(submitNum);
+        
+        // 批量查询提交数量，避免N+1查询
+        List<HomeworkPublish> publishes = page.getContent();
+        if (!publishes.isEmpty()) {
+            List<Long> publishIds = publishes.stream()
+                    .map(HomeworkPublish::getId)
+                    .collect(Collectors.toList());
+            
+            Map<Long, Long> submitNumMap = studentsHomeworkNewService.getSubmitNumMapByHomeworkPublishIds(publishIds);
+            
+            // 设置提交数量
+            for (HomeworkPublish publish : publishes) {
+                Long submitNum = submitNumMap.getOrDefault(publish.getId(), 0L);
+                publish.setSubmitNum(submitNum);
+            }
         }
+        
         return page;
     }
 

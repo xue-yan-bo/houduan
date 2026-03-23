@@ -9,6 +9,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 public interface IStudentsHomeworkNewService {
     void createStudentsHomeworkByHomeworkPublish(HomeworkPublish homeworkPublish);
@@ -23,21 +24,10 @@ public interface IStudentsHomeworkNewService {
 
     Page<StudentsHomeworkNew> getStudentsHomeworkPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 
-    AccuracyDto getAverageAccuracyStatistics(String subject, Long classId, String startDate, String endDate);
-
     StudentsHomeworkNew getById(Long id);
-
-    List<StudentChapterAccuracy> studentChapterStatistics(String subject, Long classId, String chapter);
-
-    List<ChapterKnowledgeAccuracy> chapterKnowledgeAccuracy(String subject, Long classId, String startDate, String endDate);
 
     void endStudentsHomework(HomeworkPublish homeworkPublish);
 
-    SchoolHomeworkData getSchoolHomeworkData(Long schoolId);
-
-    EducHomeworkData getEducHomeworkData(Long educOrgId,Long schoolId,String schoolType);
-
-    HomeworkStatisticsDto getHomeworkStatistics(String startDate, String endDate);
 
     List<HomeWork2Board> getHomeWork2Board(String subject,String date,Long studentId);
 
@@ -56,6 +46,8 @@ public interface IStudentsHomeworkNewService {
 
     Long getSubmitNumByHomeworkPublishId(Long id);
 
+    Map<Long, Long> getSubmitNumMapByHomeworkPublishIds(List<Long> homeworkPublishIds);
+
     StudentsHomeworkNew appSubmit(StudentsHomeworkNew studentsHomework);
 
     StudentsHomeworkNew appEmendSubmit(StudentsHomeworkNew studentsHomework);
@@ -68,5 +60,4 @@ public interface IStudentsHomeworkNewService {
 
     void updateSubmietNull(Long homeworkPublishId);
 
-    void dealTongji(Long studentsHomeworkId);
 }

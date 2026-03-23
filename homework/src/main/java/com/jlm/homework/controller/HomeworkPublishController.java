@@ -58,7 +58,7 @@ public class HomeworkPublishController {
      * @return
      */
     @GetMapping("/queryList")
-    public Page<HomeworkPublish> selectPurchaseList(
+    public Page<HomeworkPublish> selectHomeworkPublishList(
             @RequestParam(defaultValue = "1")Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             HomeworkPublishRequest homeworkPublishRequest) {

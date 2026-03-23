@@ -20,6 +20,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -53,6 +54,8 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
     private IStudentAICallService aiCallService;
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public String aIaudit(Long studentsHomeworkId) {
@@ -926,5 +929,284 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
             return String.join(",,,", stringList);
         }
         return correctAnswer.toString();
+    }
+    /**
+     * 处理AI审批（用于非中台调用的情况）
+     */
+    @Override
+    public void processAIApproval(StudentsHomeworkNew studentsHomework, String type) {
+        try {
+            List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
+            AIUtil util = aiUtil.getAIUtil();
+
+            List<HomeworkStudentWriteData> homeworkStudentWriteDataList = homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(), type);
+
+            if (studentsHomework.getTopicImages() != null && !studentsHomework.getTopicImages().isEmpty()
+                    && !studentsHomework.getTopicImagesStr().endsWith(".docx") && !studentsHomework.getTopicImagesStr().endsWith(".doc")) {
+                processImageApproval(studentsHomework, homeworkStudentWriteDataList, util, bigDtoAll);
+            } else if (StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())) {
+                processDocumentApproval(studentsHomework, homeworkStudentWriteDataList, util, bigDtoAll);
+            }
+
+            // 保存审批结果
+            if (!bigDtoAll.isEmpty()) {
+                if ("1".equals(type)) {
+                    studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoAll));
+                } else if ("2".equals(type)) {
+                    studentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoAll));
+                }
+                studentsHomeworkNewRepository.save(studentsHomework);
+
+                // 清除缓存
+                String cacheKey = "studentsHomework:id:" + studentsHomework.getId();
+                redisTemplate.delete(cacheKey);
+            }
+        } catch (Exception e) {
+            log.error("处理AI审批失败", e);
+            throw new RuntimeException("处理AI审批失败", e);
+        }
+    }
+    /**
+     * 处理图片审批
+     */
+    private void processImageApproval(StudentsHomeworkNew studentsHomework, List<HomeworkStudentWriteData> writeDataList,
+                                      AIUtil util, List<HomeworkAIBigDto> bigDtoAll) throws IOException {
+        List<String> imageNames = new ArrayList<>();
+
+        // 构建页码到数据的映射
+        Map<Integer, HomeworkStudentWriteData> pageDataMap = new HashMap<>();
+        for (HomeworkStudentWriteData data : writeDataList) {
+            if (data.getPageNum() != null) {
+                pageDataMap.put(data.getPageNum(), data);
+            }
+        }
+
+        for (int i = 0; i < studentsHomework.getTopicImages().size(); i++) {
+            String imageUrl = studentsHomework.getTopicImages().get(i);
+            int pageNum = i + 1;
+            HomeworkStudentWriteData writeData = pageDataMap.get(pageNum);
+
+            if (writeData != null) {
+                List<StudentsWriteRecord> records = writeData.getStudentsWriteRecords();
+                if (records != null && !records.isEmpty()) {
+                    BufferedImage resultImage = ImageOverlayUtil.overlayWritingDataFromUrl(imageUrl, records);
+                    String imageName = studentsHomework.getHomeworkPublishName() + "_" +
+                            studentsHomework.getStudentName() + "_" + pageNum + "页作业.png";
+                    CoordinateImageGenerator.saveImage(resultImage, imageName);
+                    imageNames.add(imageName);
+                }
+            }
+        }
+
+        // 批量识别
+        if (!imageNames.isEmpty()) {
+            Map<String, String> resultMap = util.batchRecognizePiyueInImages(imageNames);
+            for (Map.Entry<String, String> entry : resultMap.entrySet()) {
+                String imagePath = entry.getKey();
+                String titleImage = entry.getValue();
+
+                // 处理AI返回的内容
+                if (titleImage.contains("<|begin_of_box|>")) {
+                    titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|") + 16);
+                }
+                if (titleImage.contains("<|end_of_box|>")) {
+                    titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+                }
+
+                List<HomeworkAIBigDto> bigDtoList = JSONArray.parseArray(titleImage, HomeworkAIBigDto.class);
+                bigDtoAll.addAll(bigDtoList);
+
+                // 清理临时文件
+                File imageFile = new File(imagePath);
+                imageFile.delete();
+            }
+        }
+    }
+
+    /**
+     * 处理文档审批
+     */
+    private void processDocumentApproval(StudentsHomeworkNew studentsHomework, List<HomeworkStudentWriteData> writeDataList,
+                                         AIUtil util, List<HomeworkAIBigDto> bigDtoAll) throws Exception {
+        String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
+        DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(
+                studentsHomework.getDailyPracticePreview(), writeDataList, 1, outputPath);
+
+        // 识别文档
+        String prompt = "请识别批阅图片中所有试题的内容，并以JSON格式返回，格式如[{\"bigNumber\":\"一\",\"questionType\":\"选择题\",\"smallDtoList\":[{{\"smallNumber\":\"1\",\"correctFlag\":\"错误\"}]}] ";
+        String titleImage = util.analyzeImage(outputPath, prompt);
+
+        // 处理AI返回的内容
+        if (titleImage.contains("<|begin_of_box|>")) {
+            titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|") + 16);
+        }
+        if (titleImage.contains("<|end_of_box|>")) {
+            titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+        }
+
+        List<HomeworkAIBigDto> bigDtoList = JSONArray.parseArray(titleImage, HomeworkAIBigDto.class);
+        bigDtoAll.addAll(bigDtoList);
+
+        // 清理临时文件
+        File imageFile = new File(outputPath);
+        imageFile.delete();
+    }
+    @Override
+    public void dealTongji(Long studentsHomeworkId) {
+        if (studentsHomeworkId == null) {
+            return;
+        }
+
+        List<QuestionAnalysis> analysisList = questionAnalysisService.findListByStudHomeId(studentsHomeworkId);
+        if (CollectionUtils.isEmpty(analysisList)) {
+            return;
+        }
+
+        Map<String, HomeworkAIBigDto> map = new HashMap<>();
+
+        for (QuestionAnalysis analysis : analysisList) {
+            String key = analysis.getBigNumber() + ":" + analysis.getQuestionType();
+            HomeworkAISmallDto smallDto = new HomeworkAISmallDto();
+            smallDto.setSmallNumber(analysis.getSmallNumber());
+
+            if (analysis.getIsCorrect() != null && analysis.getIsCorrect()) {
+                smallDto.setCorrectFlag("正确");
+            } else if (analysis.getIsCorrect() != null && !analysis.getIsCorrect()) {
+                smallDto.setCorrectFlag("错误");
+            } else {
+                smallDto.setCorrectFlag("未作答");
+            }
+
+            smallDto.setParse(analysis.getAnalysis());
+
+            map.computeIfAbsent(key, k -> {
+                HomeworkAIBigDto bigDto = new HomeworkAIBigDto();
+                bigDto.setBigNumber(analysis.getBigNumber());
+                bigDto.setQuestionType(analysis.getQuestionType());
+                bigDto.setSmallDtoList(new ArrayList<>());
+                return bigDto;
+            }).getSmallDtoList().add(smallDto);
+        }
+
+        List<HomeworkAIBigDto> bigDtoList = new ArrayList<>(map.values());
+
+        StudentsHomeworkNew studentsHomework = studentsHomeworkNewRepository.findById(studentsHomeworkId).orElse(null);
+        if (studentsHomework != null) {
+            studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoList));
+            studentsHomeworkNewRepository.save(studentsHomework);
+
+        }
+    }
+    @Override
+    public void appSubmitAI(StudentsHomeworkNew finalStudentsHomework) {
+        AIUtil util  = aiUtil.getAIUtil();
+        if("qianwen".equals(util.getAiName())){
+            util = (QianWenAIUtil)  util;
+        }else {
+            util = (ZhipuAIImageAnalysisUtil) util;
+        }
+        try{
+            String auditImages ="";
+            if(StringUtils.isNotEmpty(finalStudentsHomework.getSubmitFileUrl())) {
+                List<String> imageNames = Arrays.asList(finalStudentsHomework.getSubmitFileUrl().split(","));
+                List<QuestionAnalysis> analyses=util.batchReviewExamQuestions(imageNames);
+
+                List<QuestionAnalysis> errorList = new ArrayList<>();
+                if(analyses!=null&&analyses.size()>0){
+
+                    //System.out.println(analyses.toString());
+                    Map<String,String> map = new HashMap<>();
+                    StringBuilder stringBuilder = new StringBuilder();
+                    for(QuestionAnalysis questionAnalysis:analyses){
+                        if(StringUtils.isNotEmpty(questionAnalysis.getBigNumber())&&!map.containsKey(questionAnalysis.getBigNumber())){
+                            stringBuilder = stringBuilder.append(questionAnalysis.getBigNumber()).append("、").append(questionAnalysis.getQuestionType());
+                            map.put(questionAnalysis.getBigNumber(),questionAnalysis.getQuestionType());
+                        }
+                        if(StringUtils.isNotEmpty(questionAnalysis.getSmallNumber())){
+                            stringBuilder = stringBuilder.append(questionAnalysis.getSmallNumber()).append(".");
+                        }
+                        questionAnalysis.setHomeworkPublishId(finalStudentsHomework.getHomeworkPublishId());
+                        questionAnalysis.setStudentsHomeworkId(finalStudentsHomework.getId());
+                        questionAnalysis.setClassesId(finalStudentsHomework.getClassesId());
+                        questionAnalysis.setStudentId(finalStudentsHomework.getStudentId());
+                        questionAnalysis.setStudentName(finalStudentsHomework.getStudentName());
+                        questionAnalysis.setGrade(finalStudentsHomework.getGrade());
+                        questionAnalysis.setSchoolId(finalStudentsHomework.getSchoolId());
+                        if(questionAnalysis.getIsCorrect()==null){
+                            stringBuilder = stringBuilder.append("未答题 ");
+                        }else if(questionAnalysis.getIsCorrect()){
+                            stringBuilder = stringBuilder.append("正确 ");
+                        }else{
+                            stringBuilder = stringBuilder.append("错误 ");
+                            errorList.add(questionAnalysis);
+                        }
+                        questionAnalysisService.save(questionAnalysis);
+                    }
+                    auditImages = stringBuilder.toString();
+                }
+                finalStudentsHomework.setAiAudit(auditImages);
+                studentsHomeworkNewRepository.save(finalStudentsHomework);
+                if(errorList!=null&&errorList.size()>0){
+                    for(QuestionAnalysis questionAnalysis:errorList){
+                        WrongTitleBook wrongTitleBook = new WrongTitleBook();
+                        wrongTitleBook.setTitleBigNo(questionAnalysis.getBigNumber());
+                        wrongTitleBook.setTitleSmallNo(questionAnalysis.getSmallNumber());
+                        wrongTitleBook.setTitleContext(questionAnalysis.getContent());
+                        wrongTitleBook.setStudentAnswer(questionAnalysis.getStudentAnswer());
+                        wrongTitleBook.setParse(questionAnalysis.getAnalysis());
+                        wrongTitleBook.setKnowledgePoint(questionAnalysis.getKnowledgePoints());
+                        wrongTitleBook.setHomeworkPublishId(finalStudentsHomework.getHomeworkPublishId());
+                        wrongTitleBook.setStudentsHomeworkId(finalStudentsHomework.getId());
+                        wrongTitleBook.setSource("学生作业：" + finalStudentsHomework.getHomeworkPublishName());
+                        wrongTitleBook.setStudentId(finalStudentsHomework.getStudentId());
+                        wrongTitleBook.setStudentName(finalStudentsHomework.getStudentName());
+                        wrongTitleBook.setClassId(finalStudentsHomework.getClassesId());
+                        wrongTitleBook.setClassName(finalStudentsHomework.getClassesName());
+                        wrongTitleBookService.addWrongBook(wrongTitleBook);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    @Override
+    public void appEmendSubmitAI(StudentsHomeworkNew finalStudentsHomework) {
+        AIUtil util  = aiUtil.getAIUtil();
+        if("qianwen".equals(util.getAiName())){
+            util = (QianWenAIUtil)  util;
+        }else {
+            util = (ZhipuAIImageAnalysisUtil) util;
+        }
+        try{
+            String auditImages ="";
+            if(StringUtils.isNotEmpty(finalStudentsHomework.getSubmitFileUrl2())) {
+                List<String> imageNames = Arrays.asList(finalStudentsHomework.getSubmitFileUrl2().split(","));
+                List<HomeworkAIBigDto> bigDtoAll  = new ArrayList<>();
+                Map<String, String> resltMap = util.batchRecognizePiyueInImages(imageNames);
+                for (String key : resltMap.keySet()) {
+                    String titleImage = resltMap.get(key);
+                    if(titleImage.contains("<|begin_of_box|>")){
+                        titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>")+16);
+                    }
+                    if (titleImage.contains("<|end_of_box|>")) {
+                        titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+                    }
+                    List<HomeworkAIBigDto> bigDtoList= JSONArray.parseArray(titleImage,HomeworkAIBigDto.class);
+                    bigDtoAll.addAll(bigDtoList);
+                    auditImages = auditImages + titleImage;
+                    File imageFile = new File(key);
+                    imageFile.delete();
+                }
+                //System.out.println("批阅结果: " + auditImages);
+
+                finalStudentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoAll));
+                studentsHomeworkNewRepository.save(finalStudentsHomework);
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

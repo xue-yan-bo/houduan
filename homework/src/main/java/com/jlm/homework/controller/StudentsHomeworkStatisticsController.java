@@ -50,7 +50,7 @@ public class StudentsHomeworkStatisticsController {
      */
     @GetMapping("/average-accuracy-statistics")
     public AccuracyDto getAverageAccuracyStatistics(String subject, Long classId, String startDate, String endDate){
-        AccuracyDto accuracyDto = studentsHomeworkNewService.getAverageAccuracyStatistics(subject,classId,startDate,endDate);
+        AccuracyDto accuracyDto = studentsHomeworkStatisticsService.getAverageAccuracyStatistics(subject,classId,startDate,endDate);
         return accuracyDto;
     }
     /**
@@ -78,7 +78,7 @@ public class StudentsHomeworkStatisticsController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             String subject, Long classId, String chapter) {
         List<StudentChapterAccuracy> studentChapterAccuracyList = new ArrayList<>();
-        studentChapterAccuracyList=studentsHomeworkNewService.studentChapterStatistics(subject,classId,chapter);
+        studentChapterAccuracyList=studentsHomeworkStatisticsService.studentChapterStatistics(subject,classId,chapter);
         Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNum);
         int end = pageNum*pageSize>studentChapterAccuracyList.size()?studentChapterAccuracyList.size():pageNum*pageSize;
         List<StudentChapterAccuracy> content  = studentChapterAccuracyList.subList((pageNum-1)*pageSize,end);
@@ -92,7 +92,7 @@ public class StudentsHomeworkStatisticsController {
      */
     @GetMapping("/chapter-knowledge-analyse")
     public List<ChapterKnowledgeAccuracy> chapterKnowledgeAccuracy(String subject, Long classId, String startDate, String endDate){
-        List<ChapterKnowledgeAccuracy>  chapterKnowledgeAccuracyList = studentsHomeworkNewService.chapterKnowledgeAccuracy(subject,classId,startDate,endDate);
+        List<ChapterKnowledgeAccuracy>  chapterKnowledgeAccuracyList = studentsHomeworkStatisticsService.chapterKnowledgeAccuracy(subject,classId,startDate,endDate);
         return  chapterKnowledgeAccuracyList;
     }
     /**
@@ -124,7 +124,7 @@ public class StudentsHomeworkStatisticsController {
     @Operation(summary = "校级智慧作业大数据")
     public SchoolHomeworkData schoolHomeworkData(Long schoolId){
         SchoolHomeworkData schoolHomeworkData = new SchoolHomeworkData();
-        schoolHomeworkData =studentsHomeworkNewService.getSchoolHomeworkData(schoolId);
+        schoolHomeworkData =studentsHomeworkStatisticsService.getSchoolHomeworkData(schoolId);
         return schoolHomeworkData;
     }
     /**
@@ -139,7 +139,7 @@ public class StudentsHomeworkStatisticsController {
         Long educOrgId =educSearch.getEducOrgId();
         Long schoolId =educSearch.getSchoolId();
         String schoolType =educSearch.getSchoolType();
-        educHomeworkData = studentsHomeworkNewService.getEducHomeworkData(educOrgId,schoolId,schoolType);
+        educHomeworkData = studentsHomeworkStatisticsService.getEducHomeworkData(educOrgId,schoolId,schoolType);
         return educHomeworkData;
     }
 
@@ -152,7 +152,7 @@ public class StudentsHomeworkStatisticsController {
     @Operation(summary = "作业统计")
     public HomeworkStatisticsDto getHomeworkStatistics(String startDate,String endDate){
         HomeworkStatisticsDto statisticsDto= new HomeworkStatisticsDto();
-        statisticsDto =studentsHomeworkNewService.getHomeworkStatistics(startDate,endDate);
+        statisticsDto =studentsHomeworkStatisticsService.getHomeworkStatistics(startDate,endDate);
         return statisticsDto;
     }
 

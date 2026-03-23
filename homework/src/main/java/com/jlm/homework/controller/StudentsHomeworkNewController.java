@@ -7,7 +7,7 @@ import com.jlm.homework.entity.AuditLogoCoordinate;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.exception.ParameterNewException;
 import com.jlm.homework.service.IStudentsHomeworkNewService;
-//import com.jlm.homework.service.impl.StudentsHomeworkNewServiceStrucImpl;
+import com.jlm.homework.service.IStudentHomeworkAIService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.alibaba.cloud.commons.lang.StringUtils;
@@ -26,6 +26,8 @@ import java.util.Map;
 public class StudentsHomeworkNewController {
     @Autowired
     private IStudentsHomeworkNewService studentsHomeworkNewService;
+    @Autowired
+    private IStudentHomeworkAIService studentHomeworkAIService;
 
     /**
      * 根据
@@ -229,7 +231,7 @@ public class StudentsHomeworkNewController {
     @GetMapping("/aIaudit")
     @Operation(summary = "AI分析学生作业")
     public String aIaudit(Long studentsHomeworkId){
-        String auditAiImage=studentsHomeworkNewService.aIauditStruc(studentsHomeworkId);
+        String auditAiImage=studentHomeworkAIService.aIauditStruc(studentsHomeworkId);
         return auditAiImage;
     }
 
@@ -257,7 +259,7 @@ public class StudentsHomeworkNewController {
     @GetMapping("/aIauditEmend")
     @Operation(summary = "AI分析学生订正作业")
     public String aIauditEmend(Long studentsHomeworkId){
-        String auditAiImage=studentsHomeworkNewService.aIauditEmend(studentsHomeworkId);
+        String auditAiImage=studentHomeworkAIService.aIauditEmend(studentsHomeworkId);
         return auditAiImage;
     }
 

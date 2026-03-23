@@ -138,12 +138,12 @@ public class StudentFeedbackServiceImpl implements IStudentFeedbackService {
     }
 
     @Override
-    public List<FeedbackDto> getFeedbackDto(Long schoolId, String feedbackTimeStart, String feedbackTimeEnd) {
+    public List<FeedbackDto> getFeedbackDto(Long schoolId,Long classId,String studentName, String feedbackTimeStart, String feedbackTimeEnd) {
         List<FeedbackDto> result = new ArrayList<>();
         if(StringUtils.isNotEmpty(feedbackTimeStart)&&StringUtils.isNotEmpty(feedbackTimeEnd)){
             String start = feedbackTimeStart + " 00:00:00";
             String end = feedbackTimeEnd + " 23:59:59";
-            List<Object[]> rawList = studentFeedbackRepository.getFeedbackDto(schoolId, start, end);
+            List<Object[]> rawList = studentFeedbackRepository.getFeedbackDto(schoolId,classId,studentName, start, end);
             
             // 手动转换Object[]到FeedbackDto
             for (Object[] obj : rawList) {

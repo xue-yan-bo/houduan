@@ -1,16 +1,12 @@
 package com.jlm.homework.service;
 
-import com.jlm.agent.domain.SubQuestionsEnt;
 import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.HomeworkPublish;
 import com.jlm.homework.entity.StudentsHomeworkNew;
 import com.jlm.homework.entity.StudentsWriteRecord;
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.web.bind.annotation.RequestParam;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
@@ -58,25 +54,11 @@ public interface IStudentsHomeworkNewService {
 
     StudentHomeworkDto homeworkPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 
-
-    String aIaudit(Long studentsHomeworkId);
-    /*AI�ṹ��*/
-    String aIauditStruc(Long studentsHomeworkId);
-
-
-    String aIauditMid(Long studentsHomeworkId) throws IOException, InvalidFormatException;
-
     Long getSubmitNumByHomeworkPublishId(Long id);
-
 
     StudentsHomeworkNew appSubmit(StudentsHomeworkNew studentsHomework);
 
     StudentsHomeworkNew appEmendSubmit(StudentsHomeworkNew studentsHomework);
-
-    String aIauditEmend(Long studentsHomeworkId);
-
-    String aIauditEmendStruc(Long studentsHomeworkId);
-
 
     Page<StudentsHomeworkSimpleDTO> getEmendPage(Integer pageNum, Integer pageSize, StudentsHomeworkNew studentsHomework);
 
@@ -85,8 +67,6 @@ public interface IStudentsHomeworkNewService {
     public void updateByPublishId(Long homeworkPublishId,String homeworkName, String topicImagesStr, Date deadline, Long dailyPracticeld, String dailyPracticeName, String dailyPracticePreview, String chapter, String knowledgePoint,Integer submitStatus);
 
     void updateSubmietNull(Long homeworkPublishId);
-
-    void  aiResultDeal(Long studentsHomeworkId,List<SubQuestionsEnt> answers);
 
     void dealTongji(Long studentsHomeworkId);
 }

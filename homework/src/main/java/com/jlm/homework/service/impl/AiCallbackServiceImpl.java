@@ -14,7 +14,7 @@ import com.jlm.homework.entity.WrongTitleBook;
 import com.jlm.homework.repository.AiCallbackRepository;
 import com.jlm.homework.service.IAiCallbackService;
 import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
-import com.jlm.homework.service.IStudentsHomeworkNewService;
+import com.jlm.homework.service.IStudentHomeworkAIService;
 import com.jlm.homework.util.HttpUtil;
 import com.tencentcloudapi.lke.v20231130.models.AICallConfig;
 import jakarta.annotation.Resource;
@@ -34,7 +34,7 @@ public class AiCallbackServiceImpl implements IAiCallbackService {
     @Resource
     private AiCallbackRepository aiCallbackRepository;
     @Resource
-    private IStudentsHomeworkNewService studentsHomeworkNewService;
+    private IStudentHomeworkAIService studentHomeworkAIService;
     @Resource
     private IClassroomExercisesStudentRecordService classroomExercisesStudentRecordService;
     @Override
@@ -86,7 +86,7 @@ public class AiCallbackServiceImpl implements IAiCallbackService {
                         result.setStatus(2);
                         result.setMsg("AI解析错误");
                     } else if ("作业批改".equals(aiCallbackRequest.getBusinessType())) {
-                        studentsHomeworkNewService.aiResultDeal(businessId, answers);
+                        studentHomeworkAIService.aiResultDeal(businessId, answers);
                         result.setStatus(0);
                         result.setMsg("OK");
                     } else {

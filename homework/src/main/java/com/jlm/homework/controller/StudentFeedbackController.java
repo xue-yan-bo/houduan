@@ -28,8 +28,8 @@ public class StudentFeedbackController {
      */
     @GetMapping("/getFeedbackDto")
     @Operation(summary = "学生反馈根据日期班级分类")
-    public List<FeedbackDto> getFeedbackDto(Long schoolId,String feedbackTimeStart,String feedbackTimeEnd) {
-        return studentFeedbackService.getFeedbackDto(schoolId,feedbackTimeStart,feedbackTimeEnd);
+    public List<FeedbackDto> getFeedbackDto(Long schoolId,Long classId,String studentName,String feedbackTimeStart,String feedbackTimeEnd) {
+        return studentFeedbackService.getFeedbackDto(schoolId,classId,studentName,feedbackTimeStart,feedbackTimeEnd);
     }
     /**
      * 分页查询

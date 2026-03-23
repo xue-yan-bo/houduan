@@ -15,7 +15,7 @@ import java.util.List;
 @Resource
 public interface StudentFeedbackRepository  extends JpaRepository<StudentFeedback, Long>, JpaSpecificationExecutor<StudentFeedback> {
     @Query(value = "SELECT DATE_FORMAT(feedback_time,'%Y-%m-%d') as feedbackDate,class_id as classId,class_name as className,COUNT(id) as num FROM student_feedback \n" +
-            "WHERE school_id = ?1 AND feedback_time >= ?2 AND feedback_time <= ?3 \n " +
+            "WHERE school_id = ?1 AND (?2 IS NULL OR class_id = ?2) AND (?3 IS NULL OR ?3 = '' OR student_name LIKE CONCAT('%', ?3, '%')) AND feedback_time >= ?4 AND feedback_time <= ?5 \n " +
             "GROUP BY DATE_FORMAT(feedback_time,'%Y-%m-%d'),class_id,class_name ", nativeQuery = true)
-    public List<Object[]> getFeedbackDto(Long schoolId, String start, String end);
+    public List<Object[]> getFeedbackDto(Long schoolId,Long classId,String studentName,  String start, String end);
 }

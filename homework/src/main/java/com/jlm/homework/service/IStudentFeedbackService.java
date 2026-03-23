@@ -14,7 +14,7 @@ public interface IStudentFeedbackService {
     StudentFeedback findById(long id);
     Page<StudentFeedback> findPage(Integer pageNum, Integer pageSize, StudentFeedbackReq studentFeedback);
 
-    List<FeedbackDto> getFeedbackDto(Long schoolId, String feedbackTimeStart, String feedbackTimeEnd);
+    List<FeedbackDto> getFeedbackDto(Long schoolId,Long classId,String studentName, String feedbackTimeStart, String feedbackTimeEnd);
 
     StudentFeedback findByStudentAndSubject(Long studentId, String subject);
 

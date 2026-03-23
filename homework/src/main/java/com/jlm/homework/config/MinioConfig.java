@@ -46,4 +46,12 @@ public class MinioConfig {
     public String getPublicEndpoint() {
         return publicEndpoint;
     }
+
+    public String getAccessKey() {
+        return accessKey;
+    }
+
+    public String getSecretKey() {
+        return secretKey;
+    }
 }

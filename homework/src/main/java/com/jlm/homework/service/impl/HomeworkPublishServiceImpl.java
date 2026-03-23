@@ -21,6 +21,8 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import com.alibaba.cloud.commons.lang.StringUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.hibernate.mapping.Join;
 import org.springframework.ai.content.Media;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
@@ -39,7 +41,7 @@ import java.util.concurrent.FutureTask;
 import java.util.stream.Collectors;
 
 import static com.jlm.homework.util.AIFileUtil.encodeImageToBase64;
-
+@Slf4j
 @Service
 public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
     @Resource
@@ -58,6 +60,8 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
     private HomeworkPublishQuestionRepository homeworkPublishQuestionRepository;
     @Autowired
     private IStudentAICallService studentAICallService;
+    @Autowired
+    private WordToPdfUtil wordToPdfUtil;
 
     @Override
     public String create(HomeworkPublish homeworkPublish) {
@@ -93,6 +97,25 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
                 subject = exerciseBook.getSubject();
             }
             homeworkPublish.setSubject(subject);
+        }
+        if(Integer.compare(1,homeworkPublish.getTestSource())==0&&!homeworkPublish.getTopicImages().isEmpty()){
+            List<String> urls = new ArrayList<>();
+            for(String url:homeworkPublish.getTopicImages()){
+                if(StringUtils.isNotEmpty(url)&&
+                        (url.contains(".docx")||url.contains(".doc"))) {
+                    try {
+                        String pdfurl = wordToPdfUtil.convertMinioWordToPdf(url);
+                        urls.add(pdfurl);
+                    } catch (Exception e) {
+                        log.error("转换PDF错误："+e.getMessage());
+                        urls.add(url);
+                    }
+                }else{
+                    urls.add(url);
+                }
+            }
+            homeworkPublish.setTopicImages(urls);
+            homeworkPublish.setTopicImagesStr(String.join(",",urls));
         }
         if (StringUtils.isEmpty(homeworkPublish.getUserId()) && userService.getCurrentUserInfo() != null) {
             CurrentUserInfo userInfo = userService.getCurrentUserInfo();
@@ -184,7 +207,25 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
             }
             homeworkPublish.setSubject(subject);
         }
-
+        if(Integer.compare(1,homeworkPublish.getTestSource())==0&&!homeworkPublish.getTopicImages().isEmpty()){
+            List<String> urls = new ArrayList<>();
+            for(String url:homeworkPublish.getTopicImages()){
+                if(StringUtils.isNotEmpty(url)
+                        &&(url.contains(".docx")||url.contains(".doc"))) {
+                    try {
+                        String pdfurl = wordToPdfUtil.convertMinioWordToPdf(url);
+                        urls.add(pdfurl);
+                    } catch (Exception e) {
+                        log.error("转换PDF错误："+e.getMessage());
+                        urls.add(url);
+                    }
+                }else{
+                    urls.add(url);
+                }
+            }
+            homeworkPublish.setTopicImages(urls);
+            homeworkPublish.setTopicImagesStr(String.join(",",urls));
+        }
         return homeworkPublishRepository.save(homeworkPublish);
     }
 

@@ -20,8 +20,8 @@ spring:
   cloud:
     nacos:
       # 服务器地址 - 支持环境变量配置， 启动了？
-      server-addr: ${NACOS_SERVER_ADDR:localhost:8848},localhost:8848
-      #server-addr: 192.168.1.38:8848
+      #server-addr: ${NACOS_SERVER_ADDR:localhost:8848},localhost:8848
+      server-addr: 192.168.1.38:8848
       # 服务发现配置
       discovery:
         enabled: true
@@ -183,6 +183,19 @@ logging:
 zhipu:
   ai:
     api-key: "7abc333508dd4d71b83dcb6f5a511eee.rjwsPZyUfDN5abhn"
+
+# JODConverter配置 - Word转PDF
+jodconverter:
+  local:
+    enabled: true
+    # Office安装路径（可选，不配置会自动检测）
+    # office-home: C:/Program Files/LibreOffice
+    # 端口号（多个端口支持并发转换）
+    port-numbers: 2002,2003,2004
+    # 任务执行超时时间（毫秒）
+    task-execution-timeout: 300000
+    # 任务队列超时时间（毫秒）
+    task-queue-timeout: 30000
 
 # 1.通义千问
 TONGYI_API_KEY: "sk-234cb378f4484f3e9f6fc5b8304508e5"

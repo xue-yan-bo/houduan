@@ -47,7 +47,11 @@ import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.*;
+import org.springframework.data.redis.core.RedisTemplate;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -246,97 +250,46 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Override
     public List<StudentsHomeworkSimpleDTO> getByHomeworkPublishId(Long homeworkPublishId, StudentsHomeworkRequest studentsHomeworkRequest) {
-        StudentsHomeworkNew homeworkNew = new StudentsHomeworkNew();
-
-            Specification<StudentsHomeworkNew> specification = new Specification<StudentsHomeworkNew>() {
-
-                @Override
-                public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                    if (studentsHomeworkRequest != null) {
-                        Predicate condition0 = criteriaBuilder.equal(root.get("homeworkPublishId"), homeworkPublishId);
-                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                        Calendar calendar = Calendar.getInstance();
-                        Predicate condition1 = null;
-                        if (StringUtils.isNotEmpty(studentsHomeworkRequest.getStudentName())) {
-                            condition1 = criteriaBuilder.like(root.get("studentName").as(String.class), "%" + studentsHomeworkRequest.getStudentName() + "%");
-                        }else {
-                            condition1 = criteriaBuilder.conjunction();
-                        }
-                        Predicate condition2 = null;
-                        if (studentsHomeworkRequest.getSubmitStatus() != null) {
-                            condition2 = criteriaBuilder.equal(root.get("submitStatus").as(String.class), studentsHomeworkRequest.getSubmitStatus());
-                        }else {
-                            condition2 = criteriaBuilder.conjunction();
-                        }
-                        try {
-                            Predicate condition3 = null;
-                            if (StringUtils.isNotEmpty(studentsHomeworkRequest.getSubmitTime())) {
-                                Date submitTime = sdf.parse(studentsHomeworkRequest.getSubmitTime());
-                                calendar.setTime(submitTime);
-                                calendar.add(Calendar.DAY_OF_MONTH, 1);
-                                Date submitTime1 = calendar.getTime();
-                                condition3 = criteriaBuilder.between(root.get("submitTime").as(Date.class), submitTime, submitTime1);
-
-                            }else {
-                                condition3 = criteriaBuilder.conjunction();
-                            }
-                            Predicate condition4 = null;
-                            if (StringUtils.isNotEmpty(studentsHomeworkRequest.getAuditTime())) {
-                                Date auditTime = sdf.parse(studentsHomeworkRequest.getAuditTime());
-                                calendar.setTime(auditTime);
-                                calendar.add(Calendar.DAY_OF_MONTH, 1);
-                                Date auditTime1 = calendar.getTime();
-                                condition4 = criteriaBuilder.between(root.get("auditTime").as(Date.class), auditTime, auditTime1);
-                            }else {
-                                condition4 = criteriaBuilder.conjunction();
-                            }
-                            Predicate condition5 = null;
-                            if (studentsHomeworkRequest.getAuditStatus() != null) {
-                                condition5 = criteriaBuilder.equal(root.get("auditStatus"), studentsHomeworkRequest.getAuditStatus());
-                            }else {
-                                condition5 = criteriaBuilder.conjunction();
-                            }
-
-
-                            query.where(condition0, condition1, condition2, condition3, condition4, condition5);
-                        } catch (ParseException e) {
-                            throw new RuntimeException(e);
-                        }
-
-                    }
-                    return null;
-                }
-
-
-            };
-            List<StudentsHomeworkSimpleDTO> studentsHomeworkList = this.findAllSimpleDTOBySpecification(specification);
-            return studentsHomeworkList;
+        Specification<StudentsHomeworkNew> specification = (root, query, criteriaBuilder) ->
+                PredicateBuilderUtil.buildStudentHomeworkPredicate(
+                        criteriaBuilder, root, 
+                        homeworkPublishId, 
+                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getStudentName() : null, 
+                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getSubmitStatus() : null, 
+                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getSubmitTime() : null, 
+                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getAuditTime() : null, 
+                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getAuditStatus() : null
+                );
+        return this.findAllSimpleDTOBySpecification(specification);
     }
 
     @Override
-    public StudentsHomeworkNew  update(StudentsHomeworkNew studentsHomework) {
+    public StudentsHomeworkNew update(StudentsHomeworkNew studentsHomework) {
         studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
-        HomeworkPublish homeworkPublish=homeworkPublishRepository.getById(studentsHomework.getHomeworkPublishId());
+        
+        // 清除缓存
+        String cacheKey = "studentsHomework:id:" + studentsHomework.getId();
+        redisTemplate.delete(cacheKey);
+        
+        HomeworkPublish homeworkPublish = homeworkPublishRepository.getById(studentsHomework.getHomeworkPublishId());
         StudentsHomeworkNew finalStudentsHomework = studentsHomework;
-        Specification<StudentsHomeworkNew> specification= new Specification<StudentsHomeworkNew>() {
-
+        Specification<StudentsHomeworkNew> specification = new Specification<StudentsHomeworkNew>() {
             @Override
             public Predicate toPredicate(Root<StudentsHomeworkNew> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                 List<Predicate> list = new ArrayList<>();
                 Predicate condition = criteriaBuilder.equal(root.get("homeworkPublishId"), finalStudentsHomework.getHomeworkPublishId());
                 list.add(condition);
-                Predicate condition1 = criteriaBuilder.le(root.get("auditStatus"),1);
+                Predicate condition1 = criteriaBuilder.le(root.get("auditStatus"), 1);
                 list.add(condition1);
-                Predicate[] p =  new Predicate[list.size()];
+                Predicate[] p = new Predicate[list.size()];
                 return criteriaBuilder.and(list.toArray(p));
             }
         };
-        long count =studentsHomeworkNewRepository.count(specification);
-        if(count==0){
+        long count = studentsHomeworkNewRepository.count(specification);
+        if (count == 0) {
             homeworkPublish.setAuditStatus(2);
             homeworkPublishRepository.save(homeworkPublish);
         }
-
         return studentsHomework;
     }
 
@@ -417,16 +370,16 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             for(StudentsHomeworkNew studentsHomework:studentsHomeworkList.getContent()){
                 List<HomeworkStudentWriteData> writeDatas=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"1");
                 studentsHomework.setStudentWriteDataList(writeDatas);
-                List<HomeworkStudentWriteData> writeDatas2=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"2");
-                studentsHomework.setStudentWriteDataList2(writeDatas2);
+                /*List<HomeworkStudentWriteData> writeDatas2=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"2");
+                studentsHomework.setStudentWriteDataList2(writeDatas2);*/
                 StudentsHomeworkCorrect search = new  StudentsHomeworkCorrect();
                 search.setStudentsHomeworkId(studentsHomework.getId());
                 search.setType(1);
                 List<StudentsHomeworkCorrect> correctList = studentsHomeworkCorrectRepository.findAll(Example.of(search));
                 studentsHomework.setHomeworkCorrectList(correctList);
-                search.setType(2);
+                /*search.setType(2);
                 List<StudentsHomeworkCorrect> correctList2 = studentsHomeworkCorrectRepository.findAll(Example.of(search));
-                studentsHomework.setHomeworkCorrectList2(correctList2);
+                studentsHomework.setHomeworkCorrectList2(correctList2);*/
             }
         }
         return studentsHomeworkList;
@@ -735,21 +688,38 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         return accuracyDto;
     }
 
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+    
     @Override
     public StudentsHomeworkNew getById(Long id) {
-        StudentsHomeworkNew studentsHomework=studentsHomeworkNewRepository.findById(id).get();
-        List<HomeworkStudentWriteData> writeDatas=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"1");
-        studentsHomework.setStudentWriteDataList(writeDatas);
-        List<HomeworkStudentWriteData> writeDatas2=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"2");
-        studentsHomework.setStudentWriteDataList2(writeDatas2);
-        StudentsHomeworkCorrect search = new  StudentsHomeworkCorrect();
-        search.setStudentsHomeworkId(studentsHomework.getId());
-        search.setType(1);
-        List<StudentsHomeworkCorrect> correctList = studentsHomeworkCorrectRepository.findAll(Example.of(search));
-        studentsHomework.setHomeworkCorrectList(correctList);
-        search.setType(2);
-        List<StudentsHomeworkCorrect> correctList2 = studentsHomeworkCorrectRepository.findAll(Example.of(search));
-        studentsHomework.setHomeworkCorrectList2(correctList2);
+        String cacheKey = "studentsHomework:id:" + id;
+        
+        // 尝试从缓存获取
+        Object cachedObj = redisTemplate.opsForValue().get(cacheKey);
+        if (cachedObj != null && cachedObj instanceof StudentsHomeworkNew) {
+            return (StudentsHomeworkNew) cachedObj;
+        }
+        
+        // 从数据库查询
+        StudentsHomeworkNew studentsHomework = studentsHomeworkNewRepository.findById(id).orElse(null);
+        if (studentsHomework != null) {
+            List<HomeworkStudentWriteData> writeDatas = homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(), "1");
+            studentsHomework.setStudentWriteDataList(writeDatas);
+            List<HomeworkStudentWriteData> writeDatas2 = homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(), "2");
+            studentsHomework.setStudentWriteDataList2(writeDatas2);
+            StudentsHomeworkCorrect search = new StudentsHomeworkCorrect();
+            search.setStudentsHomeworkId(studentsHomework.getId());
+            search.setType(1);
+            List<StudentsHomeworkCorrect> correctList = studentsHomeworkCorrectRepository.findAll(Example.of(search));
+            studentsHomework.setHomeworkCorrectList(correctList);
+            search.setType(2);
+            List<StudentsHomeworkCorrect> correctList2 = studentsHomeworkCorrectRepository.findAll(Example.of(search));
+            studentsHomework.setHomeworkCorrectList2(correctList2);
+            
+            // 缓存结果，设置1小时过期
+            redisTemplate.opsForValue().set(cacheKey, studentsHomework, 1, TimeUnit.HOURS);
+        }
         return studentsHomework;
     }
 
@@ -1749,16 +1719,18 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     }
 
     @Override
-    public void saveWriteRecords(Long studentId,Long homeworkId, String type, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords,Boolean isFinish) {
-        /*StudentsHomeworkNew search = new StudentsHomeworkNew();
-        search.setStudentId(studentId);
-        search.setHomeworkPublishId(homeworkId);*/
-        System.out.println("=========================保存笔记开始");
-        Optional<StudentsHomeworkNew> optional=studentsHomeworkNewRepository.findById(homeworkId);
-        if(optional==null||optional.isEmpty()){
+    public void saveWriteRecords(Long studentId, Long homeworkId, String type, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords, Boolean isFinish) {
+        log.info("开始保存书写记录，studentId: {}, homeworkId: {}, type: {}", studentId, homeworkId, type);
+        
+        Optional<StudentsHomeworkNew> optional = studentsHomeworkNewRepository.findById(homeworkId);
+        if (optional == null || optional.isEmpty()) {
+            log.warn("作业不存在，homeworkId: {}", homeworkId);
             return;
         }
-        StudentsHomeworkNew studentsHomework=optional.get();
+        
+        StudentsHomeworkNew studentsHomework = optional.get();
+        
+        // 保存书写记录
         HomeworkStudentWriteData writeData = new HomeworkStudentWriteData();
         writeData.setStudentHomeworkId(studentsHomework.getId());
         writeData.setPageNum(pageN);
@@ -1766,135 +1738,177 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         writeData.setStudentId(studentId);
         writeData.setStudentsWriteRecords(studentsWriteRecords);
         writeData.setCreateTime(new Date());
-        if(StringUtils.isNotEmpty(type)) {
+        if (StringUtils.isNotEmpty(type)) {
             writeData.setType(type);
         }
         homeworkStudentWriteDataService.save(writeData);
-
+        
+        // 更新作业状态
         studentsHomework.setSubmitStatus(1);
         studentsHomework.setSubmitTime(new Date());
-        if("1".equals(type)) {
+        if ("1".equals(type)) {
             studentsHomework.setAuditStatus(1);
-        }else if("2".equals(type)) {
+        } else if ("2".equals(type)) {
             studentsHomework.setEmendStatus(2);
             studentsHomework.setAuditStatus(4);
         }
-
-        studentsHomeworkNewRepository.save(studentsHomework);
-
-        HomeworkPublish homeworkPublish=homeworkPublishRepository.findById(studentsHomework.getHomeworkPublishId()).get();
-        homeworkPublish.setAuditStatus(1);
-        homeworkPublishRepository.save(homeworkPublish);
-        log.info("=========================异步处理AI智能审批"+homeworkId+"学生 id"+studentId);
-        //异步处理AI智能审批
-        if(isFinish){
-            FutureTask<String> futureTask = new FutureTask<>(() -> {
-                try {
-                    System.out.println("=========================准备中台调用4，type========================="+type);
-                    if("1".equals(type)){
-                        System.out.println("=========================准备中台调用3=========================");
-                        aIauditMid(studentsHomework.getId());
-                    }else {
-                    String auditImages = "";
-                    List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
-                    //异步处理AI智能审批
-                    //ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
-                    //QianWenAIUtil util = new QianWenAIUtil();
-                    AIUtil util  = aiUtil.getAIUtil();
-                    if("qianwen".equals(util.getAiName())){
-                        util = (QianWenAIUtil)  util;
-                    }else {
-                        util = (ZhipuAIImageAnalysisUtil) util;
-                    }
-                    List<HomeworkStudentWriteData> homeworkStudentWriteDataList = homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(), type);
-                    if (studentsHomework.getTopicImages() != null && studentsHomework.getTopicImages().size() > 0
-                            && !studentsHomework.getTopicImagesStr().endsWith(".docx") && !studentsHomework.getTopicImagesStr().endsWith(".doc")) {
-                        try {
-                            List<String> imageNames = new ArrayList<>();
-                            for (int i = 0; i < studentsHomework.getTopicImages().size(); i++) {
-                                String imageUrl = studentsHomework.getTopicImages().get(i);
-
-
-                                for (HomeworkStudentWriteData writeData1 : homeworkStudentWriteDataList) {
-                                    if (writeData1.getPageNum() == (i + 1)) {
-                                        List<StudentsWriteRecord> records = writeData1.getStudentsWriteRecords();
-                                        BufferedImage resultImage = null;
-
-                                        resultImage = ImageOverlayUtil.overlayWritingDataFromUrl(imageUrl, records);
-
-                                        // 保存结果图片
-                                        String imageName = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + "_" + writeData1.getPageNum() + "页作业.png";
-                                        CoordinateImageGenerator.saveImage(resultImage, imageName);
-                                        imageNames.add(imageName);
-                                    }
-                                }
-                            }
-                            Map<String, String> resltMap = util.batchRecognizePiyueInImages(imageNames);
-                            //Map<String, String> resltMap = util.analyzeImageToJson(imageNames,"");
-                            for (String key : resltMap.keySet()) {
-                                String titleImage = resltMap.get(key);
-                                if (titleImage.contains("<|begin_of_box|>")) {
-                                    titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>") + 16);
-                                }
-                                if (titleImage.contains("<|end_of_box|>")) {
-                                    titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
-                                }
-                                List<HomeworkAIBigDto> bigDtoList= JSONArray.parseArray(titleImage,HomeworkAIBigDto.class);
-                                bigDtoAll.addAll(bigDtoList);
-                                auditImages = auditImages + titleImage;
-                                File imageFile = new File(key);
-                                imageFile.delete();
-                            }
-
-                            //System.out.println("批阅结果: " + auditImages);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-
-                    } else if (StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())) {
-                        try {
-                            String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
-                            DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
-                            //试题识别
-
-                            String prompt = "请识别批阅图片中所有试题的内容，并以JSON格式返回，格式如[{\"bigNumber\":\"一\",\"questionType\":\"选择题\",\"smallDtoList\":[{{\"smallNumber\":\"1\",\"correctFlag\":\"错误\"}]}] ";
-                            String titleImage = util.analyzeImage(outputPath,prompt);
-                            if (titleImage.contains("<|begin_of_box|>")) {
-                                titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|>") + 16);
-                            }
-                            if (titleImage.contains("<|end_of_box|>")) {
-                                titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
-                            }
-                            //System.out.println("批阅结果: " + titleImage);
-                            List<HomeworkAIBigDto> bigDtoList= JSONArray.parseArray(titleImage,HomeworkAIBigDto.class);
-                            bigDtoAll.addAll(bigDtoList);
-                            auditImages = auditImages + "\n" + titleImage;
-                            File imageFile = new File(outputPath);
-                            imageFile.delete();
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    if ("1".equals(type)) {
-                        studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoAll));
-                    } else if ("2".equals(type)) {
-                        studentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoAll));
-                    }
-                    studentsHomeworkNewRepository.save(studentsHomework);
-                }
-                } catch (Exception e) {
-                    log.error("=========================aIauditMid异步调用异常: "+e.getMessage(), e);
-                    e.printStackTrace();
-                }
-                return "异步-OK";
-
-
-            });
-            Thread thread = new Thread(futureTask);
-            thread.start();
-
+        
+        // 保存作业状态
+        studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
+        
+        // 清除缓存
+        String cacheKey = "studentsHomework:id:" + studentsHomework.getId();
+        redisTemplate.delete(cacheKey);
+        
+        // 更新作业发布状态
+        HomeworkPublish homeworkPublish = homeworkPublishRepository.findById(studentsHomework.getHomeworkPublishId()).orElse(null);
+        if (homeworkPublish != null) {
+            homeworkPublish.setAuditStatus(1);
+            homeworkPublishRepository.save(homeworkPublish);
         }
+        
+        // 异步处理AI智能审批
+        if (isFinish) {
+            StudentsHomeworkNew finalStudentsHomework = studentsHomework;
+            CompletableFuture.runAsync(() -> {
+                try {
+                    log.info("开始异步处理AI智能审批，type: {}", type);
+                    if ("1".equals(type)) {
+                        aIauditMid(finalStudentsHomework.getId());
+                    } else {
+                        processAIApproval(finalStudentsHomework, type);
+                    }
+                    log.info("异步处理AI智能审批完成");
+                } catch (Exception e) {
+                    log.error("AI智能审批异步处理失败", e);
+                }
+            }).exceptionally(ex -> {
+                log.error("异步任务执行异常", ex);
+                return null;
+            });
+        }
+    }
+    
+    /**
+     * 处理AI审批（用于非中台调用的情况）
+     */
+    private void processAIApproval(StudentsHomeworkNew studentsHomework, String type) {
+        try {
+            List<HomeworkAIBigDto> bigDtoAll = new ArrayList<>();
+            AIUtil util = aiUtil.getAIUtil();
+            
+            List<HomeworkStudentWriteData> homeworkStudentWriteDataList = homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(), type);
+            
+            if (studentsHomework.getTopicImages() != null && !studentsHomework.getTopicImages().isEmpty()
+                    && !studentsHomework.getTopicImagesStr().endsWith(".docx") && !studentsHomework.getTopicImagesStr().endsWith(".doc")) {
+                processImageApproval(studentsHomework, homeworkStudentWriteDataList, util, bigDtoAll);
+            } else if (StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())) {
+                processDocumentApproval(studentsHomework, homeworkStudentWriteDataList, util, bigDtoAll);
+            }
+            
+            // 保存审批结果
+            if (!bigDtoAll.isEmpty()) {
+                if ("1".equals(type)) {
+                    studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoAll));
+                } else if ("2".equals(type)) {
+                    studentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoAll));
+                }
+                studentsHomeworkNewRepository.save(studentsHomework);
+                
+                // 清除缓存
+                String cacheKey = "studentsHomework:id:" + studentsHomework.getId();
+                redisTemplate.delete(cacheKey);
+            }
+        } catch (Exception e) {
+            log.error("处理AI审批失败", e);
+            throw new RuntimeException("处理AI审批失败", e);
+        }
+    }
+    
+    /**
+     * 处理图片审批
+     */
+    private void processImageApproval(StudentsHomeworkNew studentsHomework, List<HomeworkStudentWriteData> writeDataList, 
+                                   AIUtil util, List<HomeworkAIBigDto> bigDtoAll) throws IOException {
+        List<String> imageNames = new ArrayList<>();
+        
+        // 构建页码到数据的映射
+        Map<Integer, HomeworkStudentWriteData> pageDataMap = new HashMap<>();
+        for (HomeworkStudentWriteData data : writeDataList) {
+            if (data.getPageNum() != null) {
+                pageDataMap.put(data.getPageNum(), data);
+            }
+        }
+        
+        for (int i = 0; i < studentsHomework.getTopicImages().size(); i++) {
+            String imageUrl = studentsHomework.getTopicImages().get(i);
+            int pageNum = i + 1;
+            HomeworkStudentWriteData writeData = pageDataMap.get(pageNum);
+            
+            if (writeData != null) {
+                List<StudentsWriteRecord> records = writeData.getStudentsWriteRecords();
+                if (records != null && !records.isEmpty()) {
+                    BufferedImage resultImage = ImageOverlayUtil.overlayWritingDataFromUrl(imageUrl, records);
+                    String imageName = studentsHomework.getHomeworkPublishName() + "_" + 
+                            studentsHomework.getStudentName() + "_" + pageNum + "页作业.png";
+                    CoordinateImageGenerator.saveImage(resultImage, imageName);
+                    imageNames.add(imageName);
+                }
+            }
+        }
+        
+        // 批量识别
+        if (!imageNames.isEmpty()) {
+            Map<String, String> resultMap = util.batchRecognizePiyueInImages(imageNames);
+            for (Map.Entry<String, String> entry : resultMap.entrySet()) {
+                String imagePath = entry.getKey();
+                String titleImage = entry.getValue();
+                
+                // 处理AI返回的内容
+                if (titleImage.contains("<|begin_of_box|>")) {
+                    titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|") + 16);
+                }
+                if (titleImage.contains("<|end_of_box|>")) {
+                    titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+                }
+                
+                List<HomeworkAIBigDto> bigDtoList = JSONArray.parseArray(titleImage, HomeworkAIBigDto.class);
+                bigDtoAll.addAll(bigDtoList);
+                
+                // 清理临时文件
+                File imageFile = new File(imagePath);
+                imageFile.delete();
+            }
+        }
+    }
+    
+    /**
+     * 处理文档审批
+     */
+    private void processDocumentApproval(StudentsHomeworkNew studentsHomework, List<HomeworkStudentWriteData> writeDataList, 
+                                      AIUtil util, List<HomeworkAIBigDto> bigDtoAll) throws Exception {
+        String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
+        DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(
+                studentsHomework.getDailyPracticePreview(), writeDataList, 1, outputPath);
+        
+        // 识别文档
+        String prompt = "请识别批阅图片中所有试题的内容，并以JSON格式返回，格式如[{\"bigNumber\":\"一\",\"questionType\":\"选择题\",\"smallDtoList\":[{{\"smallNumber\":\"1\",\"correctFlag\":\"错误\"}]}] ";
+        String titleImage = util.analyzeImage(outputPath, prompt);
+        
+        // 处理AI返回的内容
+        if (titleImage.contains("<|begin_of_box|>")) {
+            titleImage = titleImage.substring(titleImage.indexOf("<|begin_of_box|") + 16);
+        }
+        if (titleImage.contains("<|end_of_box|>")) {
+            titleImage = titleImage.substring(0, titleImage.indexOf("<|end_of_box|>"));
+        }
+        
+        List<HomeworkAIBigDto> bigDtoList = JSONArray.parseArray(titleImage, HomeworkAIBigDto.class);
+        bigDtoAll.addAll(bigDtoList);
+        
+        // 清理临时文件
+        File imageFile = new File(outputPath);
+        imageFile.delete();
     }
 
     @Override
@@ -2500,116 +2514,108 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Transactional
     public String aIauditMid(Long studentsHomeworkId) {
-        //System.out.println("=========================aIauditMid开始，studentsHomeworkId: "+studentsHomeworkId+"=========================");
+        log.info("开始执行中台AI批改，studentsHomeworkId: {}", studentsHomeworkId);
         StudentsHomeworkNew studentsHomework = this.getById(studentsHomeworkId);
-        //System.out.println("=========================getById完成，studentsHomework: "+(studentsHomework!=null?studentsHomework.getId():"null")+"=========================");
+        if (studentsHomework == null) {
+            log.warn("作业不存在，studentsHomeworkId: {}", studentsHomeworkId);
+            return "";
+        }
+        
         String auditImages = "";
-        List<HomeworkStudentWriteData> homeworkStudentWriteDataList=homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(),"1");
-        //System.out.println("=========================准备中台调用2=========================");
+        List<HomeworkStudentWriteData> homeworkStudentWriteDataList = homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(), "1");
         List<String> imageNames = null;
-        //System.out.println("========================="+studentsHomework.getTopicImages()+"=========================");
+        
+        try {
+            imageNames = processImages(studentsHomework, homeworkStudentWriteDataList);
+            
+            if (imageNames != null && !imageNames.isEmpty()) {
+                auditImages = callApiReview(studentsHomeworkId, studentsHomework, imageNames);
+                cleanupImages(imageNames);
+            }
+        } catch (Exception e) {
+            log.error("中台AI批改失败，studentsHomeworkId: {}", studentsHomeworkId, e);
+            throw new RuntimeException("中台AI批改失败", e);
+        }
+        
+        log.info("中台AI批改完成，studentsHomeworkId: {}", studentsHomeworkId);
+        return auditImages;
+    }
+    
+    /**
+     * 处理图片（叠加书写数据）
+     */
+    private List<String> processImages(StudentsHomeworkNew studentsHomework, List<HomeworkStudentWriteData> homeworkStudentWriteDataList) {
+        List<String> imageNames = new ArrayList<>();
+        
         String topicImagesStr = studentsHomework.getTopicImagesStr();
         boolean isDocFile = StringUtils.isNotEmpty(topicImagesStr) && 
-                (topicImagesStr.endsWith(".docx") || topicImagesStr.endsWith(".doc"));
-        //System.out.println("=========================topicImagesStr: "+topicImagesStr+", isDocFile: "+isDocFile+"=========================");
-        if(studentsHomework.getTopicImages()!=null&&studentsHomework.getTopicImages().size()>0 && !isDocFile){
-            //System.out.println("=========================准备中台调用2.1========================="+studentsHomework.getTopicImagesStr());
-            try {
-                imageNames = new ArrayList<>();
-                Map<Integer, HomeworkStudentWriteData> pageDataMap = new HashMap<>();
-                for(HomeworkStudentWriteData data : homeworkStudentWriteDataList){
-                    if(data.getPageNum() != null){
-                        pageDataMap.put(data.getPageNum(), data);
-                    }
-                }
-                
-                for(int i=0;i<studentsHomework.getTopicImages().size();i++) {
-                    String imageUrl = studentsHomework.getTopicImages().get(i);
-                    if(StringUtils.isEmpty(imageUrl)){
-                        continue;
-                    }
-                    
-                    int pageNum = i + 1;
-                    HomeworkStudentWriteData writeData = pageDataMap.get(pageNum);
-                    
-                    if(writeData != null){
-                        List<StudentsWriteRecord> records = writeData.getStudentsWriteRecords();
-                        //System.out.println("=========================aIauditMid-two-2, imageUrl: "+imageUrl+", records size: "+(records!=null?records.size():"null")+"=========================");
-                        try {
-                            BufferedImage resultImage = ImageOverlayUtil.overlayWritingDataFromUrl(imageUrl, records);
-                            ///System.out.println("=========================aIauditMid-two-3=========================");
-                            String imageName = studentsHomework.getHomeworkPublishName()+"_"+studentsHomework.getStudentName()+"_"+pageNum+"页作业.png";
-                            CoordinateImageGenerator.saveImage(resultImage, imageName);
-                            imageNames.add(imageName);
-                        } catch (Exception e) {
-                            //System.out.println("=========================aIauditMid-two-异常: "+e.getMessage()+"=========================");
-                            e.printStackTrace();
-                            imageNames.add(imageUrl);
-                        }
-                    } else {
-                        imageNames.add(imageUrl);
-                    }
-                }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-
-        }else if(StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())) {
-            //System.out.println("========================="+studentsHomework.getDailyPracticePreview()+"=========================");
+                HomeworkImageUtil.isDocumentFile(topicImagesStr);
+        
+        if (studentsHomework.getTopicImages() != null && !studentsHomework.getTopicImages().isEmpty() && !isDocFile) {
+            // 使用工具类处理图片
+            imageNames = HomeworkImageUtil.processHomeworkImages(studentsHomework, homeworkStudentWriteDataList);
+        } else if (StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())) {
             try {
                 String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
-                DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
-
-
+                DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(
+                        studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
                 imageNames = Arrays.asList(outputPath);
-
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                log.warn("处理文档预览失败: {}", e.getMessage());
+                throw new RuntimeException("处理文档预览失败", e);
             }
-        }else if(StringUtils.isNotEmpty(studentsHomework.getSubmitFileUrl())) {
+        } else if (StringUtils.isNotEmpty(studentsHomework.getSubmitFileUrl())) {
             imageNames = Arrays.asList(studentsHomework.getSubmitFileUrl().split(","));
-
         }
-        //System.out.println("=========================准备中台调用2.1========================="+imageNames.size());
-        if(imageNames!=null&&imageNames.size()>0) {
+        
+        return imageNames;
+    }
+    
+    /**
+     * 调用中台API进行批改
+     */
+    private String callApiReview(Long studentsHomeworkId, StudentsHomeworkNew studentsHomework, List<String> imageNames) {
+        List<AiFile> medias = new ArrayList<>();
+        
+        for (String imagePath : imageNames) {
             try {
-
-                List<AiFile> medias = new ArrayList<AiFile>();
-
-                for (String imagePath : imageNames) {
-                    String base64Image = null;
-                    try {
-                        base64Image = AIFileUtil.encodeImageToBase64(imagePath);
-                        AiFile file = new AiFile();
-                        file.setId(studentsHomeworkId+"_"+imageNames.indexOf(imagePath));
-                        file.setFile(base64Image);
-                        file.setFileType("image/"+imagePath.substring(imagePath.lastIndexOf(".")+1));
-                        medias.add(file);
-
-
-                    } catch (IOException e) {
-                        continue;
-                    }
+                String base64Image = AIFileUtil.encodeImageToBase64(imagePath);
+                if (base64Image != null) {
+                    AiFile file = new AiFile();
+                    file.setId(studentsHomeworkId + "_" + imageNames.indexOf(imagePath));
+                    file.setFile(base64Image);
+                    file.setFileType("image/" + imagePath.substring(imagePath.lastIndexOf(".") + 1));
+                    medias.add(file);
                 }
-                //System.out.println("=============================准备中台调用1=============================");
-                AIMidDto midDto=aiMidService.apiReview(studentsHomeworkId+"",medias,"作业批改",null);
-                if(midDto!=null&&StringUtils.isNotEmpty(midDto.getTaskId())){
+            } catch (IOException e) {
+                log.warn("转换图片为Base64失败，path: {}", imagePath);
+                continue;
+            }
+        }
+        
+        if (!medias.isEmpty()) {
+            try {
+                log.info("调用中台API批改，studentsHomeworkId: {}, 图片数量: {}", studentsHomeworkId, medias.size());
+                AIMidDto midDto = aiMidService.apiReview(studentsHomeworkId + "", medias, "作业批改", null);
+                if (midDto != null && StringUtils.isNotEmpty(midDto.getTaskId())) {
                     studentsHomework.setAiTaskId(midDto.getTaskId());
                     studentsHomeworkNewRepository.save(studentsHomework);
+                    log.info("保存AI任务ID成功: {}", midDto.getTaskId());
                 }
             } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            //System.out.println("=========================图片删除=========================");
-            for (String image : imageNames) {
-                File imageFile = new File(image);
-                imageFile.delete();
-
+                log.error("调用中台API失败: {}", e.getMessage());
+                throw new RuntimeException("调用中台API失败", e);
             }
         }
-
-        //System.out.println("=========================完成=========================");
-        return auditImages;
+        
+        return String.join(",", imageNames);
+    }
+    
+    /**
+     * 清理临时图片文件
+     */
+    private void cleanupImages(List<String> imageNames) {
+        HomeworkImageUtil.cleanupTempImages(imageNames);
     }
 
 

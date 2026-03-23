@@ -5,8 +5,8 @@ server:
 # Socket服务配置
 socket:
   server:
-    port: 80
-    #port: 6000
+    #port: 80
+    port: 6000
     maxConnections: 500
     corePoolSize: 50
     maxPoolSize: 500
@@ -18,23 +18,23 @@ socket:
 spring:
   datasource:
     # 开发环境使用专门的数据库
-    #url: ${DEV_DATABASE_URL:jdbc:mysql://192.168.1.251:3306/jlm-homework-design?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
-    url: ${DEV_DATABASE_URL:jdbc:mysql://localhost:3306/homework_dev?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    url: ${DEV_DATABASE_URL:jdbc:mysql://192.168.1.251:3306/jlm-homework-design?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    #url: ${DEV_DATABASE_URL:jdbc:mysql://localhost:3306/homework_dev?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
     username: ${DEV_DATABASE_USERNAME:root}
-    #password: ${DEV_DATABASE_PASSWORD:jlm@1234}
-    password: ${DEV_DATABASE_PASSWORD:root123}
+    password: ${DEV_DATABASE_PASSWORD:jlm@1234}
+    #password: ${DEV_DATABASE_PASSWORD:root123}
     hikari:
       # 开发环境使用较小的连接池
       maximum-pool-size: 10
       minimum-idle: 2
   rabbitmq:
-    host: 172.31.100.2
-    #host: 192.168.1.38
+    #host: 172.31.100.2
+    host: 192.168.1.38
     port: 5672
-    #username: root
-    username: guest
-    #password: jlm@1234
-    password: guest
+    username: root
+    #username: guest
+    password: jlm@1234
+    ##password: guest
 
 
   jpa:
@@ -72,8 +72,8 @@ spring:
   # Redis配置
   data:
     redis:
-      host: 172.31.100.2
-      #host: 192.168.1.38
+      #host: 172.31.100.2
+      host: 192.168.1.38
       port: 6379
       database: 0
 
@@ -111,9 +111,9 @@ rongcloud:
 
 plus:
   # 下载文件地址（线上要用外网，否则无法下载！）
-  #download-url: http://192.168.1.38:9930
+  download-url: http://192.168.1.38:9930
   # 线上配置
-  download-url: http://124.165.206.34:20017/exercises
+  #download-url: http://124.165.206.34:20017/exercises
   # 在线预览基路径
   view-url: https://view.sxhetu.com/onlinePreview?url=
   # 定时删除无效题卷[每五秒执行一次：0/5 * * * * ?, 每晚23点执行一次：0 0 23 * * ?, 每晚12点半执行一次：0 30 0 * * ?]
@@ -121,7 +121,9 @@ plus:
 
 minio:
   # 内网地址用于上传
-  endpoint: http://172.31.100.8:80
+  #endpoint: http://192.168.1.38:9930
+  #endpoint: http://172.31.100.8:80
+  endpoint: http://124.165.206.34:20029
   # 外网地址用于访问下载
   publicEndpoint: http://124.165.206.34:20029
   accessKey: admin
@@ -130,11 +132,12 @@ minio:
 
 ai-mid:
   #156\243|192.168.100.5
-  #baseUrl: http://192.168.1.156:18081
-  baseUrl: http://aiops.gnway.cc
+  baseUrl: http://192.168.1.156:18081
+  #baseUrl: http://aiops.gnway.cc
   reviewUrl: /api/review
   pollUrl: /api/poll?
   historyUrl: /api/history?
-  #aiCallbackUrl: http://192.168.1.29/prod-api/homework-board/api/aicallback
-  aiCallbackUrl: http://www.jlmbzjy.cn/prod-api/homework-board/api/aicallback
+  aiCallbackUrl: http://192.168.1.29/prod-api/homework-board/api/aicallback
+  #aiCallbackUrl: http://www.jlmbzjy.cn/prod-api/homework-board/api/aicallback
+  #model: qwen3-vl-flash-2026-01-22
   model: qwen3-vl-plus-2025-12-19

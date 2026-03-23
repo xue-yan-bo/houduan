@@ -452,12 +452,10 @@ public class ButtonHandler implements MessageHandler {
              MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
              String name = itemT.getDesc();
              context.setFeedbackSubject(name);
-            // 异步执行保存操作
-            ASYNC_EXECUTOR.submit(() -> {
-                  Long feedbackId = handlerService.saveFeedbackRecords(context.getFeedbackId(), Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
-                  context.setFeedbackId(feedbackId); // 保存返回的feedbackId，用于下次更新
-                  context.setStudentsFeedbackRecords(new ArrayList<>());
-            });
+             Long feedbackId = handlerService.saveFeedbackRecords(context.getFeedbackId(), Long.parseLong(relation.getUserId()), name, context.getStudentsFeedbackRecords());
+             context.setFeedbackId(feedbackId); // 保存返回的feedbackId，用于下次更新
+             context.setStudentsFeedbackRecords(new ArrayList<>());
+
              // 不重置feedbackId，保留它用于后续更新
              resetContext(context);
              responseSender.sendMenuUpdate(context);

@@ -18,6 +18,21 @@ import java.util.List;
  */
 public class ImageOverlayUtil {
 
+    private static final String MINIO_PUBLIC_ENDPOINT = "http://124.165.206.34:20029";
+    private static final String MINIO_INTERNAL_ENDPOINT = "http://172.31.100.8:80";
+
+    /**
+     * 将MinIO外网地址替换为内网地址
+     * @param url 原始URL
+     * @return 替换后的URL
+     */
+    public static String convertToInternalUrl(String url) {
+        if (url != null && url.contains(MINIO_PUBLIC_ENDPOINT)) {
+            return url.replace(MINIO_PUBLIC_ENDPOINT, MINIO_INTERNAL_ENDPOINT);
+        }
+        return url;
+    }
+
     /**
      * 从URL或本地文件路径加载图片
      * @param imageUrl 图片URL或本地文件路径
@@ -25,17 +40,15 @@ public class ImageOverlayUtil {
      * @throws IOException 加载图片时发生的异常
      */
     public static BufferedImage loadImageFromUrl(String imageUrl) throws IOException {
+        String internalUrl = convertToInternalUrl(imageUrl);
         try {
-            // 首先尝试作为URL加载
-            URL url = new URL(imageUrl);
+            URL url = new URL(internalUrl);
             return ImageIO.read(url);
         } catch (IOException e) {
-            // 如果作为URL加载失败，尝试作为本地文件加载
-            File file = new File(imageUrl);
+            File file = new File(internalUrl);
             if (file.exists()) {
                 return ImageIO.read(file);
             }
-            // 如果本地文件也不存在，重新抛出异常
             throw e;
         }
     }

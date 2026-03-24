@@ -1,5 +1,6 @@
 package com.jlm.homework.controller;
 
+import com.jlm.homework.dto.CopybookStatistics;
 import com.jlm.homework.entity.CopybookStudentRecord;
 import com.jlm.homework.service.ICopybookStudentRecordService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -7,6 +8,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "学生书写字帖记录", description = "学生书写字帖相关接口等")
 @RestController
@@ -53,5 +56,20 @@ public class CopybookStudentRecordController {
         Page<CopybookStudentRecord> list = copybookStudentRecordService.selectList(pageNum,pageSize, copybook);
 
         return list;
+    }
+
+    @GetMapping("/class-statistics/{classId}")
+    @Operation(summary = "根据班级ID查询所有字帖的完成情况")
+    public List<CopybookStatistics.ClassCopybookStatistics> getClassCopybookStatistics(
+            @PathVariable Long classId) {
+        return copybookStudentRecordService.getClassCopybookStatistics(classId);
+    }
+
+    @GetMapping("/copybook-statistics/{copybookId}/{classId}")
+    @Operation(summary = "根据字帖ID和班级ID统计学生完成情况")
+    public CopybookStatistics.CopybookStudentStatistics getCopybookStudentStatistics(
+            @PathVariable Long copybookId,
+            @PathVariable Long classId) {
+        return copybookStudentRecordService.getCopybookStudentStatistics(copybookId, classId);
     }
 }

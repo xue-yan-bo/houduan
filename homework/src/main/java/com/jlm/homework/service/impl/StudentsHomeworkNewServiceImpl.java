@@ -2066,6 +2066,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                     if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
                                         wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
                                     }
+                                    // 添加：设置科目信息
+                                    if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(finalStudentsHomework.getSubject())) {
+                                        wrongTitleBook.setSubject(finalStudentsHomework.getSubject());
+                                    }
                                     wrongTitleBook.setTitleImage(question.getCroppedUrl());
                                     wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                                     wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
@@ -2108,6 +2112,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             // 确保设置学校ID
                             if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
                                 wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
+                            }
+                            // 添加：设置科目信息
+                            if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(finalStudentsHomework.getSubject())) {
+                                wrongTitleBook.setSubject(finalStudentsHomework.getSubject());
                             }
                             wrongTitleBook.setTitleImage(question.getCroppedUrl());
                             wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
@@ -2504,6 +2512,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 if (wrongTitleBook.getSchoolId() == null && studentsHomework.getSchoolId() != null) {
                     wrongTitleBook.setSchoolId(studentsHomework.getSchoolId());
                 }
+                // 添加：设置科目信息
+                if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(studentsHomework.getSubject())) {
+                    wrongTitleBook.setSubject(studentsHomework.getSubject());
+                }
                 wrongTitleBookService.addWrongBook(wrongTitleBook);
             }
         }
@@ -2843,6 +2855,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 if (wrongTitleBook.getSchoolId() == null && studentsHomework.getSchoolId() != null) {
                     wrongTitleBook.setSchoolId(studentsHomework.getSchoolId());
                 }
+                // 添加：设置科目信息
+                if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(studentsHomework.getSubject())) {
+                    wrongTitleBook.setSubject(studentsHomework.getSubject());
+                }
                 wrongTitleBookService.addWrongBook(wrongTitleBook);
             }
         }
@@ -3177,6 +3193,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
                                 wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
                             }
+                            wrongTitleBook.setSubject(finalStudentsHomework.getSubject());
                             wrongTitleBookService.addWrongBook(wrongTitleBook);
                         }
                     }

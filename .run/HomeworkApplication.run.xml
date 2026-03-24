@@ -6,7 +6,7 @@
     <option name="DEBUG_MODE" value="true" />
     <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateResources" />
     <module name="homework" />
-    <option name="SPRING_BOOT_MAIN_CLASS" value="com.jlm.homework.HomeworkApplication" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.jlm.homework.HomeworkApplicationKt" />
     <option name="UPDATE_ACTION_UPDATE_POLICY" value="UpdateClassesAndResources" />
     <extension name="net.ashald.envfile">
       <option name="IS_ENABLED" value="true" />

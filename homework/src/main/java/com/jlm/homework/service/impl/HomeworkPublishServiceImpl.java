@@ -155,12 +155,8 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
         }
 
         FutureTask<String> futureTask = new FutureTask<>(() -> {
-
             this.homeworkQuestionStuc(homeworkPublish);
-
-
             return "异步-OK";
-
 
         });
         Thread thread = new Thread(futureTask);

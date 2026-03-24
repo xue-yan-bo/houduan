@@ -337,6 +337,12 @@ public class StudentsHomeworkNew implements Serializable {
     @Column(name = "ai_task_id")
     private String aiTaskId;
     /**
+     * AI接口调用状态,pending 任务处理中;success 处理完成
+     */
+    @Column(name = "ai_interface_status")
+    private String aiInterfaceStatus;
+
+    /**
      * 作业相关文件
      */
     @Transient

@@ -84,8 +84,10 @@ spring:
 #        options:
 #          model: ${TONGYI_MODEL}
 # 2.智谱
-ZHIPU_API_KEY: "22d592c665f749799d69f2b0c15233db.jw1mkeTjslTeGtJf"
-ZHIPU_CHAT_MODEL: "GLM-4.6V-Flash"
+#ZHIPU_API_KEY: "22d592c665f749799d69f2b0c15233db.jw1mkeTjslTeGtJf"
+ZHIPU_API_KEY: "fb1fc9c0ff2343449849169312c32239.VSKApXu51Gla8810"
+#ZHIPU_CHAT_MODEL: "GLM-4.6V-Flash"
+ZHIPU_CHAT_MODEL: "glm-4.6v"
 ZHIPU_IMAGE_MODEL: "Cogview-3-Flash"
 
 # 1.通义千问

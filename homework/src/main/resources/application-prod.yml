@@ -1,11 +1,12 @@
-# ===================================================================
-# 生产环境配置 - Homework 服务
-# Spring Cloud Alibaba 2023 生产环境最佳实践
-# ===================================================================
+# 开发环境配置
+server:
+  port: ${SERVER_PORT:18080}
+
 # Socket服务配置
 socket:
   server:
     port: 80
+    #port: 6000
     maxConnections: 500
     corePoolSize: 50
     maxPoolSize: 500
@@ -13,117 +14,131 @@ socket:
     bossThreads: 1
     workerThreads: 0
     idleTimeout: 300
+# 开发环境数据库配置覆盖
 spring:
-  cloud:
-    nacos:
-      # 生产环境Nacos配置
-      server-addr: ${NACOS_SERVER_ADDR:nacos-cluster.prod.com:8848}
-      discovery:
-        # 生产环境命名空间
-        namespace: ${NACOS_NAMESPACE:prod}
-        # 生产环境配置组
-        group: ${NACOS_GROUP:PROD_GROUP}
-        # 生产环境元数据
-        metadata:
-          version: ${project.version:25.0}
-          zone: ${DEPLOYMENT_ZONE:prod}
-          cluster: ${CLUSTER_NAME:default}
-      config:
-        # 生产环境命名空间
-        namespace: ${NACOS_NAMESPACE:prod}
-        # 生产环境配置组
-        group: ${NACOS_GROUP:PROD_GROUP}
-        # 生产环境扩展配置
-        extension-configs:
-          - data-id: homework-prod.yml
-            group: PROD_GROUP
-            refresh: true
-          - data-id: database-prod.yml
-            group: PROD_GROUP
-            refresh: true
-          - data-id: redis-prod.yml
-            group: PROD_GROUP
-            refresh: true
-        # 共享配置
-        shared-configs:
-          - data-id: common-prod.yml
-            group: PROD_GROUP
-            refresh: true
+  datasource:
+    # 开发环境使用专门的数据库
+    #url: ${DEV_DATABASE_URL:jdbc:mysql://192.168.1.251:3306/jlm-homework-design?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    url: ${DEV_DATABASE_URL:jdbc:mysql://localhost:3306/homework_dev?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${DEV_DATABASE_USERNAME:root}
+    #password: ${DEV_DATABASE_PASSWORD:jlm@1234}
+    password: ${DEV_DATABASE_PASSWORD:root123}
+    hikari:
+      # 开发环境使用较小的连接池
+      maximum-pool-size: 10
+      minimum-idle: 2
+  rabbitmq:
+    host: 172.31.100.2
+    #host: 192.168.1.38
+    port: 5672
+    #username: root
+    username: guest
+    #password: jlm@1234
+    password: guest
 
-# 生产环境服务器配置
-server:
-  port: ${SERVER_PORT:8080}
-  # 优雅关闭
-  shutdown: graceful
-  # Tomcat生产环境优化
-  tomcat:
-    # 最大连接数
-    max-connections: 10000
-    # 接受队列长度
-    accept-count: 1000
-    threads:
-      # 最大线程数
-      max: 800
-      # 最小线程数
-      min-spare: 100
 
-# 生产环境日志配置
+  jpa:
+    # 开发环境显示SQL
+    show-sql: true
+    hibernate:
+      # 开发环境自动更新表结构
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+
+  #AI
+  # 智谱
+  ai:
+    zhipuai:
+      api-key: ${ZHIPU_API_KEY}
+      #      base-url: "https://open.bigmodel.cn"
+      image:
+        options:
+          model: ${ZHIPU_IMAGE_MODEL}
+      chat:
+        options:
+          model: ${ZHIPU_CHAT_MODEL}
+
+    # openAI配置
+    openai:
+      api-key: ${}
+      base-url: ${}
+      chat:
+        options:
+          model: ${}
+    # 千问配置
+  # Redis配置
+  data:
+    redis:
+      host: 172.31.100.2
+      #host: 192.168.1.38
+      port: 6379
+      database: 0
+
+#    dashscope:
+#      # 需要替换为你自己的 key
+#      api-key: ${TONGYI_API_KEY}
+#      chat:
+#        options:
+#          model: ${TONGYI_MODEL}
+# 2.智谱
+ZHIPU_API_KEY: "22d592c665f749799d69f2b0c15233db.jw1mkeTjslTeGtJf"
+ZHIPU_CHAT_MODEL: "GLM-4.6V-Flash"
+ZHIPU_IMAGE_MODEL: "Cogview-3-Flash"
+
+# 1.通义千问
+TONGYI_API_KEY: "sk-4e8c4687ad3046c69151b21aa2b56861"
+##1.1 多模态图文分析 qwen-vl-max
+TONGYI_MODEL: "qwen-vl-max"
+
+# 开发环境日志配置
 logging:
   level:
-    root: WARN
-    com.jlm.homework: INFO
-    com.jlm.remote: INFO
-    org.springframework.cloud: WARN
-    com.alibaba.nacos: WARN
-  # 生产环境日志文件配置
-  file:
-    name: /var/log/homework/homework.log
-  logback:
-    rollingpolicy:
-      # 日志文件最大大小
-      max-file-size: 100MB
-      # 保留天数
-      max-history: 30
-      # 总大小限制
-      total-size-cap: 10GB
+    com.jlm.homework: ${LOG_LEVEL_HOMEWORK:DEBUG}
+    # 开发环境数据库日志
+    org.hibernate.SQL: ${LOG_LEVEL_HIBERNATE_SQL:DEBUG}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${LOG_LEVEL_HIBERNATE_PARAM:TRACE}
+    org.springframework.data.jpa: ${LOG_LEVEL_SPRING_DATA_JPA:DEBUG}
 
-# 生产环境管理端点配置
-management:
-  endpoints:
-    web:
-      exposure:
-        # 生产环境只暴露必要的端点
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: when-authorized
-  # 监控配置
-  metrics:
-    export:
-      prometheus:
-        enabled: true
-  health:
-    # 健康检查配置
-    nacos:
-      enabled: true
-    diskspace:
-      enabled: true
-      threshold: 10GB
+# 开发环境特定配置
+debug: true
 
-# 生产环境特定配置
-debug: false
+rongcloud:
+  App_Key: p5tvi9dspctn4
+  App_Secret: euPM0qGaA44
 
-# MinIO配置
+plus:
+  # 下载文件地址（线上要用外网，否则无法下载！）
+  #download-url: http://192.168.1.38:9930
+  # 线上配置
+  download-url: http://124.165.206.34:20017/exercises
+  # 在线预览基路径
+  view-url: https://view.sxhetu.com/onlinePreview?url=
+  # 定时删除无效题卷[每五秒执行一次：0/5 * * * * ?, 每晚23点执行一次：0 0 23 * * ?, 每晚12点半执行一次：0 30 0 * * ?]
+  cron-remove: 0 30 0 * * ?
+
 minio:
   # 内网地址用于上传
+  #endpoint: http://192.168.1.38:9930
   endpoint: http://172.31.100.8:80
+  #endpoint: http://124.165.206.34:20029
   # 外网地址用于访问下载
   publicEndpoint: http://124.165.206.34:20029
   accessKey: admin
   secretKey: HTTPSxjlm@2017.cn
   bucketName: exercise
 
-# 生产环境JVM配置建议（在启动脚本中设置）
-# -Xms2g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-# -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/log/homework/
-# -Dspring.profiles.active=prod
+ai-mid:
+  #156\243|192.168.100.5
+  #baseUrl: http://192.168.1.156:18081
+  baseUrl: http://aiops.gnway.cc
+  reviewUrl: /api/review
+  pollUrl: /api/poll?
+  historyUrl: /api/history?
+  #aiCallbackUrl: http://192.168.1.29/prod-api/homework-board/api/aicallback
+  aiCallbackUrl: http://www.jlmbzjy.cn/prod-api/homework-board/api/aicallback
+  #model: qwen3-vl-flash-2026-01-22
+  #model: qwen3-vl-plus-2025-12-19
+  model: glm-4.6v

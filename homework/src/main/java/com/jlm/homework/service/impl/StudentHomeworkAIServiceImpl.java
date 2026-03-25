@@ -5,6 +5,8 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.nacos.common.utils.CollectionUtils;
 import com.jlm.agent.domain.SubQuestionsEnt;
 import com.jlm.agent.domain.TopicReportEnt;
+import com.jlm.homework.dto.AIMidDto;
+import com.jlm.homework.dto.AiFile;
 import com.jlm.homework.dto.HomeworkAIBigDto;
 import com.jlm.homework.dto.HomeworkAISmallDto;
 import com.jlm.homework.entity.*;
@@ -52,6 +54,8 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
     private IQuestionAnalysisService questionAnalysisService;
     @Autowired
     private IStudentAICallService aiCallService;
+    @Autowired
+    private IAiMidService aiMidService;
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
     @Autowired
@@ -331,7 +335,7 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
         try {
             imageNames = processImages(studentsHomework, homeworkStudentWriteDataList);
             if (imageNames != null && !imageNames.isEmpty()) {
-                auditImages = callApiReview(studentsHomeworkId, studentsHomework, imageNames);
+                auditImages = callApiReview(studentsHomeworkId, studentsHomework, imageNames,"1");
                 cleanupImages(imageNames);
             }
         } catch (Exception e) {
@@ -736,30 +740,30 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
     }
 
     @Override
-    public void aiResultDeal(Long studentsHomeworkId, List<SubQuestionsEnt> answers) {
+    public void aiResultDeal(Long studentsHomeworkId, List<SubQuestionsEnt> answers,String type) {
         if (studentsHomeworkId == null) {
             return;
         }
         if (CollectionUtils.isEmpty(answers)) {
             return;
         }
-        
         StudentsHomeworkNew studentsHomework = studentsHomeworkNewRepository.findById(studentsHomeworkId).orElse(null);
         if (studentsHomework == null) {
             return;
         }
-        
-        List<QuestionAnalysis> listByStudHomeId = questionAnalysisService.findListByStudHomeId(studentsHomeworkId);
-        if (CollectionUtils.isNotEmpty(listByStudHomeId)) {
-            questionAnalysisService.deleteByStudHomeId(studentsHomeworkId);
+        List<HomeworkAIBigDto> bigDtoList = new ArrayList<>();
+        if("1".equals(type)) {
+            List<QuestionAnalysis> listByStudHomeId = questionAnalysisService.findListByStudHomeId(studentsHomeworkId);
+            if (CollectionUtils.isNotEmpty(listByStudHomeId)) {
+                questionAnalysisService.deleteByStudHomeId(studentsHomeworkId);
+            }
         }
-        
         Map<String, List<HomeworkAISmallDto>> aiResultMap = new HashMap<>();
         List<QuestionAnalysis> questionAnalysisList = new ArrayList<>();
         List<QuestionAnalysis> errorList = new ArrayList<>();
         Map<String, String> map = new HashMap<>();
         StringBuilder stringBuilder = new StringBuilder();
-        
+
         for (SubQuestionsEnt temp : answers) {
             QuestionAnalysis questionAnalysis = new QuestionAnalysis();
             questionAnalysis.setId(null);
@@ -781,7 +785,7 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
             List<String> answerText = temp.getAnswer_text();
             questionAnalysis.setStudentAnswer(answerText != null ? String.join(",,,", answerText) : "未作答");
             questionAnalysis.setReferenceAnswer(formatCorrectAnswer(temp.getCorrect_answer()));
-            
+
             if (StringUtils.isNotEmpty(questionAnalysis.getBigNumber()) && !map.containsKey(questionAnalysis.getBigNumber())) {
                 stringBuilder.append(questionAnalysis.getBigNumber()).append("、").append(questionAnalysis.getQuestionType());
                 map.put(questionAnalysis.getBigNumber(), questionAnalysis.getQuestionType());
@@ -789,16 +793,18 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
             if (StringUtils.isNotEmpty(questionAnalysis.getSmallNumber())) {
                 stringBuilder.append(questionAnalysis.getSmallNumber()).append(".");
             }
-            
+
             HomeworkAISmallDto smallDto = new HomeworkAISmallDto();
             smallDto.setSmallNumber(questionAnalysis.getSmallNumber());
-            
+
             Boolean judgeRes = Boolean.valueOf(temp.getIs_correct());
             if (judgeRes == null) {
                 questionAnalysis.setIsCorrect(null);
                 smallDto.setCorrectFlag("未答题");
                 smallDto.setParse(StringUtils.isNotEmpty(questionAnalysis.getAnalysis()) ? questionAnalysis.getAnalysis() : "无解析");
-                errorList.add(questionAnalysis);
+                if ("1".equals(type)) {
+                    errorList.add(questionAnalysis);
+                }
             } else {
                 questionAnalysis.setIsCorrect(judgeRes);
                 if (judgeRes) {
@@ -809,20 +815,22 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
                     stringBuilder.append("错误 ");
                     smallDto.setCorrectFlag("错误");
                     smallDto.setParse(StringUtils.isNotEmpty(questionAnalysis.getAnalysis()) ? questionAnalysis.getAnalysis() : "无解析");
-                    errorList.add(questionAnalysis);
+                    if ("1".equals(type)) {
+                        errorList.add(questionAnalysis);
+                    }
                 }
             }
-            
+
             String key = questionAnalysis.getBigNumber() + ":" + (StringUtils.isNotEmpty(questionAnalysis.getQuestionType()) ? questionAnalysis.getQuestionType() : "未作答");
             aiResultMap.computeIfAbsent(key, k -> new ArrayList<>()).add(smallDto);
             questionAnalysisList.add(questionAnalysis);
         }
-        
-        if (!questionAnalysisList.isEmpty()) {
+
+        if ("1".equals(type)&&!questionAnalysisList.isEmpty()) {
             questionAnalysisService.saveAll(questionAnalysisList);
         }
-        
-        List<HomeworkAIBigDto> bigDtoList = new ArrayList<>();
+
+
         for (Map.Entry<String, List<HomeworkAISmallDto>> entry : aiResultMap.entrySet()) {
             String[] keyParts = entry.getKey().split(":");
             if (keyParts.length == 2) {
@@ -835,10 +843,15 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
                 bigDtoList.add(bigDto);
             }
         }
-        
-        studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoList));
+        if("1".equals(type)) {
+            studentsHomework.setAiAudit(JSONObject.toJSONString(bigDtoList));
+            studentsHomework.setAiInterfaceStatus("success");
+        }else {
+            studentsHomework.setAiAudit2(JSONObject.toJSONString(bigDtoList));
+            studentsHomework.setAiInterfaceStatus("success");
+        }
         studentsHomeworkNewRepository.save(studentsHomework);
-        
+
         if (CollectionUtils.isNotEmpty(errorList)) {
             for (QuestionAnalysis questionAnalysis : errorList) {
                 WrongTitleBook wrongTitleBook = new WrongTitleBook();
@@ -862,7 +875,7 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
                 wrongTitleBookService.addWrongBook(wrongTitleBook);
             }
         }
-        
+
         if (!bigDtoList.isEmpty()) {
             try {
                 messagingTemplate.convertAndSend("/studentHomework/aiResult/" + studentsHomeworkId, bigDtoList);
@@ -894,8 +907,41 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
         return imageNames;
     }
 
-    private String callApiReview(Long studentsHomeworkId, StudentsHomeworkNew studentsHomework, List<String> imageNames) throws Exception {
+    private String callApiReview(Long studentsHomeworkId, StudentsHomeworkNew studentsHomework, List<String> imageNames,String type) throws Exception {
         // Implementation from original code
+        if(imageNames!=null&&imageNames.size()>0) {
+            try {
+
+                List<AiFile> medias = new ArrayList<AiFile>();
+
+                for (String imagePath : imageNames) {
+                    String base64Image = null;
+                    try {
+                        base64Image = AIFileUtil.encodeImageToBase64(imagePath);
+                        AiFile file = new AiFile();
+                        file.setId(studentsHomeworkId + "_" + imageNames.indexOf(imagePath));
+                        file.setFile(base64Image);
+                        file.setFileType("image/" + imagePath.substring(imagePath.lastIndexOf(".") + 1));
+                        medias.add(file);
+
+
+                    } catch (IOException e) {
+                        continue;
+                    }
+                }
+                //System.out.println("=============================准备中台调用1=============================");
+                AIMidDto midDto = aiMidService.apiReview(studentsHomeworkId + "-2", medias, "作业批改", null);
+                if (midDto != null && StringUtils.isNotEmpty(midDto.getTaskId())) {
+                    if("1".equals(type)) {
+                        studentsHomework.setAiTaskId(midDto.getTaskId());
+                        studentsHomework.setAiInterfaceStatus(midDto.getStatus());
+                    }
+                    studentsHomeworkNewRepository.save(studentsHomework);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
         return "";
     }
 
@@ -1208,5 +1254,34 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    @Transactional
+    public String aIauditMid2(Long studentsHomeworkId) throws IOException, InvalidFormatException {
+        log.info("开始执行中台AI批改，studentsHomeworkId: {}", studentsHomeworkId);
+        StudentsHomeworkNew studentsHomework = studentsHomeworkNewRepository.findById(studentsHomeworkId).orElse(null);
+        if (studentsHomework == null) {
+            log.warn("作业不存在，studentsHomeworkId: {}", studentsHomeworkId);
+            return "";
+        }
+
+        String auditImages = "";
+        List<HomeworkStudentWriteData> homeworkStudentWriteDataList = homeworkStudentWriteDataService.findByStudentRecordId(studentsHomework.getId(), "2");
+        List<String> imageNames = null;
+
+        try {
+            imageNames = processImages(studentsHomework, homeworkStudentWriteDataList);
+            if (imageNames != null && !imageNames.isEmpty()) {
+                auditImages = callApiReview(studentsHomeworkId, studentsHomework, imageNames,"2");
+                cleanupImages(imageNames);
+            }
+        } catch (Exception e) {
+            log.error("中台AI批改失败，studentsHomeworkId: {}", studentsHomeworkId, e);
+            throw new RuntimeException("中台AI批改失败", e);
+        }
+
+        log.info("中台AI批改完成，studentsHomeworkId: {}", studentsHomeworkId);
+        return auditImages;
     }
 }

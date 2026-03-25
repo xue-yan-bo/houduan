@@ -1,5 +1,6 @@
 package com.jlm.homework.service.impl;
 
+import com.alibaba.cloud.commons.lang.StringUtils;
 import com.jlm.homework.entity.BookKnowledgePoint;
 import com.jlm.homework.entity.ExerciseBookChapter;
 import com.jlm.homework.entity.ExerciseBookQuestion;
@@ -7,13 +8,16 @@ import com.jlm.homework.repository.BookKnowledgePointRepository;
 import com.jlm.homework.repository.ExerciseBookChapterRepository;
 import com.jlm.homework.repository.ExerciseBookQuestionRepository;
 import com.jlm.homework.service.IExerciseBookChapterService;
+import com.jlm.homework.util.WordToPdfUtil;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-
+@Slf4j
 @Service
 public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterService {
     @Resource
@@ -22,6 +26,8 @@ public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterServi
     private BookKnowledgePointRepository bookKnowledgePointRepository;
     @Resource
     private ExerciseBookQuestionRepository exerciseBookQuestionRepository;
+    @Autowired
+    private WordToPdfUtil wordToPdfUtil;
     @Override
     public void saveList(List<ExerciseBookChapter> list) {
         if (list.isEmpty()) {
@@ -37,6 +43,22 @@ public class ExerciseBookChapterServiceIpml implements IExerciseBookChapterServi
         }
 
         for (ExerciseBookChapter exerciseBookChapter : list) {
+            List<String> urls = new ArrayList<>();
+            for(String url:exerciseBookChapter.getChapterDirectImages()) {
+                if (StringUtils.isNotEmpty(url) &&
+                        (url.contains(".docx") || url.contains(".doc"))) {
+                    try {
+                        String pdfurl = wordToPdfUtil.convertMinioWordToPdf(url);
+                        urls.add(pdfurl);
+                    } catch (Exception e) {
+                        log.error("转换PDF错误：" + e.getMessage());
+                        urls.add(url);
+                    }
+                } else {
+                    urls.add(url);
+                }
+            }
+            exerciseBookChapter.setChapterDirectImages(urls);
             List<ExerciseBookQuestion> questionList = exerciseBookChapter.getChapterDirectCropAreas();
             List<BookKnowledgePoint> knowledgePointList = exerciseBookChapter.getKnowledgePointList();
             exerciseBookChapter = exerciseBookChapterRepository.save(exerciseBookChapter);

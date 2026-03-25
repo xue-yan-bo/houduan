@@ -72,8 +72,16 @@ public class AiCallbackServiceImpl implements IAiCallbackService {
                 result.setMsg("业务ID为空");
             } else {
                 Long businessId;
+                String type = "";
                 try {
-                    businessId = Long.parseLong(aiCallbackRequest.getBusinessId());
+                    if(!aiCallbackRequest.getBusinessId().contains("-")) {
+                        type="1";
+                        businessId = Long.parseLong(aiCallbackRequest.getBusinessId());
+                    }else {
+                        type="2";
+                        String busIdStr = aiCallbackRequest.getBusinessId().substring(0,aiCallbackRequest.getBusinessId().indexOf("-"));
+                        businessId = Long.parseLong(busIdStr);
+                    }
                 } catch (NumberFormatException e) {
                     result.setStatus(1);
                     result.setMsg("业务ID格式错误: " + aiCallbackRequest.getBusinessId());
@@ -86,7 +94,7 @@ public class AiCallbackServiceImpl implements IAiCallbackService {
                         result.setStatus(2);
                         result.setMsg("AI解析错误");
                     } else if ("作业批改".equals(aiCallbackRequest.getBusinessType())) {
-                        studentHomeworkAIService.aiResultDeal(businessId, answers);
+                        studentHomeworkAIService.aiResultDeal(businessId, answers,type);
                         result.setStatus(0);
                         result.setMsg("OK");
                     } else {

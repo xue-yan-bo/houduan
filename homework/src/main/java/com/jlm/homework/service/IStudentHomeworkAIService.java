@@ -56,7 +56,7 @@ public interface IStudentHomeworkAIService {
      * @param studentsHomeworkId 学生作业ID
      * @param answers AI返回的答案列表
      */
-    void aiResultDeal(Long studentsHomeworkId, List<SubQuestionsEnt> answers);
+    void aiResultDeal(Long studentsHomeworkId, List<SubQuestionsEnt> answers,String type);
     /**
      * 处理AI审批（用于非中台调用的情况）
      */
@@ -68,5 +68,12 @@ public interface IStudentHomeworkAIService {
 
     void appEmendSubmitAI(StudentsHomeworkNew finalStudentsHomework);
 
-
+    /**
+     * AI中台批改作业
+     * @param studentsHomeworkId 学生作业ID
+     * @return 批改结果字符串
+     * @throws IOException IO异常
+     * @throws InvalidFormatException 格式异常
+     */
+    String aIauditMid2(Long studentsHomeworkId) throws IOException, InvalidFormatException;
 }

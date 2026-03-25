@@ -568,6 +568,9 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
     
+    @Autowired
+    private PDFUtil pdfUtil;
+    
     @Override
     public StudentsHomeworkNew getById(Long id) {
         String cacheKey = "studentsHomework:id:" + id;
@@ -650,7 +653,21 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             homeWork2Board.setHomeworkName(homework.getHomeworkPublishName());
             homeWork2Board.setSubject(homework.getSubject());
             if(homework.getTopicImages()!=null&&homework.getTopicImages().size()>0){
-                homeWork2Board.setPageSize(homework.getTopicImages().size());
+                if(homework.getTopicImages()!=null&&homework.getTopicImages().size()>0){
+                    int size = 0;
+                    for(String url:homework.getTopicImages()){
+                        if(url.endsWith(".pdf")){
+                            //获取PDF页数
+                            int pdfSize = pdfUtil.getPdfPageCount(url);
+                            size = size + pdfSize;
+                        }else{
+                            size++;
+                        }
+                    }
+                    homeWork2Board.setPageSize(size);
+                }else{
+                    homeWork2Board.setPageSize(1);
+                }
             }else{
                 homeWork2Board.setPageSize(1);
             }
@@ -794,7 +811,17 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             homeWork2Board.setHomeworkName(homework.getHomeworkPublishName());
             homeWork2Board.setSubject(homework.getSubject());
             if(homework.getTopicImages()!=null&&homework.getTopicImages().size()>0){
-                homeWork2Board.setPageSize(homework.getTopicImages().size());
+                int size = 0;
+                for(String url:homework.getTopicImages()){
+                    if(url.endsWith(".pdf")){
+                        //获取PDF页数
+                        int pdfSize = pdfUtil.getPdfPageCount(url);
+                        size = size + pdfSize;
+                    }else{
+                        size++;
+                    }
+                }
+                homeWork2Board.setPageSize(size);
             }else{
                 homeWork2Board.setPageSize(1);
             }

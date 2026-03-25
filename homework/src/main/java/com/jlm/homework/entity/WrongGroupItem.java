@@ -31,23 +31,33 @@ public class WrongGroupItem implements Serializable {
 
     @Column(name = "wrong_group_id")
     private Long wrongGroupId;
-
+    /**
+     * 题类型
+     */
     @Column(name = "title_type")
     private String titleType;
 
-
+    /**
+     * 题内容
+     */
     @Column(name = "content")
     private String content;
 
-
+    /**
+     * 题答案
+     */
     @Column(name = "solution")
     private String solution;
 
-
+    /**
+     * 题解析
+     */
     @Column(name = "parse")
     private String parse;
 
-
+    /**
+     * 题排序
+     */
     @Column(name = "sort")
     private Integer sort;
 

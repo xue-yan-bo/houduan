@@ -62,6 +62,8 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
     private IStudentAICallService studentAICallService;
     @Autowired
     private WordToPdfUtil wordToPdfUtil;
+    @Autowired
+    private PDFUtil pdfUtil;
 
     @Override
     public String create(HomeworkPublish homeworkPublish) {
@@ -100,22 +102,36 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
         }
         if(Integer.compare(1,homeworkPublish.getTestSource())==0&&!homeworkPublish.getTopicImages().isEmpty()){
             List<String> urls = new ArrayList<>();
+            boolean isPdf = false;
             for(String url:homeworkPublish.getTopicImages()){
                 if(StringUtils.isNotEmpty(url)&&
                         (url.contains(".docx")||url.contains(".doc"))) {
                     try {
                         String pdfurl = wordToPdfUtil.convertMinioWordToPdf(url);
                         urls.add(pdfurl);
+                        isPdf = true;
                     } catch (Exception e) {
                         log.error("转换PDF错误："+e.getMessage());
                         urls.add(url);
                     }
-                }else{
+                }else if(StringUtils.isNotEmpty(url)&&
+                        (url.contains(".pdf")||url.contains(".pdf"))){
                     urls.add(url);
+                    isPdf = true;
                 }
             }
-            homeworkPublish.setTopicImages(urls);
-            homeworkPublish.setTopicImagesStr(String.join(",",urls));
+            if(isPdf) {
+                String finalUrl = null;
+                try {
+                    finalUrl = pdfUtil.mergePdfFiles(urls, homeworkPublish.getHomeworkName()+"-文件");
+                    homeworkPublish.setTopicImages(Arrays.asList(finalUrl));
+                    homeworkPublish.setTopicImagesStr(finalUrl);
+                } catch (Exception e) {
+                    log.error("PDF合并错误："+e.getMessage());
+                    throw new RuntimeException(e);
+                }
+
+            }
         }
         if (StringUtils.isEmpty(homeworkPublish.getUserId()) && userService.getCurrentUserInfo() != null) {
             CurrentUserInfo userInfo = userService.getCurrentUserInfo();
@@ -205,22 +221,36 @@ public class HomeworkPublishServiceImpl implements IHomeworkPublishService {
         }
         if(Integer.compare(1,homeworkPublish.getTestSource())==0&&!homeworkPublish.getTopicImages().isEmpty()){
             List<String> urls = new ArrayList<>();
+            boolean isPdf = false;
             for(String url:homeworkPublish.getTopicImages()){
-                if(StringUtils.isNotEmpty(url)
-                        &&(url.contains(".docx")||url.contains(".doc"))) {
+                if(StringUtils.isNotEmpty(url)&&
+                        (url.contains(".docx")||url.contains(".doc"))) {
                     try {
                         String pdfurl = wordToPdfUtil.convertMinioWordToPdf(url);
                         urls.add(pdfurl);
+                        isPdf = true;
                     } catch (Exception e) {
                         log.error("转换PDF错误："+e.getMessage());
                         urls.add(url);
                     }
-                }else{
+                }else if(StringUtils.isNotEmpty(url)&&
+                        (url.contains(".pdf")||url.contains(".pdf"))){
                     urls.add(url);
+                    isPdf = true;
                 }
             }
-            homeworkPublish.setTopicImages(urls);
-            homeworkPublish.setTopicImagesStr(String.join(",",urls));
+            if(isPdf) {
+                String finalUrl = null;
+                try {
+                    finalUrl = pdfUtil.mergePdfFiles(urls, homeworkPublish.getHomeworkName());
+                    homeworkPublish.setTopicImages(Arrays.asList(finalUrl));
+                    homeworkPublish.setTopicImagesStr(finalUrl);
+                } catch (Exception e) {
+                    log.error("PDF合并错误："+e.getMessage());
+                    throw new RuntimeException(e);
+                }
+
+            }
         }
         return homeworkPublishRepository.save(homeworkPublish);
     }

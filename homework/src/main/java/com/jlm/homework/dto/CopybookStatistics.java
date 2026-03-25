@@ -6,7 +6,6 @@ import java.util.List;
 
 @Data
 public class CopybookStatistics {
-    // 第一个接口的返回结构
     @Data
     public static class ClassCopybookStatistics {
         private Long copybookId;
@@ -16,7 +15,6 @@ public class CopybookStatistics {
         private double completionPercentage;
     }
 
-    // 第二个接口的返回结构
     @Data
     public static class CopybookStudentStatistics {
         private Long copybookId;

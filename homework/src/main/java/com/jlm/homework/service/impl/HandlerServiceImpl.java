@@ -211,6 +211,9 @@ public class HandlerServiceImpl implements IHandlerService {
                             if (wrongTitleBook.getSchoolId() == null && student.getSchoolId() != null) {
                                 wrongTitleBook.setSchoolId(student.getSchoolId());
                             }
+                            if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(finalWrongTitleWriteData.getSubject())) {
+                                wrongTitleBook.setSubject(finalWrongTitleWriteData.getSubject());
+                            }
                         }
                         wrongTitleBookService.addWrongBook(wrongTitleBook);
                     }

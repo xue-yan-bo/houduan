@@ -67,10 +67,8 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                 wrongTitleBook.setCreateTime(new Date());
                 wrongTitleBook.setClassId(studentAnswer.getClassId());
                 wrongTitleBook.setClassName(studentAnswer.getClassName());
-                // 确保设置学校ID
-                if (wrongTitleBook.getSchoolId() == null && classroomExercises.getSchoolId() != null) {
-                    wrongTitleBook.setSchoolId(classroomExercises.getSchoolId());
-                }
+                wrongTitleBook.setSchoolId(classroomExercises.getSchoolId());
+                wrongTitleBook.setSubject(classroomExercises.getSubject());
                 wrongTitleBookService.save(wrongTitleBook);
             }
 

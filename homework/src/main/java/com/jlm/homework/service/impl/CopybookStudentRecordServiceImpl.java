@@ -1,7 +1,7 @@
 package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.Copybook2Board;
-import com.jlm.homework.entity.Copybook;
+import com.jlm.homework.dto.CopybookStatistics;
 import com.jlm.homework.entity.CopybookStudentRecord;
 import com.jlm.homework.entity.CopybookStudentWriteData;
 import com.jlm.homework.repository.CopybookStudentRecordRepository;
@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class CopybookStudentRecordServiceImpl implements ICopybookStudentRecordService {
@@ -298,5 +300,90 @@ public class CopybookStudentRecordServiceImpl implements ICopybookStudentRecordS
             }
         };
         return copybookStudentRecordRepository.findAll(Example.of(copybookStudentRecord),pageable);
+    }
+
+    @Override
+    public List<CopybookStatistics.ClassCopybookStatistics> getClassCopybookStatistics(Long classId) {
+        // 查询该班级的所有学生字帖记录
+        Specification<CopybookStudentRecord> specification = new Specification<CopybookStudentRecord>() {
+            @Override
+            public Predicate toPredicate(Root<CopybookStudentRecord> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                Predicate condition = criteriaBuilder.equal(root.get("classId"), classId);
+                list.add(condition);
+                Predicate[] p = new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        List<CopybookStudentRecord> records = copybookStudentRecordRepository.findAll(specification);
+
+        // 按字帖ID分组统计
+        Map<Long, List<CopybookStudentRecord>> copybookMap = records.stream()
+                .collect(Collectors.groupingBy(CopybookStudentRecord::getCopybookId));
+
+        List<CopybookStatistics.ClassCopybookStatistics> result = new ArrayList<>();
+        for (Map.Entry<Long, List<CopybookStudentRecord>> entry : copybookMap.entrySet()) {
+            Long copybookId = entry.getKey();
+            List<CopybookStudentRecord> copybookRecords = entry.getValue();
+
+            int totalStudents = copybookRecords.size();
+            int completedStudents = (int) copybookRecords.stream()
+                    .filter(record -> record.getSubmitStatus() != null && record.getSubmitStatus() == 1)
+                    .count();
+            double completionPercentage = totalStudents > 0 ? (double) completedStudents / totalStudents * 100 : 0;
+
+            CopybookStatistics.ClassCopybookStatistics stats = new CopybookStatistics.ClassCopybookStatistics();
+            stats.setCopybookId(copybookId);
+            stats.setCopybookName(copybookRecords.get(0).getCopybookName());
+            stats.setTotalStudents(totalStudents);
+            stats.setCompletedStudents(completedStudents);
+            stats.setCompletionPercentage(completionPercentage);
+            result.add(stats);
+        }
+        return result;
+    }
+
+    @Override
+    public CopybookStatistics.CopybookStudentStatistics getCopybookStudentStatistics(Long copybookId, Long classId) {
+        // 查询该班级该字帖的所有学生记录
+        Specification<CopybookStudentRecord> specification = new Specification<CopybookStudentRecord>() {
+            @Override
+            public Predicate toPredicate(Root<CopybookStudentRecord> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                Predicate condition1 = criteriaBuilder.equal(root.get("copybookId"), copybookId);
+                Predicate condition2 = criteriaBuilder.equal(root.get("classId"), classId);
+                list.add(condition1);
+                list.add(condition2);
+                Predicate[] p = new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
+        List<CopybookStudentRecord> records = copybookStudentRecordRepository.findAll(specification);
+
+        int totalStudents = records.size();
+        int completedStudents = (int) records.stream()
+                .filter(record -> record.getSubmitStatus() != null && record.getSubmitStatus() == 1)
+                .count();
+        double completionPercentage = totalStudents > 0 ? (double) completedStudents / totalStudents * 100 : 0;
+
+        List<CopybookStatistics.StudentCompletion> studentCompletions = new ArrayList<>();
+        for (CopybookStudentRecord record : records) {
+            CopybookStatistics.StudentCompletion completion = new CopybookStatistics.StudentCompletion();
+            completion.setStudentId(record.getStudentId());
+            completion.setStudentName(record.getStudentName());
+            completion.setCompleted(record.getSubmitStatus() != null && record.getSubmitStatus() == 1);
+            studentCompletions.add(completion);
+        }
+
+        CopybookStatistics.CopybookStudentStatistics stats = new CopybookStatistics.CopybookStudentStatistics();
+        stats.setCopybookId(copybookId);
+        if (!records.isEmpty()) {
+            stats.setCopybookName(records.get(0).getCopybookName());
+        }
+        stats.setTotalStudents(totalStudents);
+        stats.setCompletedStudents(completedStudents);
+        stats.setCompletionPercentage(completionPercentage);
+        stats.setStudentCompletions(studentCompletions);
+        return stats;
     }
 }

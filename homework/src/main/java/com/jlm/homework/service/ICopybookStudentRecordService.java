@@ -1,7 +1,7 @@
 package com.jlm.homework.service;
 
 import com.jlm.homework.dto.Copybook2Board;
-import com.jlm.homework.entity.Copybook;
+import com.jlm.homework.dto.CopybookStatistics;
 import com.jlm.homework.entity.CopybookStudentRecord;
 import org.springframework.data.domain.Page;
 
@@ -17,4 +17,8 @@ public interface ICopybookStudentRecordService {
     CopybookStudentRecord update(CopybookStudentRecord record);
 
     Page<CopybookStudentRecord> queryByCopybookId(Long copybookId, Integer pageNum, Integer pageSize, CopybookStudentRecord copybook);
+
+    List<CopybookStatistics.ClassCopybookStatistics> getClassCopybookStatistics(Long classId);
+
+    CopybookStatistics.CopybookStudentStatistics getCopybookStudentStatistics(Long copybookId, Long classId);
 }

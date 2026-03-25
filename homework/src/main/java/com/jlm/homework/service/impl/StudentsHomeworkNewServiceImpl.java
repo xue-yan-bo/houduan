@@ -176,7 +176,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     }
                     List<Student> studentList=result.getRows();
                     studentSum += studentList.size();
-                    
+
                     // 批量保存学生作业记录
                     List<StudentsHomeworkNew> studentsHomeworkList = new ArrayList<>();
                     for(Student student:studentList){
@@ -204,7 +204,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                         studentsHomework.setChapter(homeworkPublish.getChapter());
                         studentsHomeworkList.add(studentsHomework);
                     }
-                    
+
                     // 批量保存
                     if(!studentsHomeworkList.isEmpty()){
                         studentsHomeworkNewRepository.saveAll(studentsHomeworkList);
@@ -222,12 +222,12 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     public List<StudentsHomeworkSimpleDTO> getByHomeworkPublishId(Long homeworkPublishId, StudentsHomeworkRequest studentsHomeworkRequest) {
         Specification<StudentsHomeworkNew> specification = (root, query, criteriaBuilder) ->
                 PredicateBuilderUtil.buildStudentHomeworkPredicate(
-                        criteriaBuilder, root, 
-                        homeworkPublishId, 
-                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getStudentName() : null, 
-                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getSubmitStatus() : null, 
-                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getSubmitTime() : null, 
-                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getAuditTime() : null, 
+                        criteriaBuilder, root,
+                        homeworkPublishId,
+                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getStudentName() : null,
+                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getSubmitStatus() : null,
+                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getSubmitTime() : null,
+                        studentsHomeworkRequest != null ? studentsHomeworkRequest.getAuditTime() : null,
                         studentsHomeworkRequest != null ? studentsHomeworkRequest.getAuditStatus() : null
                 );
         return this.findAllSimpleDTOBySpecification(specification);
@@ -236,11 +236,11 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Override
     public StudentsHomeworkNew update(StudentsHomeworkNew studentsHomework) {
         studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
-        
+
         // 清除缓存
         String cacheKey = "studentsHomework:id:" + studentsHomework.getId();
         redisTemplate.delete(cacheKey);
-        
+
         HomeworkPublish homeworkPublish = homeworkPublishRepository.getById(studentsHomework.getHomeworkPublishId());
         StudentsHomeworkNew finalStudentsHomework = studentsHomework;
         Specification<StudentsHomeworkNew> specification = new Specification<StudentsHomeworkNew>() {
@@ -342,10 +342,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             List<Long> studentsHomeworkIds = content.stream()
                     .map(StudentsHomeworkNew::getId)
                     .collect(Collectors.toList());
-            
+
             // 批量查询 HomeworkStudentWriteData（类型1）
             Map<Long, List<HomeworkStudentWriteData>> writeDataMap1 = homeworkStudentWriteDataService.findByStudentRecordIds(studentsHomeworkIds, "1");
-            
+
             // 批量查询 StudentsHomeworkCorrect（类型1）
             List<StudentsHomeworkCorrect> allCorrects = studentsHomeworkCorrectRepository.findByStudentsHomeworkIdInAndType(studentsHomeworkIds, 1);
             Map<Long, List<StudentsHomeworkCorrect>> correctMap = new HashMap<>();
@@ -353,13 +353,13 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 correctMap.computeIfAbsent(correct.getStudentsHomeworkId(), k -> new ArrayList<>())
                          .add(correct);
             }
-            
+
             // 设置数据
             for(StudentsHomeworkNew studentsHomework: content){
                 // 设置学生写作数据
                 List<HomeworkStudentWriteData> writeDatas = writeDataMap1.getOrDefault(studentsHomework.getId(), new ArrayList<>());
                 studentsHomework.setStudentWriteDataList(writeDatas);
-                
+
                 // 设置批改数据
                 List<StudentsHomeworkCorrect> correctList = correctMap.getOrDefault(studentsHomework.getId(), new ArrayList<>());
                 studentsHomework.setHomeworkCorrectList(correctList);
@@ -384,15 +384,15 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 @Override
                 public Predicate toPredicate(Root<HomeworkPublish> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
                     List<Predicate> predicates = new ArrayList<>();
-                    
+
                     if (StringUtils.isNotEmpty(subject)) {
                         predicates.add(criteriaBuilder.equal(root.get("subject"), subject));
                     }
-                    
+
                     if (classId != null) {
                         predicates.add(criteriaBuilder.like(root.get("classIds"), "%" + classId + "%"));
                     }
-                    
+
                     try {
                         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                         Date start = sdf.parse(startDate + " 00:00:00");
@@ -401,11 +401,11 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     } catch (ParseException e) {
                         log.error("日期解析失败: startDate={}, endDate={}", startDate, endDate, e);
                     }
-                    
+
                     return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
                 }
             };
-            
+
             List<HomeworkPublish> homeworkPublishList = homeworkPublishRepository.findAll(publishSpec);
             if (!homeworkPublishList.isEmpty()) {
                 homeworkPublishIds = homeworkPublishList.stream()
@@ -523,40 +523,40 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                 List<Long> studentsHomeworkIds = homeworkList.stream()
                         .map(StudentsHomeworkNew::getId)
                         .collect(Collectors.toList());
-                
+
                 // 批量查询 HomeworkStudentWriteData（类型1和2）
                 Map<Long, List<HomeworkStudentWriteData>> writeDataMap1 = homeworkStudentWriteDataService.findByStudentRecordIds(studentsHomeworkIds, "1");
                 Map<Long, List<HomeworkStudentWriteData>> writeDataMap2 = homeworkStudentWriteDataService.findByStudentRecordIds(studentsHomeworkIds, "2");
-                
+
                 // 批量查询 StudentsHomeworkCorrect（类型1和2）
                 List<StudentsHomeworkCorrect> allCorrects1 = studentsHomeworkCorrectRepository.findByStudentsHomeworkIdInAndType(studentsHomeworkIds, 1);
                 List<StudentsHomeworkCorrect> allCorrects2 = studentsHomeworkCorrectRepository.findByStudentsHomeworkIdInAndType(studentsHomeworkIds, 2);
-                
+
                 Map<Long, List<StudentsHomeworkCorrect>> correctMap1 = new HashMap<>();
                 for (StudentsHomeworkCorrect correct : allCorrects1) {
                     correctMap1.computeIfAbsent(correct.getStudentsHomeworkId(), k -> new ArrayList<>())
                              .add(correct);
                 }
-                
+
                 Map<Long, List<StudentsHomeworkCorrect>> correctMap2 = new HashMap<>();
                 for (StudentsHomeworkCorrect correct : allCorrects2) {
                     correctMap2.computeIfAbsent(correct.getStudentsHomeworkId(), k -> new ArrayList<>())
                              .add(correct);
                 }
-                
+
                 // 设置数据
                 for (StudentsHomeworkNew homework : homeworkList) {
                     // 设置学生写作数据
                     List<HomeworkStudentWriteData> writeDatas1 = writeDataMap1.getOrDefault(homework.getId(), new ArrayList<>());
                     homework.setStudentWriteDataList(writeDatas1);
-                    
+
                     List<HomeworkStudentWriteData> writeDatas2 = writeDataMap2.getOrDefault(homework.getId(), new ArrayList<>());
                     homework.setStudentWriteDataList2(writeDatas2);
-                    
+
                     // 设置批改数据
                     List<StudentsHomeworkCorrect> correctList1 = correctMap1.getOrDefault(homework.getId(), new ArrayList<>());
                     homework.setHomeworkCorrectList(correctList1);
-                    
+
                     List<StudentsHomeworkCorrect> correctList2 = correctMap2.getOrDefault(homework.getId(), new ArrayList<>());
                     homework.setHomeworkCorrectList2(correctList2);
                 }
@@ -567,20 +567,20 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
-    
+
     @Autowired
     private PDFUtil pdfUtil;
-    
+
     @Override
     public StudentsHomeworkNew getById(Long id) {
         String cacheKey = "studentsHomework:id:" + id;
-        
+
         // 尝试从缓存获取
         Object cachedObj = redisTemplate.opsForValue().get(cacheKey);
         if (cachedObj != null && cachedObj instanceof StudentsHomeworkNew) {
             return (StudentsHomeworkNew) cachedObj;
         }
-        
+
         // 从数据库查询
         StudentsHomeworkNew studentsHomework = studentsHomeworkNewRepository.findById(id).orElse(null);
         if (studentsHomework != null) {
@@ -596,7 +596,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             search.setType(2);
             List<StudentsHomeworkCorrect> correctList2 = studentsHomeworkCorrectRepository.findAll(Example.of(search));
             studentsHomework.setHomeworkCorrectList2(correctList2);
-            
+
             // 缓存结果，设置1小时过期
             redisTemplate.opsForValue().set(cacheKey, studentsHomework, 1, TimeUnit.HOURS);
         }
@@ -680,15 +680,15 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
     @Override
     public void saveWriteRecords(Long studentId, Long homeworkId, String type, Integer pageN, List<StudentsWriteRecord> studentsWriteRecords, Boolean isFinish) {
         log.info("开始保存书写记录，studentId: {}, homeworkId: {}, type: {}", studentId, homeworkId, type);
-        
+
         Optional<StudentsHomeworkNew> optional = studentsHomeworkNewRepository.findById(homeworkId);
         if (optional == null || optional.isEmpty()) {
             log.warn("作业不存在，homeworkId: {}", homeworkId);
             return;
         }
-        
+
         StudentsHomeworkNew studentsHomework = optional.get();
-        
+
         // 保存书写记录
         HomeworkStudentWriteData writeData = new HomeworkStudentWriteData();
         writeData.setStudentHomeworkId(studentsHomework.getId());
@@ -701,7 +701,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             writeData.setType(type);
         }
         homeworkStudentWriteDataService.save(writeData);
-        
+
         // 更新作业状态
         studentsHomework.setSubmitStatus(1);
         studentsHomework.setSubmitTime(new Date());
@@ -711,21 +711,21 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             studentsHomework.setEmendStatus(2);
             studentsHomework.setAuditStatus(4);
         }
-        
+
         // 保存作业状态
         studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
-        
+
         // 清除缓存
         String cacheKey = "studentsHomework:id:" + studentsHomework.getId();
         redisTemplate.delete(cacheKey);
-        
+
         // 更新作业发布状态
         HomeworkPublish homeworkPublish = homeworkPublishRepository.findById(studentsHomework.getHomeworkPublishId()).orElse(null);
         if (homeworkPublish != null) {
             homeworkPublish.setAuditStatus(1);
             homeworkPublishRepository.save(homeworkPublish);
         }
-        
+
         // 异步处理AI智能审批
         if (isFinish) {
             StudentsHomeworkNew finalStudentsHomework = studentsHomework;
@@ -920,6 +920,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                                     if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
                                         wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
                                     }
+                                    // 添加：设置科目信息
+                                    if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(finalStudentsHomework.getSubject())) {
+                                        wrongTitleBook.setSubject(finalStudentsHomework.getSubject());
+                                    }
                                     wrongTitleBook.setTitleImage(question.getCroppedUrl());
                                     wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                                     wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
@@ -962,6 +966,10 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                             // 确保设置学校ID
                             if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
                                 wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
+                            }
+                            // 添加：设置科目信息
+                            if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(finalStudentsHomework.getSubject())) {
+                                wrongTitleBook.setSubject(finalStudentsHomework.getSubject());
                             }
                             wrongTitleBook.setTitleImage(question.getCroppedUrl());
                             wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
@@ -1086,19 +1094,19 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
         if (CollectionUtils.isEmpty(homeworkPublishIds)) {
             return submitNumMap;
         }
-        
+
         List<Object[]> results = studentsHomeworkNewRepository.countSubmittedByHomeworkPublishIds(homeworkPublishIds);
         for (Object[] result : results) {
             Long homeworkPublishId = (Long) result[0];
             Long count = ((Number) result[1]).longValue();
             submitNumMap.put(homeworkPublishId, count);
         }
-        
+
         // 确保所有请求的ID都有对应的值（默认0）
         for (Long homeworkPublishId : homeworkPublishIds) {
             submitNumMap.computeIfAbsent(homeworkPublishId, k -> 0L);
         }
-        
+
         return submitNumMap;
     }
     @Override

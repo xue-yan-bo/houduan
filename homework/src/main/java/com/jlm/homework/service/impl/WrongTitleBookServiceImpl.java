@@ -122,6 +122,10 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                     if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
                                         wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
                                     }
+                                    // 添加：设置科目信息
+                                    if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(finalStudentsHomework.getSubject())) {
+                                        wrongTitleBook.setSubject(finalStudentsHomework.getSubject());
+                                    }
                                     wrongTitleBook.setTitleImage(question.getCroppedUrl());
                                     wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                                     wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
@@ -165,6 +169,10 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                             // 确保设置学校ID
                             if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
                                 wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
+                            }
+                            // 添加：设置科目信息
+                            if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(finalStudentsHomework.getSubject())) {
+                                wrongTitleBook.setSubject(finalStudentsHomework.getSubject());
                             }
                             wrongTitleBook.setTitleImage(question.getCroppedUrl());
                             wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
@@ -222,6 +230,11 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             Optional<StudentsHomeworkNew> optional = studentsHomeworkNewRepository.findById(wrongTitleBook.getStudentsHomeworkId());
             if (optional != null && optional.isPresent()) {
                 StudentsHomeworkNew homeworkNew = optional.get();
+                // 添加：设置科目信息
+                if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(homeworkNew.getSubject())) {
+                    wrongTitleBook.setSubject(homeworkNew.getSubject());
+                    wrongTitleBookRepository.save(wrongTitleBook);
+                }
                 if (homeworkNew.getAccuracy() == null) {
                     homeworkNew.setAccuracy(98.0);
                 } else {
@@ -280,6 +293,8 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             newWrongTitle.setHomeworkPublishId(wrongTitleBook.getHomeworkPublishId());
             newWrongTitle.setHomeworkPublishName(wrongTitleBook.getHomeworkPublishName());
             newWrongTitle.setClassId(wrongTitleBook.getClassId());
+            newWrongTitle.setSchoolId(wrongTitleBook.getSchoolId());
+            newWrongTitle.setSubject(wrongTitleBook.getSubject());
             newWrongTitle.setQuestionId(wrongTitleBook.getQuestionId());
             newWrongTitle.setTitleBigNo(wrongTitleBook.getTitleBigNo());
             newWrongTitle.setTitleSmallNo(wrongTitleBook.getTitleSmallNo());

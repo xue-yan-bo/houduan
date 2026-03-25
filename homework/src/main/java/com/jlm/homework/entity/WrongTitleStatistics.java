@@ -44,6 +44,12 @@ public class WrongTitleStatistics implements Serializable {
     private Long classId;
 
     /**
+     * 学校ID
+     */
+    @Column(name = "school_id")
+    private Long schoolId;
+
+    /**
      * 题ID
      */
     @Column(name = "question_id")

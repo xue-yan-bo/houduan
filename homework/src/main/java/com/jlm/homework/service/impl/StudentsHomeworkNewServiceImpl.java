@@ -735,7 +735,7 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
                     if ("1".equals(type)) {
                         studentHomeworkAIService.aIauditMid(finalStudentsHomework.getId());
                     } else {
-                        studentHomeworkAIService.processAIApproval(finalStudentsHomework, type);
+                        studentHomeworkAIService.aIauditMid2(finalStudentsHomework.getId());
                     }
                     log.info("异步处理AI智能审批完成");
                 } catch (Exception e) {

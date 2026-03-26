@@ -28,6 +28,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -108,12 +109,25 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
         /* 含答案处理（第一次处理，建立缓存） */
         StringBuilder hasAnswerHtmlBuilder = new StringBuilder();
         for (WrongGroupItem item : itemList) {
-            if(item!=null&&item.getContent()!=null&&item.getSolution()!=null) {
-                hasAnswerHtmlBuilder.append(new String(item.getContent())).append(new String(item.getSolution()));
+            if(item!=null&&item.getContent()!=null) {
+                // 检查 content 是否是图片
+                String contentStr = new String(item.getContent());
+                if (isImageContent(contentStr)) {
+                    // 如果是图片，使用 img 标签包装
+                    hasAnswerHtmlBuilder.append(wrapImageContent(contentStr));
+                } else {
+                    // 如果不是图片，直接添加
+                    hasAnswerHtmlBuilder.append(contentStr);
+                }
+                
+                // 添加答案
+                if(item.getSolution()!=null) {
+                    hasAnswerHtmlBuilder.append(new String(item.getSolution()));
+                }
             }
         }
         String hasAnswerHtml = cleanHtmlWithCache(hasAnswerHtmlBuilder.toString(), context);
-        hasAnswerHtml = "错题组卷" + hasAnswerHtml + WORD_FOOT;
+        hasAnswerHtml = WORD_HEAD + "<body>" + "错题组卷" + hasAnswerHtml + "</body>" + WORD_FOOT;
         // 生成含答案文档并上传
         InputStream hasAnswerInputStream = new ByteArrayInputStream(hasAnswerHtml.getBytes(StandardCharsets.UTF_8));
         PoiConvert hasAnswerPoiConvert = new PoiConvert(hasAnswerInputStream);
@@ -123,10 +137,20 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
         /* 无答案处理（复用缓存，避免重复计算） */
         StringBuilder noAnswerHtmlBuilder = new StringBuilder();
         for (WrongGroupItem item : itemList) {
-            noAnswerHtmlBuilder.append(new String(item.getContent()));
+            if(item!=null&&item.getContent()!=null) {
+                // 检查 content 是否是图片
+                String contentStr = new String(item.getContent());
+                if (isImageContent(contentStr)) {
+                    // 如果是图片，使用 img 标签包装
+                    noAnswerHtmlBuilder.append(wrapImageContent(contentStr));
+                } else {
+                    // 如果不是图片，直接添加
+                    noAnswerHtmlBuilder.append(contentStr);
+                }
+            }
         }
         String noAnswerHtml = cleanHtmlWithCache(noAnswerHtmlBuilder.toString(), context);
-        noAnswerHtml = "错题组卷"  + noAnswerHtml + WORD_FOOT;
+        noAnswerHtml = WORD_HEAD + "<body>" + "错题组卷" + noAnswerHtml + "</body>" + WORD_FOOT;
 
         // 生成无答案文档并上传
         InputStream noAnswerInputStream = new ByteArrayInputStream(noAnswerHtml.getBytes(StandardCharsets.UTF_8));
@@ -225,10 +249,17 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
 
                 // 缓存未命中，处理图片
                 log.debug("图片url: {}", originalUrl);
-                String url = originalUrl.replace("124.165.206.34:20017", "172.31.100.2:80")
+                /*String url = originalUrl.replace("124.165.206.34:20017", "172.31.100.2:80")
+                        .replace("124.165.206.34:20029", "172.31.100.8");*/
+                String url = originalUrl;
+                InputStream image = null;
+                try {
+                    image = Request.Get(url).execute().returnContent().asStream();
+                } catch (IOException e) {
+                    url = originalUrl.replace("124.165.206.34:20017", "172.31.100.2:80")
                         .replace("124.165.206.34:20029", "172.31.100.8");
-
-                InputStream image = Request.Get(url).execute().returnContent().asStream();
+                    image = Request.Get(url).execute().returnContent().asStream();
+                }
                 BufferedImage sourceImg = ImageIO.read(image);
                 BigDecimal width = BigDecimal.valueOf(sourceImg.getWidth());
                 BigDecimal height = BigDecimal.valueOf(sourceImg.getHeight());
@@ -283,5 +314,31 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
             log.error("上传题卷{}时，上传文件异常", group.getId(), e);
             throw new RuntimeException( "上传题卷" + group.getId() + "时，上传文件异常");
         }
+    }
+
+    /**
+     * 判断内容是否为图片
+     * @param content 内容字符串
+     * @return 是否为图片
+     */
+    private boolean isImageContent(String content) {
+        if (StringUtils.isEmpty(content)) {
+            return false;
+        }
+        // 检查是否是图片URL
+        content = content.trim();
+        return content.startsWith("http://") || content.startsWith("https://") || 
+               content.endsWith(".jpg") || content.endsWith(".jpeg") || 
+               content.endsWith(".png") || content.endsWith(".gif") || 
+               content.endsWith(".bmp");
+    }
+
+    /**
+     * 包装图片内容为 img 标签
+     * @param imageUrl 图片URL
+     * @return 包装后的 img 标签
+     */
+    private String wrapImageContent(String imageUrl) {
+        return "<img src=\"" + imageUrl + "\" />";
     }
 }

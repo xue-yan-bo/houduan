@@ -5,10 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.nacos.common.utils.CollectionUtils;
 import com.jlm.agent.domain.SubQuestionsEnt;
 import com.jlm.agent.domain.TopicReportEnt;
-import com.jlm.homework.dto.AIMidDto;
-import com.jlm.homework.dto.AiFile;
-import com.jlm.homework.dto.HomeworkAIBigDto;
-import com.jlm.homework.dto.HomeworkAISmallDto;
+import com.jlm.homework.dto.*;
 import com.jlm.homework.entity.*;
 import com.jlm.homework.repository.*;
 import com.jlm.homework.service.*;
@@ -880,6 +877,11 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
             try {
                 messagingTemplate.convertAndSend("/studentHomework/aiResult/" + studentsHomeworkId, bigDtoList);
                 log.info("aiResultDeal: sent WebSocket message for studentsHomeworkId={}", studentsHomeworkId);
+                AiInterfaceStatusDto statusDto = new AiInterfaceStatusDto();
+                statusDto.setStudentHomeworkId(studentsHomeworkId);
+                statusDto.setStudentId(studentsHomework.getStudentId());
+                statusDto.setAiInterfaceStatus(studentsHomework.getAiInterfaceStatus());
+                messagingTemplate.convertAndSend("/studentHomework/list/" + studentsHomework.getHomeworkPublishId(), statusDto);
             } catch (Exception e) {
                 log.error("aiResultDeal: failed to send WebSocket message", e);
             }
@@ -929,14 +931,26 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
                         continue;
                     }
                 }
+                AIMidDto midDto = null;
+                if("1".equals(type)){
+                    midDto = aiMidService.apiReview(studentsHomeworkId + "", medias, "作业批改", null);
+                }else{
+                    midDto = aiMidService.apiReview(studentsHomeworkId + "-2", medias, "作业批改", null);
+                }
                 //System.out.println("=============================准备中台调用1=============================");
-                AIMidDto midDto = aiMidService.apiReview(studentsHomeworkId + "-2", medias, "作业批改", null);
                 if (midDto != null && StringUtils.isNotEmpty(midDto.getTaskId())) {
                     if("1".equals(type)) {
                         studentsHomework.setAiTaskId(midDto.getTaskId());
                         studentsHomework.setAiInterfaceStatus(midDto.getStatus());
                     }
                     studentsHomeworkNewRepository.save(studentsHomework);
+                    if("1".equals(type)){
+                        AiInterfaceStatusDto statusDto = new AiInterfaceStatusDto();
+                        statusDto.setStudentHomeworkId(studentsHomeworkId);
+                        statusDto.setStudentId(studentsHomework.getStudentId());
+                        statusDto.setAiInterfaceStatus(midDto.getStatus());
+                        messagingTemplate.convertAndSend("/studentHomework/list/" + studentsHomework.getHomeworkPublishId(), statusDto);
+                    }
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);

@@ -119,11 +119,12 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
                     // 如果不是图片，直接添加
                     hasAnswerHtmlBuilder.append(contentStr);
                 }
-                
+
                 // 添加答案
                 if(item.getSolution()!=null) {
                     hasAnswerHtmlBuilder.append(new String(item.getSolution()));
                 }
+                hasAnswerHtmlBuilder.append("<br />");
             }
         }
         String hasAnswerHtml = cleanHtmlWithCache(hasAnswerHtmlBuilder.toString(), context);

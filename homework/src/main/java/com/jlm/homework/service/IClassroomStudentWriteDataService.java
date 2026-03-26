@@ -8,4 +8,6 @@ public interface IClassroomStudentWriteDataService {
     void save(ClassroomStudentWriteData classroomStudentWriteData);
 
     List<ClassroomStudentWriteData> findByStudentRecordId(Long studentRecordId);
+    
+    List<ClassroomStudentWriteData> findByStudentRecordIds(List<Long> studentRecordIds);
 }

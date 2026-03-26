@@ -8,8 +8,12 @@ import java.util.List;
 
 public interface IClassroomTearcherApproveStuService {
     void save(ClassroomTearcherApproveStu classroomTearcherApproveStu);
+    
+    void saveAll(List<ClassroomTearcherApproveStu> classroomTearcherApproveStuList);
 
     List<ClassroomTearcherApproveStu> findByStudentRecordId(Long studentRecordId);
+    
+    List<ClassroomTearcherApproveStu> findByStudentRecordIds(List<Long> studentRecordIds);
 
     void clearTeacherApprove(Long studentRecordId, Long studentId, Integer pageNum);
 }

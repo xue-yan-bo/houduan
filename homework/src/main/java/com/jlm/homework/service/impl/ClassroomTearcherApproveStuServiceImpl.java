@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ClassroomTearcherApproveStuServiceImpl implements IClassroomTearcherApproveStuService {
@@ -61,56 +63,110 @@ public class ClassroomTearcherApproveStuServiceImpl implements IClassroomTearche
     }
 
     @Override
+    public void saveAll(List<ClassroomTearcherApproveStu> classroomTearcherApproveStuList) {
+        if (classroomTearcherApproveStuList == null || classroomTearcherApproveStuList.isEmpty()) {
+            return;
+        }
+        
+        for (ClassroomTearcherApproveStu classroomTearcherApproveStu : classroomTearcherApproveStuList) {
+            save(classroomTearcherApproveStu);
+        }
+    }
+
+    @Override
     public List<ClassroomTearcherApproveStu> findByStudentRecordId(Long studentRecordId) {
         ClassroomTearcherApproveStu data=new ClassroomTearcherApproveStu();
         data.setStudentRecordId(studentRecordId);
         Sort sort = Sort.by(Sort.Direction.ASC,"pageNum","indexN","createTime");
         List<ClassroomTearcherApproveStu> list=classroomTearcherApproveStuRepository.findAll(Example.of(data),sort);
-        List<ClassroomTearcherApproveStu> dataList=new ArrayList<>();
-        int pageNum=1;
-        ClassroomTearcherApproveStu  studentWriteData= null;
-        List<TeacherApprWriteRecord> studentsWriteRecords = new ArrayList<>();
-        for(ClassroomTearcherApproveStu writeData:list){
-            if(writeData.getPageNum()==pageNum){
-                if(studentWriteData==null){
-                    studentWriteData = new ClassroomTearcherApproveStu();
-                    studentWriteData.setId(writeData.getId());
-                    studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
-                    studentWriteData.setStudentId(writeData.getStudentId());
-                    studentWriteData.setPageNum(pageNum);
-                }
-                studentsWriteRecords.addAll(writeData.getTearcherApprStuData());
-            }else{
-                if(studentWriteData==null){
-                    studentWriteData = new ClassroomTearcherApproveStu();
-                    studentWriteData.setId(writeData.getId());
-                    studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
-                    studentWriteData.setStudentId(writeData.getStudentId());
-                    studentWriteData.setPageNum(writeData.getPageNum());
+        return groupApproveStuByPageNum(list);
+    }
+
+    @Override
+    public List<ClassroomTearcherApproveStu> findByStudentRecordIds(List<Long> studentRecordIds) {
+        if (studentRecordIds == null || studentRecordIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        // 构建查询条件
+        List<ClassroomTearcherApproveStu> allApproveStu = new ArrayList<>();
+        for (Long studentRecordId : studentRecordIds) {
+            ClassroomTearcherApproveStu data = new ClassroomTearcherApproveStu();
+            data.setStudentRecordId(studentRecordId);
+            Sort sort = Sort.by(Sort.Direction.ASC, "pageNum", "indexN", "createTime");
+            List<ClassroomTearcherApproveStu> list = classroomTearcherApproveStuRepository.findAll(Example.of(data), sort);
+            allApproveStu.addAll(list);
+        }
+        
+        return groupApproveStuByPageNum(allApproveStu);
+    }
+
+    /**
+     * 按页码分组审批数据
+     * @param list 审批数据列表
+     * @return 分组后的数据列表
+     */
+    private List<ClassroomTearcherApproveStu> groupApproveStuByPageNum(List<ClassroomTearcherApproveStu> list) {
+        List<ClassroomTearcherApproveStu> dataList = new ArrayList<>();
+        if (list == null || list.isEmpty()) {
+            return dataList;
+        }
+        
+        // 按学生记录 ID 分组
+        Map<Long, List<ClassroomTearcherApproveStu>> recordIdMap = new HashMap<>();
+        for (ClassroomTearcherApproveStu writeData : list) {
+            recordIdMap.computeIfAbsent(writeData.getStudentRecordId(), k -> new ArrayList<>()).add(writeData);
+        }
+        
+        // 对每个学生记录的数据进行分页分组
+        for (List<ClassroomTearcherApproveStu> recordApproveStu : recordIdMap.values()) {
+            int pageNum = 1;
+            ClassroomTearcherApproveStu studentWriteData = null;
+            List<TeacherApprWriteRecord> studentsWriteRecords = new ArrayList<>();
+            
+            for (ClassroomTearcherApproveStu writeData : recordApproveStu) {
+                if (writeData.getPageNum() == pageNum) {
+                    if (studentWriteData == null) {
+                        studentWriteData = new ClassroomTearcherApproveStu();
+                        studentWriteData.setId(writeData.getId());
+                        studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
+                        studentWriteData.setStudentId(writeData.getStudentId());
+                        studentWriteData.setPageNum(pageNum);
+                    }
                     studentsWriteRecords.addAll(writeData.getTearcherApprStuData());
-                    pageNum=writeData.getPageNum();
-                }else {
-                    studentWriteData.setTearcherApprStuData(studentsWriteRecords);
-                    dataList.add(studentWriteData);
-                    pageNum++;
-                    studentWriteData = new ClassroomTearcherApproveStu();
-                    studentWriteData.setId(writeData.getId());
-                    studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
-                    studentWriteData.setStudentId(writeData.getStudentId());
-                    studentWriteData.setPageNum(writeData.getPageNum());
-                    studentsWriteRecords = new ArrayList<>();
-                    studentsWriteRecords.addAll(writeData.getTearcherApprStuData());
-                    studentWriteData.setTearcherApprStuData(studentsWriteRecords);
+                } else {
+                    if (studentWriteData == null) {
+                        studentWriteData = new ClassroomTearcherApproveStu();
+                        studentWriteData.setId(writeData.getId());
+                        studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
+                        studentWriteData.setStudentId(writeData.getStudentId());
+                        studentWriteData.setPageNum(writeData.getPageNum());
+                        studentsWriteRecords.addAll(writeData.getTearcherApprStuData());
+                        pageNum = writeData.getPageNum();
+                    } else {
+                        studentWriteData.setTearcherApprStuData(studentsWriteRecords);
+                        dataList.add(studentWriteData);
+                        pageNum++;
+                        studentWriteData = new ClassroomTearcherApproveStu();
+                        studentWriteData.setId(writeData.getId());
+                        studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
+                        studentWriteData.setStudentId(writeData.getStudentId());
+                        studentWriteData.setPageNum(writeData.getPageNum());
+                        studentsWriteRecords = new ArrayList<>();
+                        studentsWriteRecords.addAll(writeData.getTearcherApprStuData());
+                        studentWriteData.setTearcherApprStuData(studentsWriteRecords);
+                    }
                 }
-            }
-            //最后一个元素，list增加
-            if(list.indexOf(writeData)==list.size()-1){
-                if(studentsWriteRecords!=null&&studentsWriteRecords.size()>0){
-                    studentWriteData.setTearcherApprStuData(studentsWriteRecords);
-                    dataList.add(studentWriteData);
+                // 最后一个元素，添加到列表
+                if (recordApproveStu.indexOf(writeData) == recordApproveStu.size() - 1) {
+                    if (studentsWriteRecords != null && studentsWriteRecords.size() > 0) {
+                        studentWriteData.setTearcherApprStuData(studentsWriteRecords);
+                        dataList.add(studentWriteData);
+                    }
                 }
             }
         }
+        
         return dataList;
     }
 

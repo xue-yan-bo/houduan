@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWriteDataService {
@@ -70,51 +72,94 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
         data.setStudentRecordId(studentRecordId);
         Sort sort = Sort.by(Sort.Direction.ASC,"pageNum","indexN");
         List<ClassroomStudentWriteData> list=classroomStudentWriteDataRepository.findAll(Example.of(data),sort);
-        List<ClassroomStudentWriteData> dataList=new ArrayList<>();
-        int pageNum=1;
-        ClassroomStudentWriteData  studentWriteData= null;
-        List<StudentsWriteRecord> studentsWriteRecords = new ArrayList<>();
-        for(ClassroomStudentWriteData writeData:list){
-            if(writeData.getPageNum()==pageNum){
-                if(studentWriteData==null){
-                    studentWriteData = new ClassroomStudentWriteData();
-                    studentWriteData.setId(writeData.getId());
-                    studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
-                    studentWriteData.setStudentId(writeData.getStudentId());
-                    studentWriteData.setPageNum(pageNum);
-                }
-                studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
-            }else{
-                if(studentWriteData==null){
-                    studentWriteData = new ClassroomStudentWriteData();
-                    studentWriteData.setId(writeData.getId());
-                    studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
-                    studentWriteData.setStudentId(writeData.getStudentId());
-                    studentWriteData.setPageNum(writeData.getPageNum());
+        return groupWriteDataByPageNum(list);
+    }
+
+    @Override
+    public List<ClassroomStudentWriteData> findByStudentRecordIds(List<Long> studentRecordIds) {
+        if (studentRecordIds == null || studentRecordIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        // 构建查询条件
+        List<ClassroomStudentWriteData> allWriteData = new ArrayList<>();
+        for (Long studentRecordId : studentRecordIds) {
+            ClassroomStudentWriteData data = new ClassroomStudentWriteData();
+            data.setStudentRecordId(studentRecordId);
+            Sort sort = Sort.by(Sort.Direction.ASC, "pageNum", "indexN");
+            List<ClassroomStudentWriteData> list = classroomStudentWriteDataRepository.findAll(Example.of(data), sort);
+            allWriteData.addAll(list);
+        }
+        
+        return groupWriteDataByPageNum(allWriteData);
+    }
+
+    /**
+     * 按页码分组写数据
+     * @param list 写数据列表
+     * @return 分组后的数据列表
+     */
+    private List<ClassroomStudentWriteData> groupWriteDataByPageNum(List<ClassroomStudentWriteData> list) {
+        List<ClassroomStudentWriteData> dataList = new ArrayList<>();
+        if (list == null || list.isEmpty()) {
+            return dataList;
+        }
+        
+        // 按学生记录 ID 分组
+        Map<Long, List<ClassroomStudentWriteData>> recordIdMap = new HashMap<>();
+        for (ClassroomStudentWriteData writeData : list) {
+            recordIdMap.computeIfAbsent(writeData.getStudentRecordId(), k -> new ArrayList<>()).add(writeData);
+        }
+        
+        // 对每个学生记录的数据进行分页分组
+        for (List<ClassroomStudentWriteData> recordWriteData : recordIdMap.values()) {
+            int pageNum = 1;
+            ClassroomStudentWriteData studentWriteData = null;
+            List<StudentsWriteRecord> studentsWriteRecords = new ArrayList<>();
+            
+            for (ClassroomStudentWriteData writeData : recordWriteData) {
+                if (writeData.getPageNum() == pageNum) {
+                    if (studentWriteData == null) {
+                        studentWriteData = new ClassroomStudentWriteData();
+                        studentWriteData.setId(writeData.getId());
+                        studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
+                        studentWriteData.setStudentId(writeData.getStudentId());
+                        studentWriteData.setPageNum(pageNum);
+                    }
                     studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
-                    pageNum = writeData.getPageNum();
-                }else {
-                    studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
-                    dataList.add(studentWriteData);
-                    pageNum++;
-                    studentWriteData = new ClassroomStudentWriteData();
-                    studentWriteData.setId(writeData.getId());
-                    studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
-                    studentWriteData.setStudentId(writeData.getStudentId());
-                    studentWriteData.setPageNum(writeData.getPageNum());
-                    studentsWriteRecords = new ArrayList<>();
-                    studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
-                    studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
+                } else {
+                    if (studentWriteData == null) {
+                        studentWriteData = new ClassroomStudentWriteData();
+                        studentWriteData.setId(writeData.getId());
+                        studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
+                        studentWriteData.setStudentId(writeData.getStudentId());
+                        studentWriteData.setPageNum(writeData.getPageNum());
+                        studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
+                        pageNum = writeData.getPageNum();
+                    } else {
+                        studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
+                        dataList.add(studentWriteData);
+                        pageNum++;
+                        studentWriteData = new ClassroomStudentWriteData();
+                        studentWriteData.setId(writeData.getId());
+                        studentWriteData.setStudentRecordId(writeData.getStudentRecordId());
+                        studentWriteData.setStudentId(writeData.getStudentId());
+                        studentWriteData.setPageNum(writeData.getPageNum());
+                        studentsWriteRecords = new ArrayList<>();
+                        studentsWriteRecords.addAll(writeData.getStudentsWriteRecords());
+                        studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
+                    }
                 }
-            }
-            //最后一个元素，list增加
-            if(list.indexOf(writeData)==list.size()-1){
-                if(studentsWriteRecords!=null&&studentsWriteRecords.size()>0){
-                    studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
-                    dataList.add(studentWriteData);
+                // 最后一个元素，添加到列表
+                if (recordWriteData.indexOf(writeData) == recordWriteData.size() - 1) {
+                    if (studentsWriteRecords != null && studentsWriteRecords.size() > 0) {
+                        studentWriteData.setStudentsWriteRecords(studentsWriteRecords);
+                        dataList.add(studentWriteData);
+                    }
                 }
             }
         }
+        
         return dataList;
     }
 }

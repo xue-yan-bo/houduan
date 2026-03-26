@@ -72,4 +72,18 @@ public class WrongGroupController {
         wrongGroupService.deleteById(id);
 
     }
+    
+    /**
+     * 更新状态
+     */
+    @PostMapping("/updateStatus")
+    @Operation(summary = "更新错题组卷状态")
+    public WrongGroup updateStatus(@RequestParam Long id, @RequestParam Integer status) {
+        WrongGroup wrongGroup = wrongGroupService.getById(id);
+        if (wrongGroup != null) {
+            wrongGroup.setStatus(status);
+            return wrongGroupService.update(wrongGroup);
+        }
+        return null;
+    }
 }

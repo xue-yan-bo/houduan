@@ -29,11 +29,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Base64Utils;
 import org.springframework.util.CollectionUtils;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -766,6 +768,68 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
     }
 
     /**
+     * 压缩图片
+     *
+     * @param imageBytes 原始图片字节数组
+     * @return 压缩后的图片字节数组
+     * @throws IOException 处理异常
+     */
+    private byte[] compressImage(byte[] imageBytes) throws IOException {
+        // 图片压缩参数
+        final int MAX_WIDTH = 1280;  // 最大宽度
+        final int MAX_HEIGHT = 720;   // 最大高度
+        final float QUALITY = 0.7f;   // 压缩质量
+        
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            // 读取图片
+            BufferedImage image = javax.imageio.ImageIO.read(bais);
+            if (image == null) {
+                return imageBytes; // 无法读取图片，返回原始数据
+            }
+            
+            // 计算压缩后的尺寸
+            int width = image.getWidth();
+            int height = image.getHeight();
+            
+            if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+                // 按比例缩放
+                float scale = Math.min((float) MAX_WIDTH / width, (float) MAX_HEIGHT / height);
+                int newWidth = (int) (width * scale);
+                int newHeight = (int) (height * scale);
+                
+                // 创建缩放后的图片
+                BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+                Graphics2D g2d = resizedImage.createGraphics();
+                g2d.drawImage(image, 0, 0, newWidth, newHeight, null);
+                g2d.dispose();
+                
+                // 压缩图片
+                javax.imageio.ImageIO.write(resizedImage, "jpg", baos);
+            } else {
+                // 图片尺寸合适，只进行质量压缩
+                BufferedImage compressedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+                Graphics2D g2d = compressedImage.createGraphics();
+                g2d.drawImage(image, 0, 0, width, height, null);
+                g2d.dispose();
+                
+                // 获取JPEG编码器
+                javax.imageio.ImageWriter writer = javax.imageio.ImageIO.getImageWritersByFormatName("jpg").next();
+                javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
+                param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+                param.setCompressionQuality(QUALITY);
+                
+                // 写入压缩后的图片
+                writer.setOutput(new javax.imageio.stream.MemoryCacheImageOutputStream(baos));
+                writer.write(null, new javax.imageio.IIOImage(compressedImage, null, null), param);
+                writer.dispose();
+            }
+            
+            return baos.toByteArray();
+        }
+    }
+
+    /**
      * 将图片编码为Base64字符串
      *
      * @param imagePath 图片路径（支持本地文件路径或HTTP URL）
@@ -791,7 +855,9 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 while ((bytesRead = is.read(buffer)) != -1) {
                     baos.write(buffer, 0, bytesRead);
                 }
-                return Base64Utils.encodeToString(baos.toByteArray());
+                // 压缩图片
+                byte[] compressedBytes = compressImage(baos.toByteArray());
+                return Base64Utils.encodeToString(compressedBytes);
             }
         } else {
             // 处理本地文件
@@ -807,7 +873,9 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 while ((bytesRead = fis.read(buffer)) != -1) {
                     baos.write(buffer, 0, bytesRead);
                 }
-                return Base64Utils.encodeToString(baos.toByteArray());
+                // 压缩图片
+                byte[] compressedBytes = compressImage(baos.toByteArray());
+                return Base64Utils.encodeToString(compressedBytes);
             }
         }
     }

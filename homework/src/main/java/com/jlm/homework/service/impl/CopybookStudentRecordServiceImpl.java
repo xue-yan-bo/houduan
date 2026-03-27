@@ -2,8 +2,10 @@ package com.jlm.homework.service.impl;
 
 import com.jlm.homework.dto.Copybook2Board;
 import com.jlm.homework.dto.CopybookStatistics;
+import com.jlm.homework.entity.Copybook;
 import com.jlm.homework.entity.CopybookStudentRecord;
 import com.jlm.homework.entity.CopybookStudentWriteData;
+import com.jlm.homework.repository.CopybookRepository;
 import com.jlm.homework.repository.CopybookStudentRecordRepository;
 import com.jlm.homework.service.ICopybookStudentRecordService;
 import com.jlm.homework.service.ICopybookStudentWriteDataService;
@@ -302,6 +304,9 @@ public class CopybookStudentRecordServiceImpl implements ICopybookStudentRecordS
         return copybookStudentRecordRepository.findAll(Example.of(copybookStudentRecord),pageable);
     }
 
+    @Autowired
+    private CopybookRepository copybookRepository;
+
     @Override
     public List<CopybookStatistics.ClassCopybookStatistics> getClassCopybookStatistics(Long classId) {
         // 查询该班级的所有学生字帖记录
@@ -340,6 +345,17 @@ public class CopybookStudentRecordServiceImpl implements ICopybookStudentRecordS
             stats.setCompletionPercentage(completionPercentage);
             result.add(stats);
         }
+
+        // 按字帖创建时间倒序排序
+        result.sort((s1, s2) -> {
+            Copybook copybook1 = copybookRepository.findById(s1.getCopybookId()).orElse(null);
+            Copybook copybook2 = copybookRepository.findById(s2.getCopybookId()).orElse(null);
+            if (copybook1 == null || copybook2 == null) {
+                return 0;
+            }
+            return copybook2.getCreateTime().compareTo(copybook1.getCreateTime());
+        });
+
         return result;
     }
 

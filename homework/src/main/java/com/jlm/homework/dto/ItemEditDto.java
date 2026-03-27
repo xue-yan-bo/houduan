@@ -14,5 +14,6 @@ public class ItemEditDto implements Serializable {
     private String name;
     private Long studentId;
     private String studentName;
+    private String generateType; 
     private List<ItemSaveDto> itemSaveDtoList;
 }

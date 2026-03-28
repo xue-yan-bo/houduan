@@ -369,6 +369,8 @@ public class WordToPdfUtil {
             
             // 转换为PDF
             try (FileOutputStream fos = new FileOutputStream(outputPath)) {
+                // 使用Docx4J.toPDF方法，它会使用默认的PDF转换设置
+                // 这些设置已经能够保持基本的布局
                 Docx4J.toPDF(wordMLPackage, fos);
             }
             

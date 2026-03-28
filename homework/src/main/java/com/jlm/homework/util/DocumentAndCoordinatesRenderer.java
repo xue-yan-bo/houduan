@@ -11,6 +11,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -21,9 +22,7 @@ import java.util.List;
  * 实现从URL下载.docx文档、转换为图片并叠加StudentsWriteRecord坐标点
  */
 public class DocumentAndCoordinatesRenderer {
-    
 
-    
     /**
      * 从URL下载文档并保存到临时文件
      * 
@@ -39,7 +38,13 @@ public class DocumentAndCoordinatesRenderer {
         // 处理URL编码问题，特别是文件名中的中文和特殊字符
         try {
             // 解析URL，分别编码路径部分
-            URL originalUrl = new URL(documentUrl);
+            URL originalUrl = null;
+            try {
+                originalUrl = new URL(documentUrl);
+            } catch (MalformedURLException e) {
+                String internalUrl = ImageOverlayUtil.convertToInternalUrl(documentUrl);
+                originalUrl = new URL(internalUrl);
+            }
             String protocol = originalUrl.getProtocol();
             String host = originalUrl.getHost();
             int port = originalUrl.getPort();

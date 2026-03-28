@@ -122,9 +122,13 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                     if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
                                         wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
                                     }
-                                    // 添加：设置科目信息
+                                    // 设置科目信息
                                     if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(finalStudentsHomework.getSubject())) {
                                         wrongTitleBook.setSubject(finalStudentsHomework.getSubject());
+                                    }
+                                    // 设置年级信息
+                                    if (StringUtils.isEmpty(wrongTitleBook.getGrade()) && StringUtils.isNotEmpty(finalStudentsHomework.getGrade())) {
+                                        wrongTitleBook.setGrade(finalStudentsHomework.getGrade());
                                     }
                                     wrongTitleBook.setTitleImage(question.getCroppedUrl());
                                     wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
@@ -174,6 +178,10 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                             if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(finalStudentsHomework.getSubject())) {
                                 wrongTitleBook.setSubject(finalStudentsHomework.getSubject());
                             }
+                            // 添加：设置年级信息
+                            if (StringUtils.isEmpty(wrongTitleBook.getGrade()) && StringUtils.isNotEmpty(finalStudentsHomework.getGrade())) {
+                                wrongTitleBook.setGrade(finalStudentsHomework.getGrade());
+                            }
                             wrongTitleBook.setTitleImage(question.getCroppedUrl());
                             wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                             wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
@@ -216,6 +224,10 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(wrongTitleBook.getStudentId());
             if (resultDto != null && resultDto.getData() != null) {
                 wrongTitleBook.setSchoolId(resultDto.getData().getSchoolId());
+                // 添加：设置年级信息
+                if (StringUtils.isEmpty(wrongTitleBook.getGrade())) {
+                    wrongTitleBook.setGrade(resultDto.getData().getGradeName());
+                }
             }
         }
         wrongTitleBook.setCreateTime(new Date());
@@ -257,9 +269,11 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     private void addClassWrongTitle(WrongTitleBook wrongTitleBook) {
         Integer studentNum = 0;
         Long schoolId = null;
+        String grade = null;
         ResultDto<Student> resultDto= studentFeignClient.getStudentInfo(wrongTitleBook.getStudentId());
         if(resultDto!=null&&resultDto.getData()!=null){
             schoolId = resultDto.getData().getSchoolId();
+            grade = resultDto.getData().getGradeName();
         }
         if(wrongTitleBook.getClassId()!=null&&schoolId!=null){
             Result<Student> result = studentFeignClient.getStudentList(1,200,schoolId,null,wrongTitleBook.getClassId(),"0");
@@ -295,6 +309,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             newWrongTitle.setClassId(wrongTitleBook.getClassId());
             newWrongTitle.setSchoolId(wrongTitleBook.getSchoolId());
             newWrongTitle.setSubject(wrongTitleBook.getSubject());
+            newWrongTitle.setGrade(grade);
             newWrongTitle.setQuestionId(wrongTitleBook.getQuestionId());
             newWrongTitle.setTitleBigNo(wrongTitleBook.getTitleBigNo());
             newWrongTitle.setTitleSmallNo(wrongTitleBook.getTitleSmallNo());

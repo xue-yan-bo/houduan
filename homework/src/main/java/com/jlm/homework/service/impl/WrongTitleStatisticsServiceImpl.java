@@ -112,6 +112,15 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
             if(StringUtils.isEmpty(wrongTitleBook.getSource())){
                 wrongTitleBook.setSource(null);
             }
+            if(StringUtils.isEmpty(wrongTitleBook.getSubject())){
+                wrongTitleBook.setSubject(null);
+            }
+            if(StringUtils.isEmpty(wrongTitleBook.getGrade())){
+                wrongTitleBook.setGrade(null);
+            }
+            if(wrongTitleBook.getSchoolId() != null && wrongTitleBook.getSchoolId() == 0){
+                wrongTitleBook.setSchoolId(null);
+            }
         }
         return wrongTitleStatisticsRepository.findAll(Example.of(wrongTitleBook),pageable);
     }

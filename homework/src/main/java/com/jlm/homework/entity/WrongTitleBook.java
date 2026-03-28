@@ -70,6 +70,12 @@ public class WrongTitleBook {
      /**
       * 班级ID
       */
+    /**
+     * 年级
+     */
+    @Column(name = "grade")
+    private String grade;
+
      @Column(name = "class_id")
      private Long classId;
      /**

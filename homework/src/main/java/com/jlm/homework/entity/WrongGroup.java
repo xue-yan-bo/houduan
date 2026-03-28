@@ -68,4 +68,10 @@ public class WrongGroup {
      */
     @Column(name = "generate_type")
     private String generateType;
+    
+    /**
+     * 生成类型：1原题生成、2变式题生成
+     */
+    @Column(name = "question_generate_type")
+    private String questionGenerateType;
 }

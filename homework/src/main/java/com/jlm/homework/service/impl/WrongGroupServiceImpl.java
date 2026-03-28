@@ -68,6 +68,10 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
 
     @Override
     public WrongGroup addGroup(WrongGroup wrongGroup) {
+        Date now = new Date();
+        if (wrongGroup.getCreateTime() == null) {
+            wrongGroup.setCreateTime(now);
+        }
         return wrongGroupRepository.save(wrongGroup);
     }
 
@@ -89,7 +93,10 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
     public Page<WrongGroup> selectList(Integer pageNum, Integer pageSize, WrongGroup wrongGroup) {
         pageNum = pageNum == null ? 0 : pageNum-1;
         pageSize = pageSize == null ? 10 : pageSize;
-        Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
+        // 排序时将null值放在最后
+        Sort sort = Sort.by(
+            Sort.Order.desc("createTime").nullsLast()
+        );
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
         
         // 使用Specification构建查询条件，支持name字段的模糊查询

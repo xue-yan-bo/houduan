@@ -223,6 +223,7 @@ public class ClassroomExercisesStudentAnswerServiceImpl implements IClassroomExe
                 }else {
                     condition2 = criteriaBuilder.conjunction();
                 }
+
                 Predicate condition3 = null;
                 if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");

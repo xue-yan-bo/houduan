@@ -191,4 +191,14 @@ public class ClassroomTearcherApproveStuServiceImpl implements IClassroomTearche
             }
         }
     }
+
+    @Override
+    public List<ClassroomTearcherApproveStu> getTeacherApproveStuListByExercisesId(Long classroomExercisesId,Long teacherId) {
+        ClassroomTearcherApproveStu data=new ClassroomTearcherApproveStu();
+        data.setClassroomExercisesId(classroomExercisesId);
+        data.setTeacherId(teacherId);
+        Sort sort = Sort.by(Sort.Direction.ASC,"pageNum","indexN","createTime");
+        List<ClassroomTearcherApproveStu> list=classroomTearcherApproveStuRepository.findAll(Example.of(data),sort);
+        return list;
+    }
 }

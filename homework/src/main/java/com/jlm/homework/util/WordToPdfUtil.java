@@ -6,6 +6,7 @@ import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import lombok.extern.slf4j.Slf4j;
 import org.docx4j.Docx4J;
+import org.docx4j.convert.out.FOSettings;
 import org.docx4j.fonts.IdentityPlusMapper;
 import org.docx4j.fonts.Mapper;
 import org.docx4j.fonts.PhysicalFont;
@@ -349,6 +350,7 @@ public class WordToPdfUtil {
 
     /**
      * 使用docx4j转换Word到PDF - 纯Java方案
+     * 保持原有页面布局和分页设置
      */
     private void convertWithDocx4j(String inputPath, String outputPath) throws Exception {
         log.info("使用docx4j转换Word到PDF: {} -> {}", inputPath, outputPath);
@@ -367,11 +369,16 @@ public class WordToPdfUtil {
                     mainDocumentPart.getContent() != null ? mainDocumentPart.getContent().size() + " 个元素" : "空");
             }
             
-            // 转换为PDF
+            // 转换为PDF - 使用FOSettings保持页面布局
             try (FileOutputStream fos = new FileOutputStream(outputPath)) {
-                // 使用Docx4J.toPDF方法，它会使用默认的PDF转换设置
-                // 这些设置已经能够保持基本的布局
-                Docx4J.toPDF(wordMLPackage, fos);
+                // 创建FOSettings来配置PDF输出
+                FOSettings foSettings = Docx4J.createFOSettings();
+                foSettings.setWmlPackage(wordMLPackage);
+                
+                // 字体映射器已经通过wordMLPackage.setFontMapper(fontMapper)设置过了
+                
+                // 使用FO转换器，它会更好地保持页面布局
+                Docx4J.toFO(foSettings, fos, Docx4J.FLAG_EXPORT_PREFER_XSL);
             }
             
             log.info("docx4j转换完成: {}", outputPath);
@@ -381,6 +388,8 @@ public class WordToPdfUtil {
             throw new Exception("Word转PDF失败: " + e.getMessage(), e);
         }
     }
+    
+
 
     /**
      * 转换MinIO中的Word文档为PDF

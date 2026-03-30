@@ -4,6 +4,7 @@ import com.jlm.homework.dto.ExerciseWriteData;
 import com.jlm.homework.dto.StudentWriteDto;
 import com.jlm.homework.dto.TeacherWriteDto;
 import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
+import com.jlm.homework.entity.ClassroomTearcherApproveStu;
 import com.jlm.homework.service.IClassroomExercisesStudentRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -105,13 +106,23 @@ public class ClassroomExercisesStudentRecordController {
         return recordList;
     }
     /**
-     * 获取学生直播记录
+     * 获取老师直播记录
      */
     @GetMapping("/liveStreamtRecordTeacher")
     @Operation(summary = "获取老师直播记录")
     public TeacherWriteDto getLiveStreamtRecordTeacher(Long classroomExercisesId){
         TeacherWriteDto teacherWriteDto= classroomExercisesStudentRecordService.getLiveStreamtRecordTeacher(classroomExercisesId);
         return teacherWriteDto;
+    }
+
+    /**
+     * 获取对老师作答批改笔记
+     */
+    @GetMapping("/teacherApproveStuList")
+    @Operation(summary = "获取对老师作答批改笔记")
+    public List<ClassroomTearcherApproveStu> getTeacherApproveStuList(Long classroomExercisesId,Long teacherId){
+        List<ClassroomTearcherApproveStu> tearcherApproveStuList= classroomExercisesStudentRecordService.getTeacherApproveStuList(classroomExercisesId,teacherId);
+        return tearcherApproveStuList;
     }
 
     /**

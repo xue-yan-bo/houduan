@@ -58,4 +58,16 @@ public class ClassroomTearcherApproveStu {
     @Column(name = "create_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;
+
+    /**
+     * 课堂联系Id
+     */
+    @Column(name = "classroom_exercises_id")
+    private Long classroomExercisesId;
+
+    /**
+     * 课堂联系Id
+     */
+    @Column(name = "teacher_id")
+    private Long teacherId;
 }

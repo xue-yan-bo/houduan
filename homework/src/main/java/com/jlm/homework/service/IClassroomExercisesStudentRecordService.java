@@ -5,6 +5,7 @@ import com.jlm.homework.dto.ExerciseWriteData;
 import com.jlm.homework.dto.StudentWriteDto;
 import com.jlm.homework.dto.TeacherWriteDto;
 import com.jlm.homework.entity.ClassroomExercisesStudentRecord;
+import com.jlm.homework.entity.ClassroomTearcherApproveStu;
 
 import java.util.List;
 
@@ -41,4 +42,6 @@ public interface IClassroomExercisesStudentRecordService {
     void aiParseWriteMid(Long studentRecordId);
 
     void aiResultDeal(Long studentRecordId, List<SubQuestionsEnt> answers);
+
+    List<ClassroomTearcherApproveStu> getTeacherApproveStuList(Long classroomExercisesId,Long teacherId);
 }

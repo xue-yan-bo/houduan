@@ -251,8 +251,13 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                     
                     if(tearcherApproveStuList!=null&&tearcherApproveStuList.size()>0){
                         for(ClassroomTearcherApproveStu approveStu:tearcherApproveStuList){
-                            if (Long.compare(approveStu.getStudentId(), record.getStudentId()) == 0) {
+                            if (approveStu.getStudentId()!=null&&Long.compare(approveStu.getStudentId(), record.getStudentId()) == 0) {
+                                approveStu.setClassroomExercisesId(record.getClassroomExercisesId());
                                 approveStu.setStudentRecordId(record.getId());
+                                approveStusToSave.add(approveStu);
+                            } else if (approveStu.getTeacherId()!=null) {
+                                approveStu.setClassroomExercisesId(exercisesId);
+                                approveStu.setTeacherId(approveStu.getTeacherId());
                                 approveStusToSave.add(approveStu);
                             }
                         }
@@ -741,6 +746,11 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         if(statistics!=null) {
             messagingTemplate.convertAndSend("/classroom/aiResult/" + studentRecord.getClassroomExercisesId(), statistics);
         }
+    }
+
+    @Override
+    public List<ClassroomTearcherApproveStu> getTeacherApproveStuList(Long classroomExercisesId,Long teacherId) {
+        return classroomTearcherApproveStuService.getTeacherApproveStuListByExercisesId(classroomExercisesId,teacherId);
     }
 
     @Override

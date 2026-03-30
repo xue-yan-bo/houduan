@@ -354,6 +354,10 @@ public class HandwritingHandler implements MessageHandler {
                         } catch (Exception ex) {
                             log.error("反馈数据分批保存也失败: {}", ex.getMessage(), ex);
                         }
+                    }else{
+                        handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), context.getFeedbackSubject(), context.getStudentsFeedbackRecords());
+                        context.setStudentsFeedbackRecords(new ArrayList<>());
+                        saveSessionContextToRedis(context);
                     }
                 }
             }

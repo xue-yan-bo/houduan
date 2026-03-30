@@ -378,7 +378,7 @@ public class DocumentAndCoordinatesRenderer {
                         // 添加空值检查和长度限制
                         if (paragraph != null && paragraph.length() > 0) {
                             try {
-                                // 安全处理段落文本
+                                // 安全处理段落文本，确保编码正确
                                 String safeParagraph = paragraph.replaceAll("[\\r\\n]+", "\n").trim();
                                 if (safeParagraph.length() > 0) {
                                     content.append(safeParagraph).append("\n");
@@ -436,7 +436,25 @@ public class DocumentAndCoordinatesRenderer {
         
         // 添加文档内容（简化实现）
         g2d.setColor(Color.BLACK);
-        g2d.setFont(new Font("SimSun", Font.PLAIN, 12));
+        // 尝试使用系统默认字体，确保支持中文
+        Font font = null;
+        try {
+            // 尝试使用中文字体
+            font = new Font("SimSun", Font.PLAIN, 12);
+            // 验证字体是否可用
+            if (!font.getFamily().equals("SimSun")) {
+                // 如果SimSun不可用，尝试其他中文字体
+                font = new Font("宋体", Font.PLAIN, 12);
+                if (!font.getFamily().equals("宋体")) {
+                    // 如果都不可用，使用系统默认字体
+                    font = Font.decode(null);
+                }
+            }
+        } catch (Exception e) {
+            // 字体创建失败，使用系统默认字体
+            font = Font.decode(null);
+        }
+        g2d.setFont(font);
         
         // 检测文件扩展名和基本验证
         String fileName = docFile.getName().toLowerCase();

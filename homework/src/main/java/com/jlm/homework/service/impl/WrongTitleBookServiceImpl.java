@@ -128,6 +128,12 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                     wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                                     wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
                                     wrongTitleBook.setTitleSmallNo(question.getTitleSmallNo());
+                                    // 给刚创建的错题默认加上 duplicateStatus = 0 (解析中)，以便前端识别
+                                    wrongTitleBook.setDuplicateStatus(0);
+
+                                    // 先保存第一遍，拿到 ID 并且让数据库里有一条"解析中"的记录
+                                    wrongTitleBookRepository.save(wrongTitleBook);
+                                    // 随后立刻提取文本(如果需要)并跑 AI 分析和查重
                                     extractImageTextIfEmpty(wrongTitleBook);
                                     wrongTitleBookRepository.save(wrongTitleBook);
                                     aiChart(wrongTitleBook.getId());
@@ -177,6 +183,12 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                             wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                             wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
                             wrongTitleBook.setTitleSmallNo(question.getTitleSmallNo());
+                            // 给刚创建的错题默认加上 duplicateStatus = 0 (解析中)，以便前端识别
+                            wrongTitleBook.setDuplicateStatus(0);
+
+                            // 先保存第一遍，拿到 ID 并且让数据库里有一条"解析中"的记录
+                            wrongTitleBookRepository.save(wrongTitleBook);
+                            // 随后立刻提取文本(如果需要)并跑 AI 分析和查重
                             extractImageTextIfEmpty(wrongTitleBook);
                             wrongTitleBookRepository.save(wrongTitleBook);
                             aiChart(wrongTitleBook.getId());
@@ -223,6 +235,9 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         if(StringUtils.isEmpty(wrongTitleBook.getSource())){
             wrongTitleBook.setSource("学生自加");
         }
+        if(isNew) {
+            wrongTitleBook.setDuplicateStatus(0); // 刚添加的标记为0解析中
+        }
         wrongTitleBookRepository.save(wrongTitleBook);
         if(!isNew){
             return Result.success("该错题已存在");
@@ -250,7 +265,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         });
         Thread thread = new Thread(futureTask);
         thread.start();
-        return Result.success("错题添加成功，后台正在解析并查重");
+        return Result.success("错题添加成功，后台正在解析并查重", java.util.Collections.singletonList(wrongTitleBook));
     }
 
     private void addClassWrongTitle(WrongTitleBook wrongTitleBook) {
@@ -386,23 +401,19 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                             }
 
                             // 根据最高相似度打标记
-                            if (mostSimilarBook != null) {
-                                if (maxSimilarity >= 0.90) {
-                                    // 相似度 >= 90%，直接合并废弃当前题
-                                    wrongTitleBook.setDuplicateStatus(2); // 2=已合并废弃
-                                    wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
+                            if (mostSimilarBook != null && maxSimilarity > 0.80) {
+                                // 相似度 > 80%，直接合并废弃当前题
+                                wrongTitleBook.setDuplicateStatus(2); // 2=已合并废弃
+                                wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
 
-                                    // 把历史那道老题目的错误次数 + 1
-                                    Integer oldErrorCount = mostSimilarBook.getErrorCount() == null ? 1 : mostSimilarBook.getErrorCount();
-                                    mostSimilarBook.setErrorCount(oldErrorCount + 1);
-                                    // 提前保存老题目的修改
-                                    wrongTitleBookRepository.save(mostSimilarBook);
-                                } else if (maxSimilarity >= 0.70) {
-                                    // 相似度 70% ~ 90%，疑似重复，待老师或学生手动确认
-                                    wrongTitleBook.setDuplicateStatus(1); // 1=待确认合并
-                                    wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
-                                }
-                                // 其他情况（<70%），视为新题，保持默认状态 0（正常）和 error_count=1
+                                // 把历史那道老题目的错误次数 + 1
+                                Integer oldErrorCount = mostSimilarBook.getErrorCount() == null ? 1 : mostSimilarBook.getErrorCount();
+                                mostSimilarBook.setErrorCount(oldErrorCount + 1);
+                                // 提前保存老题目的修改
+                                wrongTitleBookRepository.save(mostSimilarBook);
+                            } else {
+                                // 其他情况（<=80% 或者没有历史题），视为全新题，标记为 3（解析完成的新题）
+                                wrongTitleBook.setDuplicateStatus(3); // 3=解析完成的全新题
                             }
                         } else if (wrongTitleBook.getStudentId() != null) {
                             // 降级策略：如果没有班级ID，至少按学生个人查重
@@ -424,17 +435,14 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                 }
                             }
 
-                            if (mostSimilarBook != null) {
-                                if (maxSimilarity >= 0.90) {
-                                    wrongTitleBook.setDuplicateStatus(2);
-                                    wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
-                                    Integer oldErrorCount = mostSimilarBook.getErrorCount() == null ? 1 : mostSimilarBook.getErrorCount();
-                                    mostSimilarBook.setErrorCount(oldErrorCount + 1);
-                                    wrongTitleBookRepository.save(mostSimilarBook);
-                                } else if (maxSimilarity >= 0.70) {
-                                    wrongTitleBook.setDuplicateStatus(1);
-                                    wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
-                                }
+                            if (mostSimilarBook != null && maxSimilarity > 0.80) {
+                                wrongTitleBook.setDuplicateStatus(2); // 2=已合并废弃
+                                wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
+                                Integer oldErrorCount = mostSimilarBook.getErrorCount() == null ? 1 : mostSimilarBook.getErrorCount();
+                                mostSimilarBook.setErrorCount(oldErrorCount + 1);
+                                wrongTitleBookRepository.save(mostSimilarBook);
+                            } else {
+                                wrongTitleBook.setDuplicateStatus(3); // 3=解析完成的全新题
                             }
                         }
                         // ----------- 去重逻辑结束 -----------

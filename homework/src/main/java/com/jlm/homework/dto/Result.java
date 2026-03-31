@@ -16,4 +16,12 @@ public class Result <T>{
         result.setMsg(msg);
         return result;
     }
+
+    public static <T> Result<T> success(String msg, List<T> rows) {
+        Result<T> result = new Result<>();
+        result.setCode(200);
+        result.setMsg(msg);
+        result.setRows(rows);
+        return result;
+    }
 }

@@ -198,7 +198,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     }
 
     @Override
-    public void addWrongBook(WrongTitleBook wrongTitleBook) {
+    public Result<Object> addWrongBook(WrongTitleBook wrongTitleBook) {
         boolean isNew = true;
         if (wrongTitleBook.getQuestionId() != null && wrongTitleBook.getStudentId() != null) {
             WrongTitleBook search = new WrongTitleBook();
@@ -211,12 +211,6 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 wrongTitleBook.setId(soWrongTitle.getId());
                 isNew = false;
             }
-        } else if (wrongTitleBook.getStudentId() != null) {
-            // 新增逻辑：没有 questionId 时（比如老师手动上传），按当前学生的错题数量生成递增题号
-            WrongTitleBook countSearch = new WrongTitleBook();
-            countSearch.setStudentId(wrongTitleBook.getStudentId());
-            long count = wrongTitleBookRepository.count(Example.of(countSearch));
-            wrongTitleBook.setTitleBigNo(String.valueOf(count + 1));
         }
         if (wrongTitleBook.getSchoolId() == null && wrongTitleBook.getStudentId() != null) {
             ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(wrongTitleBook.getStudentId());
@@ -231,7 +225,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         }
         wrongTitleBookRepository.save(wrongTitleBook);
         if(!isNew){
-            return;
+            return Result.success("该错题已存在");
         }
         if(wrongTitleBook.getStudentsHomeworkId()!=null) {
             Optional<StudentsHomeworkNew> optional = studentsHomeworkNewRepository.findById(wrongTitleBook.getStudentsHomeworkId());
@@ -256,6 +250,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         });
         Thread thread = new Thread(futureTask);
         thread.start();
+        return Result.success("错题添加成功，后台正在解析并查重");
     }
 
     private void addClassWrongTitle(WrongTitleBook wrongTitleBook) {
@@ -366,10 +361,12 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                     if (StringUtils.isNotEmpty(text)) {
                         wrongTitleBook.setTitleContext(text);
                         // ----------- 新增：异步去重查重核心逻辑 -----------
-                        if (wrongTitleBook.getStudentId() != null) {
+                        // 查询范围扩大到当前班级 (不仅限当前学生)
+                        if (wrongTitleBook.getClassId() != null) {
                             WrongTitleBook search = new WrongTitleBook();
-                            search.setStudentId(wrongTitleBook.getStudentId());
-                            // 查找该学生所有的历史错题
+                            search.setClassId(wrongTitleBook.getClassId());
+
+                            // 查找该班级所有的历史错题
                             java.util.List<WrongTitleBook> historyBooks = wrongTitleBookRepository.findAll(Example.of(search));
 
                             double maxSimilarity = 0.0;
@@ -394,6 +391,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                     // 相似度 >= 90%，直接合并废弃当前题
                                     wrongTitleBook.setDuplicateStatus(2); // 2=已合并废弃
                                     wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
+
                                     // 把历史那道老题目的错误次数 + 1
                                     Integer oldErrorCount = mostSimilarBook.getErrorCount() == null ? 1 : mostSimilarBook.getErrorCount();
                                     mostSimilarBook.setErrorCount(oldErrorCount + 1);
@@ -405,6 +403,38 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                     wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
                                 }
                                 // 其他情况（<70%），视为新题，保持默认状态 0（正常）和 error_count=1
+                            }
+                        } else if (wrongTitleBook.getStudentId() != null) {
+                            // 降级策略：如果没有班级ID，至少按学生个人查重
+                            WrongTitleBook search = new WrongTitleBook();
+                            search.setStudentId(wrongTitleBook.getStudentId());
+                            java.util.List<WrongTitleBook> historyBooks = wrongTitleBookRepository.findAll(Example.of(search));
+
+                            double maxSimilarity = 0.0;
+                            WrongTitleBook mostSimilarBook = null;
+
+                            for (WrongTitleBook history : historyBooks) {
+                                if (history.getId().equals(wrongTitleBook.getId()) || StringUtils.isEmpty(history.getTitleContext())) {
+                                    continue;
+                                }
+                                double similarity = com.jlm.homework.util.TextSimilarityUtil.getSimilarity(text, history.getTitleContext());
+                                if (similarity > maxSimilarity) {
+                                    maxSimilarity = similarity;
+                                    mostSimilarBook = history;
+                                }
+                            }
+
+                            if (mostSimilarBook != null) {
+                                if (maxSimilarity >= 0.90) {
+                                    wrongTitleBook.setDuplicateStatus(2);
+                                    wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
+                                    Integer oldErrorCount = mostSimilarBook.getErrorCount() == null ? 1 : mostSimilarBook.getErrorCount();
+                                    mostSimilarBook.setErrorCount(oldErrorCount + 1);
+                                    wrongTitleBookRepository.save(mostSimilarBook);
+                                } else if (maxSimilarity >= 0.70) {
+                                    wrongTitleBook.setDuplicateStatus(1);
+                                    wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
+                                }
                             }
                         }
                         // ----------- 去重逻辑结束 -----------
@@ -456,6 +486,42 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             old.setStudentAnswer(wrongTitleBook.getStudentAnswer());
         }
         wrongTitleBookRepository.save(old);
+    }
+
+    @Override
+    public void confirmDuplicate(Long id) {
+        Optional<WrongTitleBook> optional = wrongTitleBookRepository.findById(id);
+        if (optional.isPresent()) {
+            WrongTitleBook wrongTitleBook = optional.get();
+            if (wrongTitleBook.getDuplicateStatus() != null && wrongTitleBook.getDuplicateStatus() == 1 && wrongTitleBook.getDuplicateOf() != null) {
+                // 将疑似重复标记为确定废弃
+                wrongTitleBook.setDuplicateStatus(2);
+
+                // 更新母题的错误次数
+                Optional<WrongTitleBook> parentOpt = wrongTitleBookRepository.findById(wrongTitleBook.getDuplicateOf());
+                if (parentOpt.isPresent()) {
+                    WrongTitleBook parentBook = parentOpt.get();
+                    Integer oldErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
+                    parentBook.setErrorCount(oldErrorCount + 1);
+                    wrongTitleBookRepository.save(parentBook);
+                }
+                wrongTitleBookRepository.save(wrongTitleBook);
+            }
+        }
+    }
+
+    @Override
+    public void rejectDuplicate(Long id) {
+        Optional<WrongTitleBook> optional = wrongTitleBookRepository.findById(id);
+        if (optional.isPresent()) {
+            WrongTitleBook wrongTitleBook = optional.get();
+            if (wrongTitleBook.getDuplicateStatus() != null && wrongTitleBook.getDuplicateStatus() == 1) {
+                // 拒绝合并，作为全新的错题
+                wrongTitleBook.setDuplicateStatus(0);
+                wrongTitleBook.setDuplicateOf(null);
+                wrongTitleBookRepository.save(wrongTitleBook);
+            }
+        }
     }
 
     @Override

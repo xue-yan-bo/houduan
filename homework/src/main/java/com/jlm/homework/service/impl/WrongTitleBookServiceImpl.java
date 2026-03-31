@@ -281,7 +281,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 wrongTitleStatistics.setWrongStudentNum(wrongStudentNum);
             }
             if(studentNum!=0){
-                Double wrongRate = BigDecimal.valueOf(wrongStudentNum).divide(BigDecimal.valueOf(studentNum),4,BigDecimal.ROUND_HALF_UP)
+                Double wrongRate = BigDecimal.valueOf(wrongStudentNum).divide(BigDecimal.valueOf(studentNum), 4, java.math.RoundingMode.HALF_UP)
                         .doubleValue();
                 wrongTitleStatistics.setWrongRate(wrongRate);
             }
@@ -313,10 +313,10 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             }
             newWrongTitle.setWrongStudentNum(1);
             if(studentNum!=0){
-                Double wrongRate = BigDecimal.valueOf(1).divide(BigDecimal.valueOf(studentNum),4,BigDecimal.ROUND_HALF_UP)
+                Double wrongRate = BigDecimal.valueOf(1).divide(BigDecimal.valueOf(studentNum), 4, java.math.RoundingMode.HALF_UP)
                         .doubleValue();
                 newWrongTitle.setWrongRate(wrongRate);
-            };
+            }
             newWrongTitle.setCreateDate(new Date());
             wrongTitleStatisticsRepository.save(newWrongTitle);
         }

@@ -9,4 +9,11 @@ public class Result <T>{
     private Integer code;
     private String msg;
     private List<T> rows;
+
+    public static <T> Result<T> success(String msg) {
+        Result<T> result = new Result<>();
+        result.setCode(200);
+        result.setMsg(msg);
+        return result;
+    }
 }

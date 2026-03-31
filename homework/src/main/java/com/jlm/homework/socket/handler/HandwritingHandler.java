@@ -330,7 +330,8 @@ public class HandwritingHandler implements MessageHandler {
                 // 保存反馈数据但不更新feedbackId
                 try {
                     List<StudentsWriteRecord> recordsToSave = new ArrayList<>(context.getStudentsFeedbackRecords());
-                    handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), context.getFeedbackSubject(), recordsToSave);
+                    Long feedbackId =handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), context.getFeedbackSubject(), recordsToSave);
+                    context.setFeedbackId(feedbackId);
                     // 只有在保存成功后才清空列表
                     context.setStudentsFeedbackRecords(new ArrayList<>());
                     saveSessionContextToRedis(context);

@@ -305,7 +305,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
         // 2. 准备请求参数
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+        requestBody.put("model", "glm-4.6v"); // 使用GLM-4V多模态模型
 
         // 构建messages参数
         Map<String, Object> message = new HashMap<>();
@@ -366,7 +366,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
         // 2. 准备请求参数
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+        requestBody.put("model", "glm-4.6v"); // 使用GLM-4V多模态模型
 
         // 构建messages参数
         Map<String, Object> message = new HashMap<>();
@@ -470,7 +470,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
         // 1. 准备请求参数
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+        requestBody.put("model", "glm-4.6v"); // 使用GLM-4V多模态模型
         // 构建messages参数
         Map<String, Object> message = new HashMap<>();
         message.put("role", "user");
@@ -1239,7 +1239,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
         // 2. 准备请求参数
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+        requestBody.put("model", "glm-4.6v"); // 使用GLM-4V多模态模型
 
         // 构建messages参数
         Map<String, Object> message = new HashMap<>();
@@ -1285,7 +1285,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
     public String analyzeToJson(String prompt) throws IOException {
         // 1. 准备请求参数
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+        requestBody.put("model", "glm-4.6v"); // 使用GLM-4V多模态模型
 
         // 构建messages参数
         Map<String, Object> message = new HashMap<>();

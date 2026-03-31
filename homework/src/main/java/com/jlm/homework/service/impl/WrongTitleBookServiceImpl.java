@@ -4,7 +4,6 @@ import ai.z.openapi.service.image.ImageResult;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.nacos.shaded.com.google.gson.JsonObject;
-import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.dto.Result;
 import com.jlm.homework.dto.ResultDto;
 import com.jlm.homework.entity.*;
@@ -49,11 +48,10 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     @Autowired
     private StudentFeignClient studentFeignClient;
     @Autowired
-    private ZhipuAIConfig zhipuAIConfig;
-    @Autowired
     private AIUtil aiUtil;
     @Override
     public WrongTitleBook save(WrongTitleBook wrongTitleBook) {
+        extractImageTextIfEmpty(wrongTitleBook);
         return wrongTitleBookRepository.save(wrongTitleBook);
     }
 
@@ -122,18 +120,15 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                     if (wrongTitleBook.getSchoolId() == null && finalStudentsHomework.getSchoolId() != null) {
                                         wrongTitleBook.setSchoolId(finalStudentsHomework.getSchoolId());
                                     }
-                                    // 设置科目信息
+                                    // 添加：设置科目信息
                                     if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(finalStudentsHomework.getSubject())) {
                                         wrongTitleBook.setSubject(finalStudentsHomework.getSubject());
-                                    }
-                                    // 设置年级信息
-                                    if (StringUtils.isEmpty(wrongTitleBook.getGrade()) && StringUtils.isNotEmpty(finalStudentsHomework.getGrade())) {
-                                        wrongTitleBook.setGrade(finalStudentsHomework.getGrade());
                                     }
                                     wrongTitleBook.setTitleImage(question.getCroppedUrl());
                                     wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                                     wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
                                     wrongTitleBook.setTitleSmallNo(question.getTitleSmallNo());
+                                    extractImageTextIfEmpty(wrongTitleBook);
                                     wrongTitleBookRepository.save(wrongTitleBook);
                                     aiChart(wrongTitleBook.getId());
                                 }
@@ -178,14 +173,11 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                             if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(finalStudentsHomework.getSubject())) {
                                 wrongTitleBook.setSubject(finalStudentsHomework.getSubject());
                             }
-                            // 添加：设置年级信息
-                            if (StringUtils.isEmpty(wrongTitleBook.getGrade()) && StringUtils.isNotEmpty(finalStudentsHomework.getGrade())) {
-                                wrongTitleBook.setGrade(finalStudentsHomework.getGrade());
-                            }
                             wrongTitleBook.setTitleImage(question.getCroppedUrl());
                             wrongTitleBook.setSourceImageUrl(question.getSourceImageUrl());
                             wrongTitleBook.setTitleBigNo(question.getTitleBigNo());
                             wrongTitleBook.setTitleSmallNo(question.getTitleSmallNo());
+                            extractImageTextIfEmpty(wrongTitleBook);
                             wrongTitleBookRepository.save(wrongTitleBook);
                             aiChart(wrongTitleBook.getId());
                         }
@@ -208,28 +200,31 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     @Override
     public void addWrongBook(WrongTitleBook wrongTitleBook) {
         boolean isNew = true;
-        if(StringUtils.isNotEmpty(wrongTitleBook.getTitleBigNo())&&StringUtils.isNotEmpty(wrongTitleBook.getTitleSmallNo())){
+        if (wrongTitleBook.getQuestionId() != null && wrongTitleBook.getStudentId() != null) {
             WrongTitleBook search = new WrongTitleBook();
-            search.setTitleBigNo(wrongTitleBook.getTitleBigNo());
-            search.setTitleSmallNo(wrongTitleBook.getTitleSmallNo());
-            search.setStudentsHomeworkId(wrongTitleBook.getStudentsHomeworkId());
-            Optional<WrongTitleBook> soWrongTitle = wrongTitleBookRepository.findOne(Example.of(search));
-            if(soWrongTitle!=null&&soWrongTitle.isPresent()){
-                wrongTitleBook.setId(soWrongTitle.get().getId());
+            search.setQuestionId(wrongTitleBook.getQuestionId());
+            search.setStudentId(wrongTitleBook.getStudentId());
+            // TODO: 修改为 findAll 来避免数据库脏数据导致的 500 报错
+            List<WrongTitleBook> list = wrongTitleBookRepository.findAll(Example.of(search));
+            if (list != null && !list.isEmpty()) {
+                WrongTitleBook soWrongTitle = list.get(0); // 取第一条即可
+                wrongTitleBook.setId(soWrongTitle.getId());
                 isNew = false;
             }
+        } else if (wrongTitleBook.getStudentId() != null) {
+            // 新增逻辑：没有 questionId 时（比如老师手动上传），按当前学生的错题数量生成递增题号
+            WrongTitleBook countSearch = new WrongTitleBook();
+            countSearch.setStudentId(wrongTitleBook.getStudentId());
+            long count = wrongTitleBookRepository.count(Example.of(countSearch));
+            wrongTitleBook.setTitleBigNo(String.valueOf(count + 1));
         }
-        // 添加：如果 schoolId 为空，根据 studentId 获取
         if (wrongTitleBook.getSchoolId() == null && wrongTitleBook.getStudentId() != null) {
             ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(wrongTitleBook.getStudentId());
             if (resultDto != null && resultDto.getData() != null) {
                 wrongTitleBook.setSchoolId(resultDto.getData().getSchoolId());
-                // 添加：设置年级信息
-                if (StringUtils.isEmpty(wrongTitleBook.getGrade())) {
-                    wrongTitleBook.setGrade(resultDto.getData().getGradeName());
-                }
             }
         }
+        extractImageTextIfEmpty(wrongTitleBook);
         wrongTitleBook.setCreateTime(new Date());
         if(StringUtils.isEmpty(wrongTitleBook.getSource())){
             wrongTitleBook.setSource("学生自加");
@@ -242,7 +237,6 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             Optional<StudentsHomeworkNew> optional = studentsHomeworkNewRepository.findById(wrongTitleBook.getStudentsHomeworkId());
             if (optional != null && optional.isPresent()) {
                 StudentsHomeworkNew homeworkNew = optional.get();
-                // 添加：设置科目信息
                 if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(homeworkNew.getSubject())) {
                     wrongTitleBook.setSubject(homeworkNew.getSubject());
                     wrongTitleBookRepository.save(wrongTitleBook);
@@ -257,23 +251,19 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             this.addClassWrongTitle(wrongTitleBook);
         }
         FutureTask<String> futureTask = new FutureTask<>(() -> {
-
             aiChart(wrongTitleBook.getId());
             return "异步-OK";
-
-
         });
         Thread thread = new Thread(futureTask);
         thread.start();
     }
+
     private void addClassWrongTitle(WrongTitleBook wrongTitleBook) {
         Integer studentNum = 0;
         Long schoolId = null;
-        String grade = null;
         ResultDto<Student> resultDto= studentFeignClient.getStudentInfo(wrongTitleBook.getStudentId());
         if(resultDto!=null&&resultDto.getData()!=null){
             schoolId = resultDto.getData().getSchoolId();
-            grade = resultDto.getData().getGradeName();
         }
         if(wrongTitleBook.getClassId()!=null&&schoolId!=null){
             Result<Student> result = studentFeignClient.getStudentList(1,200,schoolId,null,wrongTitleBook.getClassId(),"0");
@@ -309,7 +299,6 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             newWrongTitle.setClassId(wrongTitleBook.getClassId());
             newWrongTitle.setSchoolId(wrongTitleBook.getSchoolId());
             newWrongTitle.setSubject(wrongTitleBook.getSubject());
-            newWrongTitle.setGrade(grade);
             newWrongTitle.setQuestionId(wrongTitleBook.getQuestionId());
             newWrongTitle.setTitleBigNo(wrongTitleBook.getTitleBigNo());
             newWrongTitle.setTitleSmallNo(wrongTitleBook.getTitleSmallNo());
@@ -362,66 +351,75 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             return;
         }
         WrongTitleBook wrongTitleBook = optional.get();
-
-        ZhipuAIImageAnalysisUtil util = zhipuAIConfig.zhipuAIImageAnalysisUtil();
-        /*AIUtil util  = aiUtil.getAIUtil();
-        if("qianwen".equals(util.getAiName())){
-            util = (QianWenAIUtil)  util;
-        }else {
-            util = (ZhipuAIImageAnalysisUtil) util;
-        }*/
-
-        try {
-            String  resultStr = null;
-            if(StringUtils.isNotEmpty(wrongTitleBook.getTitleContext())){
-                String prompt = "根据题目内容："+wrongTitleBook.getTitleContext() +"     分析该题的知识考点以及生成知识考点的图谱(图谱呈现父子节点json格式)。返回格式如： 知识点：   知识图谱：{\"父节点\":{\"名称\":\" \",\"阐述\":\" \",\"子节点\":[{\"名称\":\" \",\"阐述\":\" \"},{\"名称\":\" \",\"阐述\":\" \", \"子节点\":[{\"名称\":\" \",\"阐述\":\" \"}] }]}} ";
-                resultStr =util.analyzeToJson(prompt);
-
-            }else if(StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())){
-                String prompt = "根据题图片，分析该题的试题类型、知识考点以及生成知识考点的图谱(图谱呈现父子节点json格式)。返回格式如：试题类型：  知识点：   知识图谱：{\"父节点\":{\"名称\":\" \",\"阐述\":\" \",\"子节点\":[{\"名称\":\" \",\"阐述\":\" \"},{\"名称\":\" \",\"阐述\":\" \", \"子节点\":[{\"名称\":\" \",\"阐述\":\" \"}] }]}} ";
-                resultStr=util.analyzeImageToJson(wrongTitleBook.getSourceImageUrl(),prompt);
-            }else if(StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())){
-                String prompt = "根据题图片，分析该题的试题类型、知识考点以及生成知识考点的图谱(图谱呈现父子节点json格式)。返回格式如：试题类型： 知识点：   知识图谱：{\"父节点\":{\"名称\":\" \",\"阐述\":\" \",\"子节点\":[{\"名称\":\" \",\"阐述\":\" \"},{\"名称\":\" \",\"阐述\":\" \", \"子节点\":[{\"名称\":\" \",\"阐述\":\" \"}] }]}} ";
-                resultStr=util.analyzeImageToJson(wrongTitleBook.getTitleImage(),prompt);
+        if (StringUtils.isEmpty(wrongTitleBook.getTitleContext())) {
+            String imageUrl = null;
+            if (StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())) {
+                imageUrl = wrongTitleBook.getTitleImage();
+            } else if (StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())) {
+                imageUrl = wrongTitleBook.getSourceImageUrl();
             }
+            if (StringUtils.isNotEmpty(imageUrl)) {
+                try {
+                    AIUtil util = aiUtil.getAIUtil();
+                    String prompt = "请提取这张图片中的所有试题文字内容（包含题目、选项、解析等）。不论是文科（语文、历史、英语等）、理科还是美术等其他学科，请忠实还原图片中的所有文字。如果包含公式或特殊符号，请尽量使用Markdown或LaTeX语法表示。只返回提取的纯文字内容，不要输出诸如好的、提取的文字如下等任何废话。如果识别不到文字，只需返回空字符串。";
+                    String text = util.analyzeImage(imageUrl, prompt);
+                    if (StringUtils.isNotEmpty(text)) {
+                        wrongTitleBook.setTitleContext(text);
+                        // ----------- 新增：异步去重查重核心逻辑 -----------
+                        if (wrongTitleBook.getStudentId() != null) {
+                            WrongTitleBook search = new WrongTitleBook();
+                            search.setStudentId(wrongTitleBook.getStudentId());
+                            // 查找该学生所有的历史错题
+                            java.util.List<WrongTitleBook> historyBooks = wrongTitleBookRepository.findAll(Example.of(search));
 
-            //System.out.println("AI分析结果: " + resultStr);
-            Map<String, Object> resultMap = JSONObject.parseObject(resultStr);
-            String content = resultMap.get("content").toString();
-            if(StringUtils.isNotEmpty(content)&&resultStr.contains("知识点")&&resultStr.contains("知识图谱")){
-                String  questionType = content.substring(content.indexOf("试题类型")+5,content.indexOf("知识点"));
-                String knowledgePoint = content.substring(content.indexOf("知识点")+4,content.indexOf("知识图谱"));
-                String aiChart = content.substring(content.lastIndexOf("知识图谱")+5);
-                if(aiChart.contains("<|end_of_box|>")){
-                    aiChart = aiChart.substring(0,aiChart.indexOf("<|end_of_box|>"));
+                            double maxSimilarity = 0.0;
+                            WrongTitleBook mostSimilarBook = null;
+
+                            // 遍历比对相似度
+                            for (WrongTitleBook history : historyBooks) {
+                                // 排除自己，且排除没有文本内容的记录
+                                if (history.getId().equals(wrongTitleBook.getId()) || StringUtils.isEmpty(history.getTitleContext())) {
+                                    continue;
+                                }
+                                double similarity = com.jlm.homework.util.TextSimilarityUtil.getSimilarity(text, history.getTitleContext());
+                                if (similarity > maxSimilarity) {
+                                    maxSimilarity = similarity;
+                                    mostSimilarBook = history;
+                                }
+                            }
+
+                            // 根据最高相似度打标记
+                            if (mostSimilarBook != null) {
+                                if (maxSimilarity >= 0.90) {
+                                    // 相似度 >= 90%，直接合并废弃当前题
+                                    wrongTitleBook.setDuplicateStatus(2); // 2=已合并废弃
+                                    wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
+                                    // 把历史那道老题目的错误次数 + 1
+                                    Integer oldErrorCount = mostSimilarBook.getErrorCount() == null ? 1 : mostSimilarBook.getErrorCount();
+                                    mostSimilarBook.setErrorCount(oldErrorCount + 1);
+                                    // 提前保存老题目的修改
+                                    wrongTitleBookRepository.save(mostSimilarBook);
+                                } else if (maxSimilarity >= 0.70) {
+                                    // 相似度 70% ~ 90%，疑似重复，待老师或学生手动确认
+                                    wrongTitleBook.setDuplicateStatus(1); // 1=待确认合并
+                                    wrongTitleBook.setDuplicateOf(mostSimilarBook.getId());
+                                }
+                                // 其他情况（<70%），视为新题，保持默认状态 0（正常）和 error_count=1
+                            }
+                        }
+                        // ----------- 去重逻辑结束 -----------
+
+                        // 保存最终提取和比对状态后的新题
+                        wrongTitleBookRepository.save(wrongTitleBook);
+                    }
+                } catch (Exception e) {
+                    System.err.println("AI提取题目文字失败: " + e.getMessage());
                 }
-                if(aiChart.contains("<|begin_of_box|>")&&!aiChart.startsWith("<|begin_of_box|>")){
-                    aiChart = aiChart.substring(0,aiChart.indexOf("<|begin_of_box|>"));
-                }
-                aiChart=aiChart.replaceAll("\\\\", "");
-                aiChart=aiChart.replace("\\n","");
-                JSONObject json = JSON.parseObject(aiChart);
-                wrongTitleBook.setQuestionType(questionType);
-                wrongTitleBook.setKnowledgePoint(knowledgePoint);
-                wrongTitleBook.setAiChart(json);
-                wrongTitleBookRepository.save(wrongTitleBook);
-                WrongTitleStatistics search = new WrongTitleStatistics();
-                search.setHomeworkPublishId(wrongTitleBook.getHomeworkPublishId());
-                search.setClassId(wrongTitleBook.getClassId());
-                search.setTitleBigNo(wrongTitleBook.getTitleBigNo());
-                search.setTitleSmallNo(wrongTitleBook.getTitleSmallNo());
-                wrongTitleStatisticsRepository.findOne(Example.of(search)).ifPresent(
-                        wrongTitleStatistics->{
-                            wrongTitleStatistics.setQuestionType(questionType);
-                            wrongTitleStatistics.setKnowledgePoint(knowledgePoint);
-                            wrongTitleStatistics.setAiChart(json);
-                            wrongTitleStatisticsRepository.save(wrongTitleStatistics);
-                        });
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
+
+
 
     @Override
     public void updateCommandFlag(Long wrongTitleId, Integer commandFlag) {
@@ -463,5 +461,29 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     @Override
     public void deleteById(Long id) {
         wrongTitleBookRepository.deleteById(id);
+    }
+
+    private void extractImageTextIfEmpty(WrongTitleBook wrongTitleBook) {
+        if (StringUtils.isEmpty(wrongTitleBook.getTitleContext())) {
+            String imageUrl = null;
+            if (StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())) {
+                imageUrl = wrongTitleBook.getTitleImage();
+            } else if (StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())) {
+                imageUrl = wrongTitleBook.getSourceImageUrl();
+            }
+
+            if (StringUtils.isNotEmpty(imageUrl)) {
+                try {
+                    AIUtil util = aiUtil.getAIUtil();
+                    String prompt = "请提取这张图片中的所有试题文字内容（包含题目、选项、解析等）。不论是文科（语文、历史、英语等）、理科还是美术等其他学科，请忠实还原图片中的所有文字。如果包含公式或特殊符号，请尽量使用Markdown或LaTeX语法表示。只返回提取的纯文字内容，不要输出诸如'好的'、'提取的文字如下'等任何废话。如果识别不到文字，只需返回空字符串。";
+                    String text = util.analyzeImage(imageUrl, prompt);
+                    if (StringUtils.isNotEmpty(text)) {
+                        wrongTitleBook.setTitleContext(text);
+                    }
+                } catch (Exception e) {
+                    System.err.println("AI提取题目文字失败: " + e.getMessage());
+                }
+            }
+        }
     }
 }

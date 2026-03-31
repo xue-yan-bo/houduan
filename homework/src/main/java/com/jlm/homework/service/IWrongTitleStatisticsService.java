@@ -16,4 +16,5 @@ public interface IWrongTitleStatisticsService {
     void updateClassWrongBook(WrongTitleStatistics wrongTitleStatistics);
 
     void deleteClassWrong(Long id);
+    void aiChart(Long id);
 }

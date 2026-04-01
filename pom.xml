@@ -190,6 +190,7 @@
         <module>homework</module>
        <!-- <module>remote-server</module>-->
         <module>agent</module>
+        <module>ai-server</module>
     </modules>
 
 </project>

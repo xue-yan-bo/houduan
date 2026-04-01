@@ -111,6 +111,21 @@ public class WrongTitleBook {
     @Column(name = "duplicate_of")
     private Long duplicateOf;
 
+    @Column(name = "exercise_book_id")
+    private Long exerciseBookId;
+
+    @Column(name = "exercise_book_question_id")
+    private Long exerciseBookQuestionId;
+
+    @Column(name = "answer_context")
+    private String answerContext;
+
+    @Column(name = "answer_image")
+    private String answerImage;
+
+    @Column(name = "ai_analysis")
+    private String aiAnalysis;
+
     public Long getId() {
         return id;
     }
@@ -357,5 +372,45 @@ public class WrongTitleBook {
 
     public void setDuplicateOf(Long duplicateOf) {
         this.duplicateOf = duplicateOf;
+    }
+
+    public Long getExerciseBookId() {
+        return exerciseBookId;
+    }
+
+    public void setExerciseBookId(Long exerciseBookId) {
+        this.exerciseBookId = exerciseBookId;
+    }
+
+    public Long getExerciseBookQuestionId() {
+        return exerciseBookQuestionId;
+    }
+
+    public void setExerciseBookQuestionId(Long exerciseBookQuestionId) {
+        this.exerciseBookQuestionId = exerciseBookQuestionId;
+    }
+
+    public String getAnswerContext() {
+        return answerContext;
+    }
+
+    public void setAnswerContext(String answerContext) {
+        this.answerContext = answerContext;
+    }
+
+    public String getAnswerImage() {
+        return answerImage;
+    }
+
+    public void setAnswerImage(String answerImage) {
+        this.answerImage = answerImage;
+    }
+
+    public String getAiAnalysis() {
+        return aiAnalysis;
+    }
+
+    public void setAiAnalysis(String aiAnalysis) {
+        this.aiAnalysis = aiAnalysis;
     }
 }

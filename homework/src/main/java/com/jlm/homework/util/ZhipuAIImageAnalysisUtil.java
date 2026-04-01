@@ -14,6 +14,8 @@ import com.jlm.homework.entity.ExamPaperAnalysis;
 import com.jlm.homework.entity.HomeworkPublishQuestion;
 import com.jlm.homework.entity.QuestionAnalysis;
 
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -1120,8 +1122,14 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
             // 处理网络图片
             URL url = new URL(normalizedPath);
             try (InputStream is = url.openStream()) {
-                byte[] bytes = is.readAllBytes();
-                return Base64Utils.encodeToString(bytes);
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+                byte[] imageBytes = outputStream.toByteArray();
+                return Base64.getEncoder().encodeToString(imageBytes);
             }
         } else {
             // 处理本地文件

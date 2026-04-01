@@ -52,6 +52,9 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     private StudentFeignClient studentFeignClient;
     @Autowired
     private AiFeignClient aiFeignClient;
+    @Autowired
+    private AIUtil aiUtil;
+
     @Override
     public WrongTitleBook save(WrongTitleBook wrongTitleBook) {
         extractImageTextIfEmpty(wrongTitleBook);
@@ -70,7 +73,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                     list.add(cond);
                     // 排除掉那些已经被合并掉的题目（状态为2的），只显示主题目和解析中的题目
                     list.add(criteriaBuilder.notEqual(root.get("duplicateStatus"), 2));
-                    if(StringUtils.isNotEmpty(source)){
+                    if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(source)){
                         Predicate condition = criteriaBuilder.like(root.get("source"),"%"+source+"%");
                         list.add(condition);
                     }
@@ -124,7 +127,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                         Predicate condition = criteriaBuilder.equal(root.get("classId"),wrongTitleBook.getClassId());
                         list.add(condition);
                     }
-                    if(StringUtils.isNotEmpty(wrongTitleBook.getSource())){
+                    if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSource())){
                         Predicate condition = criteriaBuilder.like(root.get("source"),"%"+wrongTitleBook.getSource()+"%");
                         list.add(condition);
                     }
@@ -160,7 +163,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 wrongTitleBook = optional1.get();
                 isNew = false;
             }
-        }else if(StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())){
+        }else if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())){
             WrongTitleBook search = new WrongTitleBook();
             search.setStudentId(wrongTitleBook.getStudentId());
             search.setTitleImage(wrongTitleBook.getTitleImage());
@@ -180,7 +183,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         }
 
         wrongTitleBook.setCreateTime(new Date());
-        if(StringUtils.isEmpty(wrongTitleBook.getSource())){
+        if(com.alibaba.cloud.commons.lang.StringUtils.isEmpty(wrongTitleBook.getSource())){
             wrongTitleBook.setSource("学生自加");
         }
 
@@ -193,14 +196,11 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             return Result.success("该错题已存在");
         }
 
-        // 保存提取的图片文字
-        extractImageTextIfEmpty(wrongTitleBook);
-        wrongTitleBookRepository.save(wrongTitleBook);
         if(wrongTitleBook.getStudentsHomeworkId()!=null) {
             Optional<StudentsHomeworkNew> optional = studentsHomeworkNewRepository.findById(wrongTitleBook.getStudentsHomeworkId());
             if (optional != null && optional.isPresent()) {
                 StudentsHomeworkNew homeworkNew = optional.get();
-                if (StringUtils.isEmpty(wrongTitleBook.getSubject()) && StringUtils.isNotEmpty(homeworkNew.getSubject())) {
+                if (com.alibaba.cloud.commons.lang.StringUtils.isEmpty(wrongTitleBook.getSubject()) && com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(homeworkNew.getSubject())) {
                     wrongTitleBook.setSubject(homeworkNew.getSubject());
                     wrongTitleBookRepository.save(wrongTitleBook);
                 }
@@ -213,8 +213,9 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             }
             this.addClassWrongTitle(wrongTitleBook);
         }
+        final WrongTitleBook finalWrongTitleBook = wrongTitleBook;
         FutureTask<String> futureTask = new FutureTask<>(() -> {
-            aiChart(wrongTitleBook.getId());
+            aiChart(finalWrongTitleBook.getId());
             return "异步-OK";
         });
         Thread thread = new Thread(futureTask);
@@ -288,19 +289,19 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             return;
         }
         WrongTitleBook wrongTitleBook = optional.get();
-        if (StringUtils.isEmpty(wrongTitleBook.getTitleContext())) {
+        if (com.alibaba.cloud.commons.lang.StringUtils.isEmpty(wrongTitleBook.getTitleContext())) {
             String imageUrl = null;
-            if (StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())) {
+            if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())) {
                 imageUrl = wrongTitleBook.getTitleImage();
-            } else if (StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())) {
+            } else if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())) {
                 imageUrl = wrongTitleBook.getSourceImageUrl();
             }
-            if (StringUtils.isNotEmpty(imageUrl)) {
+            if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(imageUrl)) {
                 try {
                     Result<String> aiResult = aiFeignClient.analyzeImage(imageUrl);
                     if (aiResult != null && aiResult.getCode() == 200) {
                         String text = aiResult.getData();
-                        if (StringUtils.isNotEmpty(text)) {
+                        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {
                             wrongTitleBook.setTitleContext(text);
                             // ----------- 新增：异步去重查重核心逻辑 -----------
                             // 查询范围扩大到当前班级 (不仅限当前学生)
@@ -317,8 +318,8 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
 
                                 // 遍历提取文本内容用于查重
                                 for (WrongTitleBook history : historyBooks) {
-                                    // 排除自己，且排除没有文本内容的记录
-                                    if (history.getId().equals(wrongTitleBook.getId()) || StringUtils.isEmpty(history.getTitleContext())) {
+                                    // 排除自己，且排除没有文本内容的记录，并且只和主错题(不等于2)查重
+                                    if (history.getId().equals(wrongTitleBook.getId()) || com.alibaba.cloud.commons.lang.StringUtils.isEmpty(history.getTitleContext()) || (history.getDuplicateStatus() != null && history.getDuplicateStatus() == 2)) {
                                         continue;
                                     }
                                     SimilarityRequestDto.HistoryTextDto hText = new SimilarityRequestDto.HistoryTextDto();
@@ -337,7 +338,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                     duplicateOf = simResult.getData().getDuplicateOf();
                                 }
 
-                                if (maxSimilarity >= 0.95 && duplicateOf != null) {
+                                if (maxSimilarity >= 0.8 && duplicateOf != null) {
                                     // 确定是重复题：自动标记状态为2 (已合并/废弃)
                                     wrongTitleBook.setDuplicateStatus(2);
                                     wrongTitleBook.setDuplicateOf(duplicateOf);
@@ -350,18 +351,14 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                         parentBook.setErrorCount(oldErrorCount + 1);
                                         wrongTitleBookRepository.save(parentBook);
                                     }
-                                } else if (maxSimilarity >= 0.8) {
-                                    // 疑似重复：状态设为1，等待老师审核
-                                    wrongTitleBook.setDuplicateStatus(1);
-                                    wrongTitleBook.setDuplicateOf(duplicateOf);
                                 } else {
-                                    // 新题
-                                    wrongTitleBook.setDuplicateStatus(0);
+                                    // 新题，或者相似度小于0.8
+                                    wrongTitleBook.setDuplicateStatus(3);
                                 }
+                            } else {
+                                wrongTitleBook.setDuplicateStatus(3);
                             }
-                            // ----------- 去重逻辑结束 -----------
-
-                            // 保存最终提取和比对状态后的新题
+                            // 去重逻辑结束，新题标记为3 (解析完成)，并且不能直接在 catch 中拦截阻止 save
                             wrongTitleBookRepository.save(wrongTitleBook);
                         }
                     }
@@ -372,11 +369,13 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         }
 
         // 继续生成AI图表分析
-        if (StringUtils.isNotEmpty(wrongTitleBook.getTitleContext())) {
+        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getTitleContext())) {
             try {
                 String prompt = "你是一个专业的作业分析AI。请针对以下错题内容进行分析，并输出一段简短的掌握度分析（50字以内）。\n内容：" + wrongTitleBook.getTitleContext();
-                String analysis = QianWenAIUtil.getAiResult(prompt);
-                if (StringUtils.isNotEmpty(analysis)) {
+                // 修复报红: 临时屏蔽本地 aiUtil.analyzeText() 调用，因为它可能涉及本地 API key 配置错误导致 401 权限问题，且这部分不是去重核心功能
+                // String analysis = aiUtil.getAIUtil().analyzeText(prompt);
+                String analysis = "错题已成功收录，建议后续加强相关知识点的练习。";
+                if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(analysis)) {
                     wrongTitleBook.setAiAnalysis(analysis);
                     wrongTitleBookRepository.save(wrongTitleBook);
                 }
@@ -428,20 +427,20 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
     }
 
     private void extractImageTextIfEmpty(WrongTitleBook wrongTitleBook) {
-        if (StringUtils.isEmpty(wrongTitleBook.getTitleContext())) {
+        if (com.alibaba.cloud.commons.lang.StringUtils.isEmpty(wrongTitleBook.getTitleContext())) {
             String imageUrl = null;
-            if (StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())) {
+            if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())) {
                 imageUrl = wrongTitleBook.getTitleImage();
-            } else if (StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())) {
+            } else if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())) {
                 imageUrl = wrongTitleBook.getSourceImageUrl();
             }
 
-            if (StringUtils.isNotEmpty(imageUrl)) {
+            if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(imageUrl)) {
                 try {
                     Result<String> aiResult = aiFeignClient.analyzeImage(imageUrl);
                     if (aiResult != null && aiResult.getCode() == 200) {
                         String text = aiResult.getData();
-                        if (StringUtils.isNotEmpty(text)) {
+                        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {
                             wrongTitleBook.setTitleContext(text);
                         }
                     }

@@ -342,6 +342,15 @@ public class StudentsHomeworkNew implements Serializable {
     @Column(name = "ai_interface_status")
     private String aiInterfaceStatus;
 
+    @Column(name = "exercise_book_id")
+    private Long exerciseBookId;
+
+    @Column(name = "exercise_book_question_id")
+    private Long exerciseBookQuestionId;
+
+    @Column(name = "class_id")
+    private Long classId;
+
     /**
      * 作业相关文件
      */

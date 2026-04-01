@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @FeignClient(name = "ai-server", path = "/ai")
 public interface AiFeignClient {
 
-    @PostMapping("/analyzeImage")
+    @PostMapping(value = "/analyzeImage")
     Result<String> analyzeImage(@RequestParam("imageUrl") String imageUrl);
 
     @PostMapping("/checkSimilarity")

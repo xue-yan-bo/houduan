@@ -9,6 +9,15 @@ public class Result <T>{
     private Integer code;
     private String msg;
     private List<T> rows;
+    private T data;
+
+    public T getData() {
+        return data;
+    }
+
+    public void setData(T data) {
+        this.data = data;
+    }
 
     public static <T> Result<T> success(String msg) {
         Result<T> result = new Result<>();

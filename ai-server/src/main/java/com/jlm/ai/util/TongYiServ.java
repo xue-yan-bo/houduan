@@ -25,9 +25,9 @@ import java.util.Map;
 @Component
 public class TongYiServ {
 
-    @Value("${TONGYI_API_KEY}")
+    @Value("${TONGYI_API_KEY:}")
     private String apiKey;
-    @Value("${TONGYI_MODEL}")
+    @Value("${TONGYI_MODEL:}")
     private String model;
 
     /**

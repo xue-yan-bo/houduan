@@ -32,7 +32,11 @@ public class AiAnalyzeController {
             String prompt = "请提取这张图片中的所有试题文字内容（包含题目、选项、解析等）。不论是文科（语文、历史、英语等）、理科还是美术等其他学科，请忠实还原图片中的所有文字。如果包含公式或特殊符号，请尽量使用Markdown或LaTeX语法表示。只返回提取的纯文字内容，不要输出诸如好的、提取的文字如下等任何废话。如果识别不到文字，只需返回空字符串。";
             // 拿到具体的工厂类实现去解析
             String text = aiUtil.getAIUtil().analyzeImage(imageUrl, prompt);
-            return Result.success(text);
+
+            // 打印一下大模型返回结果，方便我们在控制台排查
+            System.out.println("====== 大模型返回提取文字 ======\n" + text);
+
+            return Result.success("提取成功", text);
         } catch (Exception e) {
             System.err.println("AI提取题目文字失败: " + e.getMessage());
             // 如果报错也别卡死流程，直接返回空字符串，让业务端正常当新题入库就行了

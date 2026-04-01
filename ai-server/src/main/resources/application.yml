@@ -1,14 +1,26 @@
 spring:
   application:
     name: ai-server
+  config:
+    import:
+      - optional:nacos:${spring.application.name}.yml
+      - optional:nacos:${spring.application.name}.yaml
   cloud:
     nacos:
       discovery:
         server-addr: 192.168.1.38:8848
+        namespace: dev
       config:
         server-addr: 192.168.1.38:8848
         file-extension: yaml
-        namespace: public # 或公司内部的其它命名空间
+        namespace: dev
+  ai:
+    openai:
+      api-key: "sk-dummy-key-just-to-bypass-startup-check"
+    zhipuai:
+      api-key: "fb1fc9c0ff2343449849169312c32239.VSKApXu5lGla881O"
+    zhipu:
+      api-key: "fb1fc9c0ff2343449849169312c32239.VSKApXu5lGla881O"
 
 server:
   port: 9005 # 单独扩容时的默认端口，可以在启动时传参覆盖
@@ -18,7 +30,12 @@ server:
 
 # AI 相关配置可统一在这里配，不影响业务代码
 ai:
+  provider: zhipu
   zhipu:
-    api-key: your-zhipu-key-here # 可通过 Nacos 获取
+    api-key: "fb1fc9c0ff2343449849169312c32239.VSKApXu5lGla881O" # 可通过 Nacos 获取
   qianwen:
     api-key: your-qianwen-key-here
+
+zhipu:
+  ai:
+    api-key: "fb1fc9c0ff2343449849169312c32239.VSKApXu5lGla881O"

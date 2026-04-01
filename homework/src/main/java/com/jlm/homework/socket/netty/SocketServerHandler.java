@@ -185,7 +185,8 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
             String errorMsg = cause.getMessage();
             if (errorMsg != null && (errorMsg.contains("断开的管道") || errorMsg.contains("Broken pipe") || 
                 errorMsg.contains("Connection reset") || errorMsg.contains("Socket closed") ||
-                errorMsg.contains("你的主机中的软件中止了一个已建立的连接"))) {
+                errorMsg.contains("你的主机中的软件中止了一个已建立的连接") ||
+                errorMsg.contains("An existing connection was forcibly closed by the remote host"))) {
                 // 这些是连接断开的致命错误，需要关闭通道
                 log.warn("Fatal connection error, closing channel: {}", errorMsg);
                 ctx.close();
@@ -194,8 +195,20 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
                 log.warn("Non-fatal IO error, continuing: {}", errorMsg);
             }
         } else if (cause instanceof java.net.SocketException) {
-            // Socket异常，通常是连接问题，关闭通道
-            log.warn("Socket exception, closing channel: {}", cause.getMessage());
+            String errorMsg = cause.getMessage();
+            if (errorMsg != null && (errorMsg.contains("Connection reset") || errorMsg.contains("Socket closed") ||
+                errorMsg.contains("你的主机中的软件中止了一个已建立的连接") ||
+                errorMsg.contains("An existing connection was forcibly closed by the remote host"))) {
+                // 这些是连接断开的致命错误，需要关闭通道
+                log.warn("Fatal socket error, closing channel: {}", errorMsg);
+                ctx.close();
+            } else {
+                // 其他Socket异常，可能是临时错误，记录但不关闭通道
+                log.warn("Non-fatal socket error, continuing: {}", errorMsg);
+            }
+        } else if (cause instanceof java.lang.OutOfMemoryError) {
+            // 内存溢出错误，需要关闭通道
+            log.error("Out of memory error, closing channel: {}", cause.getMessage());
             ctx.close();
         } else {
             // 其他异常，可能是业务逻辑错误，记录但不关闭通道
@@ -251,26 +264,31 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void sendHeartbeat(ChannelHandlerContext ctx) {
-        byte[] heartbeatData = new byte[10];
-        heartbeatData[0] = 0x55;
-        heartbeatData[1] = 0x56;
-        heartbeatData[2] = 0x05;
-        heartbeatData[3] = HEARTBEAT_TYPE;
-        heartbeatData[4] = 0x01;
+        try {
+            byte[] heartbeatData = new byte[10];
+            heartbeatData[0] = 0x55;
+            heartbeatData[1] = 0x56;
+            heartbeatData[2] = 0x05;
+            heartbeatData[3] = HEARTBEAT_TYPE;
+            heartbeatData[4] = 0x01;
 
-        long timestamp = System.currentTimeMillis() & 0xFFFFFFFF;
-        heartbeatData[5] = (byte) (timestamp >> 24);
-        heartbeatData[6] = (byte) (timestamp >> 16);
-        heartbeatData[7] = (byte) (timestamp >> 8);
-        heartbeatData[8] = (byte) timestamp;
+            long timestamp = System.currentTimeMillis() & 0xFFFFFFFF;
+            heartbeatData[5] = (byte) (timestamp >> 24);
+            heartbeatData[6] = (byte) (timestamp >> 16);
+            heartbeatData[7] = (byte) (timestamp >> 8);
+            heartbeatData[8] = (byte) timestamp;
 
-        int checksum = 0;
-        for (int i = 0; i < 9; i++) {
-            checksum += (heartbeatData[i] & 0xFF);
+            int checksum = 0;
+            for (int i = 0; i < 9; i++) {
+                checksum += (heartbeatData[i] & 0xFF);
+            }
+            heartbeatData[9] = (byte) (checksum & 0xFF);
+
+            ctx.writeAndFlush(io.netty.buffer.Unpooled.wrappedBuffer(heartbeatData));
+        } catch (Exception e) {
+            log.error("Error sending heartbeat: {}", e.getMessage(), e);
+            // 心跳发送失败，不关闭通道，继续尝试
         }
-        heartbeatData[9] = (byte) (checksum & 0xFF);
-
-        ctx.writeAndFlush(io.netty.buffer.Unpooled.wrappedBuffer(heartbeatData));
     }
 
     private void saveUnsavedData() {
@@ -296,6 +314,14 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
                         userId, sessionContext.getCopybookId(), "2",
                         sessionContext.getPageNum(),
                         sessionContext.getStudentsCopybookRecords(), false);
+                }
+                
+                // 保存未保存的反馈数据
+                if (!sessionContext.getStudentsFeedbackRecords().isEmpty()) {
+                    handlerService.saveFeedbackRecords(
+                        sessionContext.getFeedbackId(), userId, 
+                        sessionContext.getFeedbackSubject(), 
+                        sessionContext.getStudentsFeedbackRecords());
                 }
             }
         } catch (Exception e) {

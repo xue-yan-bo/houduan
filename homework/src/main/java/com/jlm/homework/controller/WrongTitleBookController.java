@@ -21,8 +21,8 @@ public class WrongTitleBookController {
 
     @PostMapping("/addWrongBook")
     @Operation(summary = "加入错题本")
-    public Result<Object> addWrongBook(@RequestBody WrongTitleBook  wrongTitleBook) {
-        return wrongTitleBookService.addWrongBook(wrongTitleBook);
+    public void addWrongBook(@RequestBody WrongTitleBook  wrongTitleBook) {
+         wrongTitleBookService.addWrongBook(wrongTitleBook);
     }
 
     @PostMapping("/updateWrongBook")

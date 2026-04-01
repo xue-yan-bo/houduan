@@ -35,102 +35,151 @@ public class DocumentAndCoordinatesRenderer {
             throw new IOException("文档URL不能为空！");
         }
         
-        // 处理URL编码问题，特别是文件名中的中文和特殊字符
+        // 尝试使用原始URL下载
         try {
-            // 解析URL，分别编码路径部分
-            URL originalUrl = null;
-            String internalUrl = ImageOverlayUtil.convertToInternalUrl(documentUrl);
-            originalUrl = new URL(internalUrl);
-
-            String protocol = originalUrl.getProtocol();
-            String host = originalUrl.getHost();
-            int port = originalUrl.getPort();
-            String path = originalUrl.getPath();
-            String query = originalUrl.getQuery();
-            String ref = originalUrl.getRef();
-            
-            // 对路径进行编码处理，确保中文和特殊字符正确编码
-            String encodedPath = encodeUrlPath(path);
-            
-            // 重新构建URL
-            StringBuilder urlBuilder = new StringBuilder();
-            urlBuilder.append(protocol).append("://").append(host);
-            if (port != -1) {
-                urlBuilder.append(":").append(port);
-            }
-            urlBuilder.append(encodedPath);
-            if (query != null) {
-                urlBuilder.append("?").append(query);
-            }
-            if (ref != null) {
-                urlBuilder.append("#").append(ref);
-            }
-            
-            URL encodedUrl = new URL(urlBuilder.toString());
-            
-            // 创建URL连接并设置请求属性
-            java.net.URLConnection connection = encodedUrl.openConnection();
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0");
-            connection.setConnectTimeout(30000); // 30秒连接超时
-            connection.setReadTimeout(60000); // 60秒读取超时
-            connection.setDoInput(true);
-            
-            // 检查Content-Type
-            String contentType = connection.getContentType();
-            //System.out.println("下载文档Content-Type: " + contentType);
-            
-            // 验证Content-Type是否为预期的文档类型
-            if (!isValidContentType(contentType)) {
-                // 即使Content-Type不符合预期，也尝试下载并检查文件内容
-                //System.out.println("警告：Content-Type不符合预期，但将继续下载并验证文件内容");
-            }
-            
-            // 创建临时文件，根据文件类型设置扩展名
-            String fileExtension = ".docx";
-            // 尝试从URL中获取文件扩展名
-            if (documentUrl != null && documentUrl.lastIndexOf('.') != -1) {
-                String urlExtension = documentUrl.substring(documentUrl.lastIndexOf('.'));
-                if (urlExtension.equalsIgnoreCase(".pdf")) {
-                    fileExtension = ".pdf";
-                } else if (urlExtension.equalsIgnoreCase(".doc")) {
-                    fileExtension = ".doc";
-                }
-            }
-            File tempFile = File.createTempFile("temp_doc", fileExtension);
-            tempFile.deleteOnExit(); // JVM退出时自动删除
-            
-            // 下载文件内容
-            try (InputStream in = connection.getInputStream();
-                 OutputStream out = new FileOutputStream(tempFile)) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                int totalBytesRead = 0;
-                
-                while ((bytesRead = in.read(buffer)) != -1) {
-                    out.write(buffer, 0, bytesRead);
-                    totalBytesRead += bytesRead;
-                }
-                
-                // 检查是否有内容被读取
-                if (totalBytesRead == 0) {
-                    tempFile.delete();
-                    throw new IOException("下载的文档为空，无法处理。URL: " + documentUrl);
-                }
-                
-                //System.out.println("成功下载文档，文件大小: " + totalBytesRead + " 字节");
-            }
-            
-            // 下载后进行文件内容验证
-            if (!validateFileContent(tempFile)) {
-                tempFile.delete(); // 删除无效文件
-                throw new IOException("下载的文档内容无效，文件格式不正确或已损坏。URL: " + documentUrl);
-            }
-            
-            return tempFile;
+            return downloadDocumentWithRetry(documentUrl);
         } catch (IOException e) {
-            // 增强错误信息，包含详细的URL和错误原因
-            throw new IOException("下载文档失败: " + documentUrl + "，错误: " + e.getMessage(), e);
+            // 原始URL下载失败，尝试使用公网域名
+            String internalUrl = ImageOverlayUtil.convertToInternalUrl(documentUrl);
+            return downloadDocumentWithRetry(internalUrl);
+
         }
+    }
+    
+    /**
+     * 尝试下载文档，支持重试机制
+     */
+    private static File downloadDocumentWithRetry(String documentUrl) throws IOException {
+        int maxRetries = 2; // 最大重试次数
+        int retryCount = 0;
+        IOException lastException = null;
+        
+        while (retryCount < maxRetries) {
+            try {
+                // 处理URL编码问题，特别是文件名中的中文和特殊字符
+                // 解析URL，分别编码路径部分
+                URL originalUrl  = new URL(documentUrl);;
+
+                String protocol = originalUrl.getProtocol();
+                String host = originalUrl.getHost();
+                int port = originalUrl.getPort();
+                String path = originalUrl.getPath();
+                String query = originalUrl.getQuery();
+                String ref = originalUrl.getRef();
+                
+                // 对路径进行编码处理，确保中文和特殊字符正确编码
+                String encodedPath = encodeUrlPath(path);
+                
+                // 重新构建URL
+                StringBuilder urlBuilder = new StringBuilder();
+                urlBuilder.append(protocol).append("://").append(host);
+                if (port != -1) {
+                    urlBuilder.append(":").append(port);
+                }
+                urlBuilder.append(encodedPath);
+                if (query != null) {
+                    urlBuilder.append("?").append(query);
+                }
+                if (ref != null) {
+                    urlBuilder.append("#").append(ref);
+                }
+                
+                URL encodedUrl = new URL(urlBuilder.toString());
+                
+                // 创建URL连接并设置请求属性
+                java.net.URLConnection connection = encodedUrl.openConnection();
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0");
+                connection.setConnectTimeout(60000); // 60秒连接超时
+                connection.setReadTimeout(120000); // 120秒读取超时
+                connection.setDoInput(true);
+                
+                // 检查Content-Type
+                String contentType = connection.getContentType();
+                //System.out.println("下载文档Content-Type: " + contentType);
+                
+                // 验证Content-Type是否为预期的文档类型
+                if (!isValidContentType(contentType)) {
+                    // 即使Content-Type不符合预期，也尝试下载并检查文件内容
+                    //System.out.println("警告：Content-Type不符合预期，但将继续下载并验证文件内容");
+                }
+                
+                // 创建临时文件，根据文件类型设置扩展名
+                String fileExtension = ".docx";
+                // 尝试从URL中获取文件扩展名
+                if (documentUrl != null && documentUrl.lastIndexOf('.') != -1) {
+                    String urlExtension = documentUrl.substring(documentUrl.lastIndexOf('.'));
+                    if (urlExtension.equalsIgnoreCase(".pdf")) {
+                        fileExtension = ".pdf";
+                    } else if (urlExtension.equalsIgnoreCase(".doc")) {
+                        fileExtension = ".doc";
+                    }
+                }
+                File tempFile = File.createTempFile("temp_doc", fileExtension);
+                tempFile.deleteOnExit(); // JVM退出时自动删除
+                
+                // 下载文件内容
+                try (InputStream in = connection.getInputStream();
+                     OutputStream out = new FileOutputStream(tempFile)) {
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    int totalBytesRead = 0;
+                    
+                    while ((bytesRead = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, bytesRead);
+                        totalBytesRead += bytesRead;
+                    }
+                    
+                    // 检查是否有内容被读取
+                    if (totalBytesRead == 0) {
+                        tempFile.delete();
+                        throw new IOException("下载的文档为空，无法处理。URL: " + documentUrl);
+                    }
+                    
+                    //System.out.println("成功下载文档，文件大小: " + totalBytesRead + " 字节");
+                }
+                
+                // 下载后进行文件内容验证
+                if (!validateFileContent(tempFile)) {
+                    tempFile.delete(); // 删除无效文件
+                    throw new IOException("下载的文档内容无效，文件格式不正确或已损坏。URL: " + documentUrl);
+                }
+                
+                return tempFile;
+            } catch (IOException e) {
+                lastException = e;
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    // 等待一段时间后重试
+                    try {
+                        Thread.sleep(2000 * retryCount); // 每次重试等待时间递增
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 所有重试都失败，抛出最后一次异常
+        throw new IOException("下载文档失败，已尝试 " + maxRetries + " 次: " + documentUrl + "，错误: " + (lastException != null ? lastException.getMessage() : "未知错误"), lastException);
+    }
+    
+    /**
+     * 将私有域名转换为公网域名
+     */
+    private static String convertToPublicUrl(String privateUrl) {
+        // 替换私有域名为公网域名
+        // 这里需要根据实际情况修改，例如将内部IP或私有域名替换为公网域名
+        // 示例：将 192.168.1.100 替换为 example.com
+        if (privateUrl.contains("192.168.")) {
+            return privateUrl.replaceAll("192\\.168\\.\\d+\\.\\d+", "example.com");
+        }
+        // 示例：将内部域名替换为公网域名
+        if (privateUrl.contains("internal.example.com")) {
+            return privateUrl.replace("internal.example.com", "example.com");
+        }
+        // 如果没有匹配的私有域名，返回原始URL
+        return privateUrl;
     }
     
     /**

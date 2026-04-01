@@ -156,19 +156,19 @@ public class HandlerServiceImpl implements IHandlerService {
             }
         }
 
-        if(feedback.getFeedbackContent()!=null&&!feedback.getFeedbackContent().isEmpty()){
-            List<StudentsWriteRecord> writeRecords = feedback.getFeedbackContent();
-            if(feedbackId!=null){
-                studentFeedbackService.saveMoreWriteRecords(feedbackId,studentId,studentsFeedbackRecords);
-            }else {
+        if(feedbackId!=null&&feedback!=null){
+            // 当feedbackId不为空且feedback存在时，只保存到StudentFeedBackWriteData表
+            studentFeedbackService.saveMoreWriteRecords(feedbackId,studentId,studentsFeedbackRecords);
+        }else {
+            // 当feedbackId为空或feedback不存在时，创建新的StudentFeedback记录
+            if(feedback.getFeedbackContent()!=null&&!feedback.getFeedbackContent().isEmpty()){
+                List<StudentsWriteRecord> writeRecords = feedback.getFeedbackContent();
                 writeRecords.addAll(studentsFeedbackRecords);
                 feedback.setFeedbackContent(writeRecords);
-                feedback.setId(feedbackId);
-                feedback.setFeedbackTime(now);
-                feedback =studentFeedbackService.save(feedback);
+            }else {
+                feedback.setFeedbackContent(studentsFeedbackRecords);
             }
-        }else {
-            feedback.setFeedbackContent(studentsFeedbackRecords);
+            feedback.setId(feedbackId);
             feedback.setFeedbackTime(now);
             feedback =studentFeedbackService.save(feedback);
         }

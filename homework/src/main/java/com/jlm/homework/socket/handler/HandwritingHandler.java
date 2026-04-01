@@ -334,9 +334,9 @@ public class HandwritingHandler implements MessageHandler {
             
             // 添加记录到同步列表
             context.getStudentsFeedbackRecords().add(writeRecord);
-            
+            List<StudentsWriteRecord> seedbackRecords = context.getStudentsFeedbackRecords();
             // 检查是否达到保存阈值且feedbackId不为空
-            if (context.getStudentsFeedbackRecords().size() >= SessionContext.SAVE_SIZE && context.getFeedbackId() != null) {
+            if (seedbackRecords.size() >= SessionContext.SAVE_SIZE) {
                 // 保存反馈数据
                 try {
                     // 创建一个新的列表来保存要处理的数据，避免并发修改

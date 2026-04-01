@@ -323,42 +323,79 @@ public class HandwritingHandler implements MessageHandler {
     }
 
     private void handleFeedbackMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation) {
+        // 先创建记录，确保数据不丢失
+        StudentsWriteRecord writeRecord = createRecord(result);
+        
         synchronized (context) {
-            // 使用带大小限制的添加方法，防止内存溢出
-            context.getStudentsFeedbackRecords().add(createRecord(result));
-            if (context.getStudentsFeedbackRecords().size() >= SessionContext.SAVE_SIZE&&context.getFeedbackId()!=null) {
-                // 保存反馈数据但不更新feedbackId
+            // 检查列表是否为空，如果为空则创建新的同步列表
+            if (context.getStudentsFeedbackRecords() == null) {
+                context.setStudentsFeedbackRecords(java.util.Collections.synchronizedList(new ArrayList<>()));
+            }
+            
+            // 添加记录到同步列表
+            context.getStudentsFeedbackRecords().add(writeRecord);
+            
+            // 检查是否达到保存阈值且feedbackId不为空
+            if (context.getStudentsFeedbackRecords().size() >= SessionContext.SAVE_SIZE && context.getFeedbackId() != null) {
+                // 保存反馈数据
                 try {
+                    // 创建一个新的列表来保存要处理的数据，避免并发修改
                     List<StudentsWriteRecord> recordsToSave = new ArrayList<>(context.getStudentsFeedbackRecords());
-                    Long feedbackId =handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), context.getFeedbackSubject(), recordsToSave);
+                    
+                    // 清空原列表，避免数据重复处理
+                    context.setStudentsFeedbackRecords(java.util.Collections.synchronizedList(new ArrayList<>()));
+                    
+                    // 保存数据到数据库
+                    Long feedbackId = handlerService.saveFeedbackRecords(context.getFeedbackId(), Long.parseLong(relation.getUserId()), context.getFeedbackSubject(), recordsToSave);
                     context.setFeedbackId(feedbackId);
-                    // 只有在保存成功后才清空列表
-                    context.setStudentsFeedbackRecords(new ArrayList<>());
+                    
+                    // 保存会话上下文到Redis
                     saveSessionContextToRedis(context);
+                    log.info("反馈数据保存成功，记录数: {}, feedbackId: {}, userId: {}", recordsToSave.size(), feedbackId, relation.getUserId());
                 } catch (Exception e) {
                     log.error("反馈数据保存失败，记录数: {}, feedbackId: {}, userId: {}, 错误: {}", 
                         context.getStudentsFeedbackRecords().size(), context.getFeedbackId(), relation.getUserId(), e.getMessage(), e);
-                    // 保存失败时不清空列表，保留数据以便下次重试
-                    // 如果列表过大，可以分批保存
+                    
+                    // 保存失败时，尝试分批保存
                     if (context.getStudentsFeedbackRecords().size() > SessionContext.SAVE_SIZE * 2) {
                         log.warn("反馈数据列表过大，尝试分批保存");
                         try {
                             int batchSize = SessionContext.SAVE_SIZE;
-                            for (int i = 0; i < context.getStudentsFeedbackRecords().size(); i += batchSize) {
-                                int end = Math.min(i + batchSize, context.getStudentsFeedbackRecords().size());
-                                List<StudentsWriteRecord> batch = new ArrayList<>(context.getStudentsFeedbackRecords().subList(i, end));
-                                handlerService.saveFeedbackRecords(context.getFeedbackId(), Long.parseLong(relation.getUserId()), context.getFeedbackSubject(), batch);
+                            Long savedFeedbackId = context.getFeedbackId();
+                            
+                            // 分批处理数据
+                            while (!context.getStudentsFeedbackRecords().isEmpty()) {
+                                int batchSizeToUse = Math.min(batchSize, context.getStudentsFeedbackRecords().size());
+                                List<StudentsWriteRecord> batch = new ArrayList<>();
+                                
+                                // 提取批次数据
+                                for (int i = 0; i < batchSizeToUse && !context.getStudentsFeedbackRecords().isEmpty(); i++) {
+                                    batch.add(context.getStudentsFeedbackRecords().remove(0));
+                                }
+                                
+                                // 保存批次数据
+                                savedFeedbackId = handlerService.saveFeedbackRecords(savedFeedbackId, Long.parseLong(relation.getUserId()), context.getFeedbackSubject(), batch);
                             }
-                            context.setStudentsFeedbackRecords(new ArrayList<>());
+                            
+                            context.setFeedbackId(savedFeedbackId);
                             saveSessionContextToRedis(context);
                             log.info("反馈数据分批保存成功");
                         } catch (Exception ex) {
                             log.error("反馈数据分批保存也失败: {}", ex.getMessage(), ex);
+                            // 分批保存失败时，不清空列表，保留数据以便下次重试
                         }
-                    }else{
-                        handlerService.saveFeedbackRecords(context.getFeedbackId(),Long.parseLong(relation.getUserId()), context.getFeedbackSubject(), context.getStudentsFeedbackRecords());
-                        context.setStudentsFeedbackRecords(new ArrayList<>());
-                        saveSessionContextToRedis(context);
+                    } else {
+                        try {
+                            // 再次尝试保存，添加异常处理
+                            Long feedbackId = handlerService.saveFeedbackRecords(context.getFeedbackId(), Long.parseLong(relation.getUserId()), context.getFeedbackSubject(), context.getStudentsFeedbackRecords());
+                            context.setFeedbackId(feedbackId);
+                            context.setStudentsFeedbackRecords(java.util.Collections.synchronizedList(new ArrayList<>()));
+                            saveSessionContextToRedis(context);
+                            log.info("反馈数据保存成功");
+                        } catch (Exception ex) {
+                            log.error("反馈数据再次保存失败: {}", ex.getMessage(), ex);
+                            // 保存失败时不清空列表，保留数据以便下次重试
+                        }
                     }
                 }
             }
@@ -366,32 +403,55 @@ public class HandwritingHandler implements MessageHandler {
     }
 
     private void handleErrorTitleMode(SessionContext context, HandwritingParseResult result, SmartDeviceUserRelation relation) {
+        // 先创建记录，确保数据不丢失
+        StudentsWriteRecord writeRecord = createRecord(result);
+        
         synchronized (context) {
-            context.getUploadErrorTitleRecords().add(createRecord(result));
+            // 检查列表是否为空，如果为空则创建新的同步列表
+            if (context.getUploadErrorTitleRecords() == null) {
+                context.setUploadErrorTitleRecords(java.util.Collections.synchronizedList(new ArrayList<>()));
+            }
+            
+            context.getUploadErrorTitleRecords().add(writeRecord);
+            
             if (context.getUploadErrorTitleRecords().size() >= SessionContext.SAVE_SIZE) {
                 try {
+                    // 创建一个新的列表来保存要处理的数据，避免并发修改
                     List<StudentsWriteRecord> recordsToSave = new ArrayList<>(context.getUploadErrorTitleRecords());
-                    Long errorTitleId = handlerService.saveErrorTitleRecords(context.getErrorTitleId(),Long.parseLong(relation.getUserId()), context.getErrorTitleSubject(), recordsToSave);
-                    // 只有在保存成功后才清空列表
+                    
+                    // 清空原列表，避免数据重复处理
+                    context.setUploadErrorTitleRecords(java.util.Collections.synchronizedList(new ArrayList<>()));
+                    
+                    // 保存数据到数据库
+                    Long errorTitleId = handlerService.saveErrorTitleRecords(context.getErrorTitleId(), Long.parseLong(relation.getUserId()), context.getErrorTitleSubject(), recordsToSave);
                     context.setErrorTitleId(errorTitleId);
-                    context.setUploadErrorTitleRecords(new ArrayList<>());
                     log.info("错题数据保存成功，记录数: {}, errorTitleId: {}, userId: {}", recordsToSave.size(), errorTitleId, relation.getUserId());
                 } catch (Exception e) {
                     log.error("错题数据保存失败，记录数: {}, errorTitleId: {}, userId: {}, 错误: {}", 
                         context.getUploadErrorTitleRecords().size(), context.getErrorTitleId(), relation.getUserId(), e.getMessage(), e);
-                    // 保存失败时不清空列表，保留数据以便下次重试
+                    
+                    // 保存失败时，尝试分批保存
                     if (context.getUploadErrorTitleRecords().size() > SessionContext.SAVE_SIZE * 2) {
                         log.warn("错题数据列表过大，尝试分批保存");
                         try {
                             int batchSize = SessionContext.SAVE_SIZE;
                             Long savedErrorTitleId = context.getErrorTitleId();
-                            for (int i = 0; i < context.getUploadErrorTitleRecords().size(); i += batchSize) {
-                                int end = Math.min(i + batchSize, context.getUploadErrorTitleRecords().size());
-                                List<StudentsWriteRecord> batch = new ArrayList<>(context.getUploadErrorTitleRecords().subList(i, end));
+                            
+                            // 分批处理数据
+                            while (!context.getUploadErrorTitleRecords().isEmpty()) {
+                                int batchSizeToUse = Math.min(batchSize, context.getUploadErrorTitleRecords().size());
+                                List<StudentsWriteRecord> batch = new ArrayList<>();
+                                
+                                // 提取批次数据
+                                for (int i = 0; i < batchSizeToUse && !context.getUploadErrorTitleRecords().isEmpty(); i++) {
+                                    batch.add(context.getUploadErrorTitleRecords().remove(0));
+                                }
+                                
+                                // 保存批次数据
                                 savedErrorTitleId = handlerService.saveErrorTitleRecords(savedErrorTitleId, Long.parseLong(relation.getUserId()), context.getErrorTitleSubject(), batch);
                             }
+                            
                             context.setErrorTitleId(savedErrorTitleId);
-                            context.setUploadErrorTitleRecords(new ArrayList<>());
                             log.info("错题数据分批保存成功");
                         } catch (Exception ex) {
                             log.error("错题数据分批保存也失败: {}", ex.getMessage(), ex);

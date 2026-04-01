@@ -39,12 +39,9 @@ public class DocumentAndCoordinatesRenderer {
         try {
             // 解析URL，分别编码路径部分
             URL originalUrl = null;
-            try {
-                originalUrl = new URL(documentUrl);
-            } catch (MalformedURLException e) {
-                String internalUrl = ImageOverlayUtil.convertToInternalUrl(documentUrl);
-                originalUrl = new URL(internalUrl);
-            }
+            String internalUrl = ImageOverlayUtil.convertToInternalUrl(documentUrl);
+            originalUrl = new URL(internalUrl);
+
             String protocol = originalUrl.getProtocol();
             String host = originalUrl.getHost();
             int port = originalUrl.getPort();
@@ -88,8 +85,18 @@ public class DocumentAndCoordinatesRenderer {
                 //System.out.println("警告：Content-Type不符合预期，但将继续下载并验证文件内容");
             }
             
-            // 创建临时文件
-            File tempFile = File.createTempFile("temp_doc", ".docx");
+            // 创建临时文件，根据文件类型设置扩展名
+            String fileExtension = ".docx";
+            // 尝试从URL中获取文件扩展名
+            if (documentUrl != null && documentUrl.lastIndexOf('.') != -1) {
+                String urlExtension = documentUrl.substring(documentUrl.lastIndexOf('.'));
+                if (urlExtension.equalsIgnoreCase(".pdf")) {
+                    fileExtension = ".pdf";
+                } else if (urlExtension.equalsIgnoreCase(".doc")) {
+                    fileExtension = ".doc";
+                }
+            }
+            File tempFile = File.createTempFile("temp_doc", fileExtension);
             tempFile.deleteOnExit(); // JVM退出时自动删除
             
             // 下载文件内容
@@ -142,7 +149,9 @@ public class DocumentAndCoordinatesRenderer {
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
             "application/msword", // .doc
             "application/zip", // 有时docx文件可能被识别为zip
-            "application/octet-stream" // 二进制流，通用情况
+            "application/octet-stream", // 二进制流，通用情况
+            "application/pdf", // PDF文件
+            "application/x-pdf" // 另一种PDF Content-Type
         };
         
         for (String validType : validContentTypes) {
@@ -155,7 +164,8 @@ public class DocumentAndCoordinatesRenderer {
         return contentType.toLowerCase().contains("word") || 
                contentType.toLowerCase().contains("document") ||
                contentType.toLowerCase().contains("docx") ||
-               contentType.toLowerCase().contains("doc");
+               contentType.toLowerCase().contains("doc") ||
+               contentType.toLowerCase().contains("pdf");
     }
     
     /**
@@ -205,8 +215,19 @@ public class DocumentAndCoordinatesRenderer {
                 }
             }
             
+            // 检查文件是否为PDF格式
+            try (FileInputStream fis = new FileInputStream(file)) {
+                // PDF文件的魔术数字是"%PDF"，即前四个字节应该是0x25, 0x50, 0x44, 0x46
+                byte[] header = new byte[4];
+                int bytesRead = fis.read(header);
+                if (bytesRead >= 4 && header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F') {
+                    //System.out.println("文件验证通过：是有效的PDF格式");
+                    return true;
+                }
+            }
+            
             // 如果文件格式不匹配预期，记录详细信息
-            System.err.println("验证失败：文件格式不是有效的.docx或.doc格式");
+            System.err.println("验证失败：文件格式不是有效的.docx、.doc或.pdf格式");
             System.err.println("文件大小：" + file.length() + " 字节");
             
             // 检查文件是否为HTML或错误页面
@@ -313,6 +334,7 @@ public class DocumentAndCoordinatesRenderer {
         // 检测文件的实际格式（不依赖扩展名）
         boolean isZipFormat = false;
         boolean isOle2Format = false;
+        boolean isPdfFormat = false;
         
         try (FileInputStream fis = new FileInputStream(docFile)) {
             // 检查ZIP文件的魔术数字（前两个字节应该是PK）
@@ -331,6 +353,10 @@ public class DocumentAndCoordinatesRenderer {
                               header[5] == (byte)0xB1 && 
                               header[6] == (byte)0x1A && 
                               header[7] == (byte)0xE1);
+            }
+            
+            if (bytesRead >= 4) {
+                isPdfFormat = (header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F');
             }
         }
         
@@ -417,6 +443,19 @@ public class DocumentAndCoordinatesRenderer {
             } catch (Exception e) {
                 System.err.println("提取.doc文档内容失败：" + e.getMessage());
                 return "无法提取.doc文档内容。";
+            }
+        } else if (isPdfFormat) {
+            // 处理PDF格式
+            try (FileInputStream fis = new FileInputStream(docFile)) {
+                // 使用PDFBox库提取PDF内容
+                org.apache.pdfbox.pdmodel.PDDocument document = org.apache.pdfbox.pdmodel.PDDocument.load(fis);
+                org.apache.pdfbox.text.PDFTextStripper stripper = new org.apache.pdfbox.text.PDFTextStripper();
+                String content = stripper.getText(document);
+                document.close();
+                return content.trim();
+            } catch (Exception e) {
+                System.err.println("提取PDF文档内容失败：" + e.getMessage());
+                return "无法提取PDF文档内容。";
             }
         } else {
             System.err.println("不支持的文档格式，无法提取内容：" + docFile.getName());

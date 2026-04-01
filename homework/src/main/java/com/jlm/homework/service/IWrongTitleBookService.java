@@ -14,7 +14,7 @@ public interface IWrongTitleBookService {
 
     void createWrongBook(Long studentsHomeworkId);
 
-    Result<Object> addWrongBook(WrongTitleBook wrongTitleBook);
+    void addWrongBook(WrongTitleBook wrongTitleBook);
 
     Page<WrongTitleBook> getPage(Integer pageNum, Integer pageSize, WrongTitleBook wrongTitleBook);
 
@@ -30,4 +30,5 @@ public interface IWrongTitleBookService {
     void rejectDuplicate(Long id);
 
     void deleteById(Long id);
+
 }

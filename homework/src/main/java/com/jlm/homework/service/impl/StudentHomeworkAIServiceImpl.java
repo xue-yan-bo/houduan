@@ -893,6 +893,7 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
         List<String> imageNames = new ArrayList<>();
         String topicImagesStr = studentsHomework.getTopicImagesStr();
         boolean isDocFile = StringUtils.isNotEmpty(topicImagesStr) && HomeworkImageUtil.isDocumentFile(topicImagesStr);
+        boolean isPdfFile = StringUtils.isNotEmpty(topicImagesStr) && HomeworkImageUtil.isPdfFile(topicImagesStr);
         
         if (studentsHomework.getTopicImages() != null && !studentsHomework.getTopicImages().isEmpty() && !isDocFile) {
             imageNames = HomeworkImageUtil.processHomeworkImages(studentsHomework, homeworkStudentWriteDataList);
@@ -904,6 +905,16 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
             } catch (Exception e) {
                 log.warn("处理文档预览失败: {}", e.getMessage());
                 throw new RuntimeException("处理文档预览失败", e);
+            }
+        } else if (isPdfFile && StringUtils.isNotEmpty(topicImagesStr)) {
+            try {
+                // 处理PDF文件，转换为图片并叠加坐标点
+                String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
+                DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(topicImagesStr, homeworkStudentWriteDataList, 1, outputPath);
+                imageNames = Arrays.asList(outputPath);
+            } catch (Exception e) {
+                log.warn("处理PDF文件失败: {}", e.getMessage());
+                throw new RuntimeException("处理PDF文件失败", e);
             }
         }
         return imageNames;

@@ -179,7 +179,28 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         log.error("Channel exception: {}", cause.getMessage(), cause);
-        ctx.close();
+        
+        // 检查异常类型，避免因为非致命异常而关闭通道
+        if (cause instanceof java.io.IOException) {
+            String errorMsg = cause.getMessage();
+            if (errorMsg != null && (errorMsg.contains("断开的管道") || errorMsg.contains("Broken pipe") || 
+                errorMsg.contains("Connection reset") || errorMsg.contains("Socket closed") ||
+                errorMsg.contains("你的主机中的软件中止了一个已建立的连接"))) {
+                // 这些是连接断开的致命错误，需要关闭通道
+                log.warn("Fatal connection error, closing channel: {}", errorMsg);
+                ctx.close();
+            } else {
+                // 其他IO异常，可能是临时错误，记录但不关闭通道
+                log.warn("Non-fatal IO error, continuing: {}", errorMsg);
+            }
+        } else if (cause instanceof java.net.SocketException) {
+            // Socket异常，通常是连接问题，关闭通道
+            log.warn("Socket exception, closing channel: {}", cause.getMessage());
+            ctx.close();
+        } else {
+            // 其他异常，可能是业务逻辑错误，记录但不关闭通道
+            log.warn("Non-fatal exception, continuing: {}", cause.getMessage());
+        }
     }
 
     private void initHandlers() {

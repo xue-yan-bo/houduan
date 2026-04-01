@@ -158,20 +158,21 @@ public class HandlerServiceImpl implements IHandlerService {
 
         if(feedback.getFeedbackContent()!=null&&!feedback.getFeedbackContent().isEmpty()){
             List<StudentsWriteRecord> writeRecords = feedback.getFeedbackContent();
-            if(writeRecords.size()>5000&&feedbackId!=null){
+            if(feedbackId!=null){
                 studentFeedbackService.saveMoreWriteRecords(feedbackId,studentId,studentsFeedbackRecords);
             }else {
                 writeRecords.addAll(studentsFeedbackRecords);
                 feedback.setFeedbackContent(writeRecords);
                 feedback.setId(feedbackId);
+                feedback.setFeedbackTime(now);
+                feedback =studentFeedbackService.save(feedback);
             }
         }else {
             feedback.setFeedbackContent(studentsFeedbackRecords);
+            feedback.setFeedbackTime(now);
+            feedback =studentFeedbackService.save(feedback);
         }
 
-
-        feedback.setFeedbackTime(now);
-        feedback =studentFeedbackService.save(feedback);
         log.info("--------完成反馈信息保存:-------"+feedback.getId());
         return feedback.getId();
     }

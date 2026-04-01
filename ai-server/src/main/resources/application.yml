@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: ai-server
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.1.38:8848
+      config:
+        server-addr: 192.168.1.38:8848
+        file-extension: yaml
+        namespace: public # 或公司内部的其它命名空间
+
+server:
+  port: 9005 # 单独扩容时的默认端口，可以在启动时传参覆盖
+  tomcat:
+    threads:
+      max: 500 # AI服务主要负责计算，可适当调大线程池
+
+# AI 相关配置可统一在这里配，不影响业务代码
+ai:
+  zhipu:
+    api-key: your-zhipu-key-here # 可通过 Nacos 获取
+  qianwen:
+    api-key: your-qianwen-key-here

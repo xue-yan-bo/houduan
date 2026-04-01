@@ -66,4 +66,19 @@ public class ExerciseBookQuestion implements Serializable {
      */
     @Column(name = "imagelrl")
     private String sourceImageUrl;
+
+    @Column(name = "question_context")
+    private String questionContext;
+
+    @Column(name = "question_image")
+    private String questionImage;
+
+    @Column(name = "answer_context")
+    private String answerContext;
+
+    @Column(name = "answer_image")
+    private String answerImage;
+
+    @Column(name = "subject")
+    private String subject;
 }

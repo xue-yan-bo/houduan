@@ -18,9 +18,9 @@ import org.springframework.util.CollectionUtils;
 @Component
 public class TongYiSDKServ {
 
-    @Value("${TONGYI_API_KEY}")
+    @Value("${TONGYI_API_KEY:}")
     private String apiKey;
-    @Value("${TONGYI_MODEL}")
+    @Value("${TONGYI_MODEL:}")
     private String model;
 
     /**

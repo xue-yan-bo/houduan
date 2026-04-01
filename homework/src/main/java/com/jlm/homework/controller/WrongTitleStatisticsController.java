@@ -7,7 +7,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Date;
 
 @Tag(name = "错题统计", description = "错题统计相关接口")
 @RestController
@@ -34,8 +37,10 @@ public class WrongTitleStatisticsController {
     @GetMapping("/page")
     public Page<WrongTitleStatistics> getWrongTitleBookList(@RequestParam(defaultValue = "1")Integer pageNum,
                                                         @RequestParam(defaultValue = "10") Integer pageSize,
+                                                        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date startTime,
+                                                        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")  Date endTime,
                                                             WrongTitleStatistics wrongTitleBook) {
-        Page<WrongTitleStatistics> wrongTitleBookList=wrongTitleBookService.getPage(pageNum,pageSize,wrongTitleBook);
+        Page<WrongTitleStatistics> wrongTitleBookList=wrongTitleBookService.getPage(pageNum,pageSize,wrongTitleBook,startTime,endTime);
         return wrongTitleBookList;
     }
     @PostMapping("/updateClassWrongBook")

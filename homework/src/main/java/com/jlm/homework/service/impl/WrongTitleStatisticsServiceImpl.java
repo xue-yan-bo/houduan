@@ -125,6 +125,16 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
             if(StringUtils.isEmpty(wrongTitleBook.getSource())){
                 wrongTitleBook.setSource(null);
             }
+            if(StringUtils.isEmpty(wrongTitleBook.getGrade())){
+                wrongTitleBook.setGrade(null);
+            }
+
+            // 如果前端没有传classId也没有传grade(即选择了"全部班级"和"全部年级")，直接返回空数据
+            if (wrongTitleBook.getClassId() == null && wrongTitleBook.getGrade() == null) {
+                return new PageImpl<>(new java.util.ArrayList<>(), pageable, 0);
+            }
+        } else {
+            return new PageImpl<>(new java.util.ArrayList<>(), pageable, 0);
         }
         return wrongTitleStatisticsRepository.findAll(Example.of(wrongTitleBook),pageable);
     }

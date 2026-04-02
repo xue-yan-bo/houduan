@@ -253,6 +253,9 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
         if(optional!=null&&optional.isPresent()){
             statistics = optional.get();
             statistics.setWrongNum(statistics.getWrongNum()+1);
+            if(StringUtils.isNotEmpty(grade)){
+                statistics.setGrade(grade);
+            }
         }else{
             statistics = new WrongTitleStatistics();
             statistics.setClassId(wrongTitleBook.getClassId());
@@ -263,6 +266,9 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             statistics.setAnswerImage(wrongTitleBook.getAnswerImage());
             statistics.setAnswerContext(wrongTitleBook.getAnswerContext());
             statistics.setSubject(wrongTitleBook.getSubject());
+            if(StringUtils.isNotEmpty(grade)){
+                statistics.setGrade(grade);
+            }
             statistics.setWrongNum(1);
         }
         if(studentNum>0){
@@ -430,6 +436,30 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
 
     @Override
     public void deleteById(Long id) {
+        // 在删除个人错题前，检查是否需要同步减少班级错题统计表中的错误人数
+        Optional<WrongTitleBook> optional = wrongTitleBookRepository.findById(id);
+        if (optional.isPresent()) {
+            WrongTitleBook wrongTitleBook = optional.get();
+            if (wrongTitleBook.getClassId() != null) {
+                WrongTitleStatistics search = new WrongTitleStatistics();
+                search.setClassId(wrongTitleBook.getClassId());
+                search.setExerciseBookQuestionId(wrongTitleBook.getExerciseBookQuestionId());
+                search.setTitleImage(wrongTitleBook.getTitleImage());
+                Example<WrongTitleStatistics> example = Example.of(search);
+                Optional<WrongTitleStatistics> statOpt = wrongTitleStatisticsRepository.findOne(example);
+                if (statOpt.isPresent()) {
+                    WrongTitleStatistics statistics = statOpt.get();
+                    if (statistics.getWrongNum() != null && statistics.getWrongNum() > 1) {
+                        statistics.setWrongNum(statistics.getWrongNum() - 1);
+                        wrongTitleStatisticsRepository.save(statistics);
+                    } else if (statistics.getWrongNum() != null && statistics.getWrongNum() == 1) {
+                        // 如果只有1个人错，错题人数变成0，但保留这道题在班级错题本中
+                        statistics.setWrongNum(0);
+                        wrongTitleStatisticsRepository.save(statistics);
+                    }
+                }
+            }
+        }
         wrongTitleBookRepository.deleteById(id);
     }
 

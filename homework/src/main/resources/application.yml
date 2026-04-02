@@ -161,7 +161,7 @@ springdoc:
 # 日志配置
 logging:
   level:
-    root: OFF
+    root: INFO
     com.jlm.homework: INFO
     com.jlm.remote: INFO
     org.springframework.cloud: INFO
@@ -182,7 +182,7 @@ logging:
 #智普
 zhipu:
   ai:
-    api-key: "7abc333508dd4d71b83dcb6f5a511eee.rjwsPZyUfDN5abhn"
+    api-key: "fb1fc9c0ff2343449849169312c32239.VSKApXu5lGla881O"
 
 # JODConverter配置 - Word转PDF
 jodconverter:

@@ -21,8 +21,8 @@ spring:
     #url: ${DEV_DATABASE_URL:jdbc:mysql://192.168.1.251:3306/jlm-homework-design?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
     url: ${DEV_DATABASE_URL:jdbc:mysql://localhost:3306/homework_dev?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
     username: ${DEV_DATABASE_USERNAME:root}
-    #password: ${DEV_DATABASE_PASSWORD:jlm@1234}
-    password: ${DEV_DATABASE_PASSWORD:root123}
+    password: ${DEV_DATABASE_PASSWORD:jlm@1234}
+    #password: ${DEV_DATABASE_PASSWORD:root123}
     hikari:
       # 开发环境使用较小的连接池
       maximum-pool-size: 10

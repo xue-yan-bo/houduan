@@ -13,6 +13,12 @@ import com.jlm.homework.repository.WrongTitleStatisticsRepository;
 import com.jlm.homework.service.IWrongTitleStatisticsService;
 import jakarta.annotation.Resource;
 import com.alibaba.cloud.commons.lang.StringUtils;
+import com.jlm.homework.config.ZhipuAIConfig;
+import com.jlm.homework.util.AIUtil;
+import com.jlm.homework.util.ZhipuAIImageAnalysisUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import java.io.IOException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -33,6 +39,13 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
 
     @Autowired
     private StudentFeignClient studentFeignClient;
+
+    @Autowired
+    private ZhipuAIConfig zhipuAIConfig;
+
+    @Autowired
+    private AIUtil aiUtil;
+
 
 
     public void createWrongTitleStatistics(Long homeworkPublishId,Long classId){
@@ -136,5 +149,34 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
         wrongTitleStatisticsRepository.deleteById(id);
     }
 
+
+
+    @Override
+    public void aiChart(Long id) {
+        Optional<WrongTitleStatistics> optional = wrongTitleStatisticsRepository.findById(id);
+        if (optional == null || !optional.isPresent()) {
+            return;
+        }
+        WrongTitleStatistics wrongTitleStatistics = optional.get();
+        if (StringUtils.isEmpty(wrongTitleStatistics.getTitleContext())) {
+            String imageUrl = wrongTitleStatistics.getTitleImage();
+            if (StringUtils.isEmpty(imageUrl)) {
+                imageUrl = ""; // WrongTitleStatistics has no sourceImageUrl
+            }
+            if (StringUtils.isNotEmpty(imageUrl)) {
+                try {
+                    AIUtil aiUtils = aiUtil.getAIUtil();
+                    String textPrompt = "请提取这张图片中的所有试题文字内容（包含题目、选项、解析等）。不论是文科（语文、历史、英语等）、理科还是美术等其他学科，请忠实还原图片中的所有文字。如果包含公式或特殊符号，请尽量使用Markdown或LaTeX语法表示。只返回提取的纯文字内容，不要输出诸如好的、提取的文字如下等任何废话。如果识别不到文字，只需返回空字符串。";
+                    String text = aiUtils.analyzeImage(imageUrl, textPrompt);
+                    if (StringUtils.isNotEmpty(text)) {
+                        wrongTitleStatistics.setTitleContext(text);
+                        wrongTitleStatisticsRepository.save(wrongTitleStatistics);
+                    }
+                } catch (Exception e) {
+                    System.err.println("AI提取题目文字失败: " + e.getMessage());
+                }
+            }
+        }
+    }
 
 }

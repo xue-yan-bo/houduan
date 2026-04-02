@@ -15,7 +15,9 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitMessagingTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import java.util.concurrent.TimeUnit;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -47,6 +49,8 @@ public class HandlerServiceImpl implements IHandlerService {
     private ClassFeignClient classFeignClient;
     @Autowired
     private AIUtil aiUtil;
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public List<HomeWork2Board> getHomeWork2Board(String subject, String date, Long studentId) {
@@ -110,10 +114,36 @@ public class HandlerServiceImpl implements IHandlerService {
             feedback = new StudentFeedback();
             feedback.setCreateTime(now);
             feedback.setStudentId(studentId);
-            //feedback.setSubject(subject);
-            ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
-            if(resultDto!=null&&resultDto.getData()!=null) {
-                Student student = resultDto.getData();
+            
+            // 先从Redis获取学生信息
+            String redisKey = "student:info:" + studentId;
+            Student student = null;
+            try {
+                Object cachedStudent = redisTemplate.opsForValue().get(redisKey);
+                if (cachedStudent != null) {
+                    student = (Student) cachedStudent;
+                    log.info("从Redis获取学生信息：id" + student.getStudentId() + "姓名：" + student.getStudentName());
+                } else {
+                    // Redis中没有，调用feign接口获取
+                    ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
+                    if(resultDto!=null&&resultDto.getData()!=null) {
+                        student = resultDto.getData();
+                        // 将学生信息存入Redis，过期时间24小时
+                        redisTemplate.opsForValue().set(redisKey, student, 24, TimeUnit.HOURS);
+                        //log.info("从Feign获取学生信息并缓存到Redis：id" + student.getStudentId() + "姓名：" + student.getStudentName());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Redis操作失败，尝试从Feign获取学生信息：" + e.getMessage());
+                // Redis操作失败，直接调用feign接口
+                ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
+                if(resultDto!=null&&resultDto.getData()!=null) {
+                    student = resultDto.getData();
+                    log.info("从Feign获取学生信息：id" + student.getStudentId() + "姓名：" + student.getStudentName());
+                }
+            }
+            
+            if(student != null) {
                 feedback.setSchoolId(student.getSchoolId());
                 feedback.setStudentName(student.getStudentName());
                 feedback.setClassId(student.getClassesId());
@@ -123,26 +153,26 @@ public class HandlerServiceImpl implements IHandlerService {
                 } else {
                     feedback.setClassName(student.getClassesName());
                 }
-                log.info("学生信息：id" + student.getStudentId() + "姓名：" + student.getStudentName());
             }
         }
 
-        if(feedback.getFeedbackContent()!=null&&!feedback.getFeedbackContent().isEmpty()){
-            List<StudentsWriteRecord> writeRecords = feedback.getFeedbackContent();
-            if(writeRecords.size()>5000&&feedbackId!=null){
-                studentFeedbackService.saveMoreWriteRecords(feedbackId,studentId,studentsFeedbackRecords);
-            }else {
+        if(feedbackId!=null&&feedback!=null){
+            // 当feedbackId不为空且feedback存在时，只保存到StudentFeedBackWriteData表
+            studentFeedbackService.saveMoreWriteRecords(feedbackId,studentId,studentsFeedbackRecords);
+        }else {
+            // 当feedbackId为空或feedback不存在时，创建新的StudentFeedback记录
+            if(feedback.getFeedbackContent()!=null&&!feedback.getFeedbackContent().isEmpty()){
+                List<StudentsWriteRecord> writeRecords = feedback.getFeedbackContent();
                 writeRecords.addAll(studentsFeedbackRecords);
                 feedback.setFeedbackContent(writeRecords);
-                feedback.setId(feedbackId);
+            }else {
+                feedback.setFeedbackContent(studentsFeedbackRecords);
             }
-        }else {
-            feedback.setFeedbackContent(studentsFeedbackRecords);
+            feedback.setId(feedbackId);
+            feedback.setFeedbackTime(now);
+            feedback =studentFeedbackService.save(feedback);
         }
 
-
-        feedback.setFeedbackTime(now);
-        feedback =studentFeedbackService.save(feedback);
         log.info("--------完成反馈信息保存:-------"+feedback.getId());
         return feedback.getId();
     }
@@ -264,9 +294,36 @@ public class HandlerServiceImpl implements IHandlerService {
         feedback.setCreateTime(new Date());
         feedback.setStudentId(studentId);
         //feedback.setSubject(subject);
-        ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
-        if(resultDto!=null&&resultDto.getData()!=null) {
-            Student student = resultDto.getData();
+        
+        // 先从Redis获取学生信息
+        String redisKey = "student:info:" + studentId;
+        Student student = null;
+        try {
+            Object cachedStudent = redisTemplate.opsForValue().get(redisKey);
+            if (cachedStudent != null) {
+                student = (Student) cachedStudent;
+                //log.info("从Redis获取学生信息：id" + student.getStudentId() + "姓名：" + student.getStudentName());
+            } else {
+                // Redis中没有，调用feign接口获取
+                ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
+                if(resultDto!=null&&resultDto.getData()!=null) {
+                    student = resultDto.getData();
+                    // 将学生信息存入Redis，过期时间24小时
+                    redisTemplate.opsForValue().set(redisKey, student, 24, TimeUnit.HOURS);
+                    //log.info("从Feign获取学生信息并缓存到Redis：id" + student.getStudentId() + "姓名：" + student.getStudentName());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Redis操作失败，尝试从Feign获取学生信息：" + e.getMessage());
+            // Redis操作失败，直接调用feign接口
+            ResultDto<Student> resultDto = studentFeignClient.getStudentInfo(studentId);
+            if(resultDto!=null&&resultDto.getData()!=null) {
+                student = resultDto.getData();
+                log.info("从Feign获取学生信息：id" + student.getStudentId() + "姓名：" + student.getStudentName());
+            }
+        }
+        
+        if(student != null) {
             feedback.setSchoolId(student.getSchoolId());
             feedback.setStudentName(student.getStudentName());
             feedback.setClassId(student.getClassesId());

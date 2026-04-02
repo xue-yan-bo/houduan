@@ -63,12 +63,12 @@ public class SessionContext implements Serializable {
     private List<Copybook2Board> copybookBoards = new ArrayList<>();
     // 笔迹数据缓存
     private List<HandwritingParseResult> studentClassRecords = java.util.Collections.synchronizedList(new ArrayList<>());
-    private List<StudentsWriteRecord> studentsWriteRecords = new ArrayList<>();
-    private List<StudentsWriteRecord> studentsEmendRecords = new ArrayList<>();
-    private List<StudentsWriteRecord> studentsFeedbackRecords = new ArrayList<>();
-    private List<StudentsWriteRecord> uploadErrorTitleRecords = new ArrayList<>();
-    private List<StudentsWriteRecord> studentsCopybookRecords = new ArrayList<>();
-    private List<StudentsWriteRecord> lastList = new ArrayList<>();
+    private List<StudentsWriteRecord> studentsWriteRecords = java.util.Collections.synchronizedList(new ArrayList<>());
+    private List<StudentsWriteRecord> studentsEmendRecords = java.util.Collections.synchronizedList(new ArrayList<>());
+    private List<StudentsWriteRecord> studentsFeedbackRecords = java.util.Collections.synchronizedList(new ArrayList<>());
+    private List<StudentsWriteRecord> uploadErrorTitleRecords = java.util.Collections.synchronizedList(new ArrayList<>());
+    private List<StudentsWriteRecord> studentsCopybookRecords = java.util.Collections.synchronizedList(new ArrayList<>());
+    private List<StudentsWriteRecord> lastList = java.util.Collections.synchronizedList(new ArrayList<>());
 
     public synchronized void clearSession() {
         this.work2Boards.clear();

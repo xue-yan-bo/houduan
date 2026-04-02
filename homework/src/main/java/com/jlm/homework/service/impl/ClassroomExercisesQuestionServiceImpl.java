@@ -318,5 +318,41 @@ public class ClassroomExercisesQuestionServiceImpl implements IClassroomExercise
         classroomExercisesQuestionRepository.save(cpQuestion);
     }
 
+    @Override
+    public List<ClassroomExercisesQuestion> selectQuestionListByExercisesIds(List<Long> classroomExercisesIds) {
+        if (classroomExercisesIds == null || classroomExercisesIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        // 构建查询条件
+        List<ClassroomExercisesQuestion> allQuestions = new ArrayList<>();
+        for (Long exercisesId : classroomExercisesIds) {
+            ClassroomExercisesQuestion question = new ClassroomExercisesQuestion();
+            question.setClassroomExercisesId(exercisesId);
+            Sort sort = Sort.by(Sort.Direction.ASC, "titleNumber");
+            List<ClassroomExercisesQuestion> questionList = classroomExercisesQuestionRepository.findAll(Example.of(question), sort);
+            allQuestions.addAll(questionList);
+        }
+        
+        // 填充问题银行信息
+        for (ClassroomExercisesQuestion exercisesQuestion : allQuestions) {
+            if (exercisesQuestion.getQuestionBankId() != null) {
+                QuestionBank questionBank = questionBankService.getById(exercisesQuestion.getQuestionBankId());
+                if (questionBank != null) {
+                    exercisesQuestion.setQuestionType(questionBank.getQuestionType());
+                    exercisesQuestion.setDifficulty(questionBank.getDifficulty());
+                    exercisesQuestion.setOptions(questionBank.getOptions());
+                    exercisesQuestion.setParse(questionBank.getParse());
+                    exercisesQuestion.setSubject(questionBank.getSubject());
+                    if ("math".equals(questionBank.getSubject())) {
+                        exercisesQuestion.setSubject("数学");
+                    }
+                }
+            }
+        }
+        
+        return allQuestions;
+    }
+
 
 }

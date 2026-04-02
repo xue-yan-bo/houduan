@@ -10,6 +10,8 @@ public interface IClassroomExercisesQuestionService {
     void saveQuestionList(Long classroomExercisesId, List<ClassroomExercisesQuestion> questionList);
 
     List<ClassroomExercisesQuestion>  selectQuestionList(Long classroomExercisesId);
+    
+    List<ClassroomExercisesQuestion> selectQuestionListByExercisesIds(List<Long> classroomExercisesIds);
 
     ClassroomExercisesQuestion save(Long classroomExercisesId, ClassroomExercisesQuestion question);
 

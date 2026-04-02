@@ -14,6 +14,8 @@ import com.jlm.homework.entity.ExamPaperAnalysis;
 import com.jlm.homework.entity.HomeworkPublishQuestion;
 import com.jlm.homework.entity.QuestionAnalysis;
 
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -305,7 +307,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
         // 2. 准备请求参数
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+        requestBody.put("model", "glm-4.6v"); // 使用GLM-4V多模态模型
 
         // 构建messages参数
         Map<String, Object> message = new HashMap<>();
@@ -366,7 +368,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
         // 2. 准备请求参数
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+        requestBody.put("model", "glm-4.6v"); // 使用GLM-4V多模态模型
 
         // 构建messages参数
         Map<String, Object> message = new HashMap<>();
@@ -470,7 +472,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
         // 1. 准备请求参数
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+        requestBody.put("model", "glm-4.6v"); // 使用GLM-4V多模态模型
         // 构建messages参数
         Map<String, Object> message = new HashMap<>();
         message.put("role", "user");
@@ -1120,8 +1122,14 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
             // 处理网络图片
             URL url = new URL(normalizedPath);
             try (InputStream is = url.openStream()) {
-                byte[] bytes = is.readAllBytes();
-                return Base64Utils.encodeToString(bytes);
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+                byte[] imageBytes = outputStream.toByteArray();
+                return Base64.getEncoder().encodeToString(imageBytes);
             }
         } else {
             // 处理本地文件
@@ -1239,7 +1247,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
         // 2. 准备请求参数
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+        requestBody.put("model", "glm-4.6v"); // 使用GLM-4V多模态模型
 
         // 构建messages参数
         Map<String, Object> message = new HashMap<>();
@@ -1285,7 +1293,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
     public String analyzeToJson(String prompt) throws IOException {
         // 1. 准备请求参数
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "glm-4.5v"); // 使用GLM-4V多模态模型
+        requestBody.put("model", "glm-4.6v"); // 使用GLM-4V多模态模型
 
         // 构建messages参数
         Map<String, Object> message = new HashMap<>();

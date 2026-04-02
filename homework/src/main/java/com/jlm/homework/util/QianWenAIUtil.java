@@ -334,11 +334,20 @@ public class QianWenAIUtil extends AIUtil{
         /*GenerationResult result=callWithMessage(imageUrl,prompt);
         return result.getOutput().getChoices().get(0).getMessage().getContent();*/
         String aiResult = null;
-        if(StringUtils.isNotEmpty(imageUrl)) {
+        if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(imageUrl)) {
             aiResult = getTongYiServ().multiModalCall(prompt, Arrays.asList(imageUrl));
         }else{
             aiResult = getTongYiServ().multiModalCall(prompt, null);
         }
         return aiResult;
+    }
+
+    public static String getAiResult(String prompt) {
+        try {
+            return new QianWenAIUtil().analyzeImage(null, prompt);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

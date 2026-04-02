@@ -147,7 +147,20 @@ public class HomeworkImageUtil {
             return false;
         }
         String lowerCase = fileName.toLowerCase();
-        return lowerCase.endsWith(".doc") || lowerCase.endsWith(".docx");
+        return lowerCase.endsWith(".doc") || lowerCase.endsWith(".docx") || lowerCase.endsWith(".pdf");
+    }
+    
+    /**
+     * 检查文件是否为PDF文件
+     * @param fileName 文件名
+     * @return 是否为PDF文件
+     */
+    public static boolean isPdfFile(String fileName) {
+        if (fileName == null) {
+            return false;
+        }
+        String lowerCase = fileName.toLowerCase();
+        return lowerCase.endsWith(".pdf");
     }
     
     /**

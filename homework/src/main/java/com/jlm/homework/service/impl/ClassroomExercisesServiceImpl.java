@@ -19,9 +19,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.jlm.homework.util.DateUtil;
 
 @Service
 public class ClassroomExercisesServiceImpl implements IClassroomExercisesService {
@@ -86,9 +86,22 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         classroomExercises.setDeleteFlag(0);
         Page<ClassroomExercises> page= classroomExercisesRepository.findAll(Example.of(classroomExercises),pageable);
         List<ClassroomExercises> exercisesList=page.getContent();
-        for(ClassroomExercises item:exercisesList){
-            List<ClassroomExercisesQuestion> questionList=classroomExercisesQuestionService.selectQuestionList(item.getId());
-            item.setQuestionList(questionList);
+        
+        // 批量查询问题列表
+        if (!exercisesList.isEmpty()) {
+            List<Long> exercisesIds = exercisesList.stream().map(ClassroomExercises::getId).collect(Collectors.toList());
+            List<ClassroomExercisesQuestion> allQuestions = classroomExercisesQuestionService.selectQuestionListByExercisesIds(exercisesIds);
+            
+            // 按课堂练习 ID 分组
+            Map<Long, List<ClassroomExercisesQuestion>> questionMap = new HashMap<>();
+            for (ClassroomExercisesQuestion question : allQuestions) {
+                questionMap.computeIfAbsent(question.getClassroomExercisesId(), k -> new ArrayList<>()).add(question);
+            }
+            
+            // 设置问题列表到对应的课堂练习对象
+            for (ClassroomExercises item : exercisesList) {
+                item.setQuestionList(questionMap.getOrDefault(item.getId(), new ArrayList<>()));
+            }
         }
 
         return page;
@@ -126,7 +139,6 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         List<ClassroomExercisesQuestion> questionList=classroomExercisesQuestionService.findQuestionList(classId,startDate,endDate);
         Map<String,Integer> exerciseTypeMap = new HashMap<>();
         Map<String,Integer> dayExerciseTypeMap = new HashMap<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         Map<String,String> questionIdMap = new HashMap<>();
         for(ClassroomExercisesQuestion question:questionList){
             if(StringUtils.isNotEmpty(question.getQuestionType())) {
@@ -141,7 +153,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
                     questionIdMap.put(question.getQuestionType(), "" + question.getId());
                 }
                 if(question.getCreateTime()!=null) {
-                    String day = sdf.format(question.getCreateTime());
+                    String day = DateUtil.formatDate(question.getCreateTime());
                     String key = question.getQuestionType() + ":" + day;
                     if (dayExerciseTypeMap.containsKey(key)) {
                         dayExerciseTypeMap.put(key, dayExerciseTypeMap.get(key) + 1);
@@ -233,13 +245,12 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             classroomExercises.setClassIds(Arrays.asList(classId));
             classroomExercises.setExercisesType(exercisesType);
             classroomExercises.setSchoolId(schoolId);
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             classroomExercises.setDeleteFlag(0);
             List<ClassroomExercisesQuestion> exercisesQuestionList= null;
             if(2==exercisesType){
-                classroomExercises.setHomeworkName(teacherName+sdf.format(new Date())+"课堂互动");
+                classroomExercises.setHomeworkName(teacherName+DateUtil.formatDateTime(new Date())+"课堂互动");
             }else if(3==exercisesType){
-                classroomExercises.setHomeworkName(teacherName+sdf.format(new Date())+"纸笔直播");
+                classroomExercises.setHomeworkName(teacherName+DateUtil.formatDateTime(new Date())+"纸笔直播");
             }else if(1==exercisesType&&1==useStatus&&classroomExercisesId!=null&&classroomExercisesId!=0){
                 saveflag = false;
                 exercisesQuestionList=classroomExercisesQuestionService.selectQuestionList(classroomExercisesId);
@@ -323,6 +334,8 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             classroomExercisesRepository.save(classroomExercises);
         }
 
+        // 批量保存学生记录
+        List<ClassroomExercisesStudentRecord> recordList = new ArrayList<>();
         for (Student student:studentList){
             ClassroomExercisesStudentRecord record=new ClassroomExercisesStudentRecord();
             record.setStudentId(student.getStudentId());
@@ -334,16 +347,74 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
             record.setClassroomExercisesId(classroomExercisesId);
             record.setStartTime(now);
             record.setStartFlag(1);
-            classroomExercisesStudentRecordRepository.save(record);
-
+            recordList.add(record);
+        }
+        if (!recordList.isEmpty()) {
+            classroomExercisesStudentRecordRepository.saveAll(recordList);
         }
         return classroomExercisesId;
+    }
+
+    /**
+     * 构建课堂练习查询的 Specification
+     */
+    private Specification<ClassroomExercises> buildClassroomExercisesSpecification(Long classId, String homeworkName, String startDate, String endDate, Integer exercisesType, Integer useStatus) {
+        return new Specification<ClassroomExercises>() {
+            @Override
+            public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                try {
+                    // 基础条件：未删除
+                    Predicate condDel = criteriaBuilder.equal(root.get("deleteFlag"), 0);
+                    list.add(condDel);
+                    
+                    // 学校 ID
+                    Predicate condSchool = criteriaBuilder.equal(root.get("schoolId"), userService.getCurrentSchoolIdSafely());
+                    list.add(condSchool);
+                    
+                    // 班级 ID
+                    if (classId != null) {
+                        Predicate condClass = criteriaBuilder.like(root.get("classIds").as(String.class), "%" + classId + "%");
+                        list.add(condClass);
+                    }
+                    
+                    // 作业名称
+                    if (StringUtils.isNotEmpty(homeworkName)) {
+                        Predicate condHomeworkName = criteriaBuilder.like(root.get("homeworkName").as(String.class), "%" + homeworkName + "%");
+                        list.add(condHomeworkName);
+                    }
+                    
+                    // 时间范围
+                    if (StringUtils.isNotEmpty(startDate) && StringUtils.isNotEmpty(endDate)) {
+                        Date startDate1 = DateUtil.parseDateTime(startDate);
+                        Date endDate1 = DateUtil.parseDateTime(endDate);
+                        Predicate condDate = criteriaBuilder.between(root.<Date>get("createTime"), startDate1, endDate1);
+                        list.add(condDate);
+                    }
+                    
+                    // 练习类型
+                    if (exercisesType != null) {
+                        Predicate condType = criteriaBuilder.equal(root.get("exercisesType"), exercisesType);
+                        list.add(condType);
+                    }
+                    
+                    // 使用状态
+                    if (useStatus != null) {
+                        Predicate condUseStatus = criteriaBuilder.equal(root.get("useStatus"), useStatus);
+                        list.add(condUseStatus);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException("构建课堂练习查询条件失败: " + e.getMessage(), e);
+                }
+                Predicate[] p = new Predicate[list.size()];
+                return criteriaBuilder.and(list.toArray(p));
+            }
+        };
     }
 
     @Override
     public TeacherClassroomData getTeacherClassroomData(String startDate, String endDate) {
         TeacherClassroomData classroomData =new TeacherClassroomData();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         Specification<ClassroomExercises> specification = new Specification<ClassroomExercises>() {
             @Override
             public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
@@ -351,15 +422,15 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
                 try {
                     Predicate condition = null;
                     if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
-                        Date startDate1 = sdf.parse(startDate);
-                        Date endDate1 = sdf.parse(endDate);
+                        Date startDate1 = DateUtil.parseDate(startDate);
+                        Date endDate1 = DateUtil.parseDate(endDate);
                         condition = criteriaBuilder.between(root.<Date>get("publishTime"),startDate1,endDate1);
                         list.add(condition);
                     }
                     Predicate condition1 = criteriaBuilder.equal(root.get("useStatus"),1);
                     list.add(condition1);
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    throw new RuntimeException("构建课堂练习统计查询条件失败: " + e.getMessage(), e);
                 }
                 Predicate condDel = criteriaBuilder.equal(root.get("deleteFlag"),0);
                 list.add(condDel);
@@ -391,7 +462,7 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         Map<String,Integer> dayClassroomUseNumMap = new HashMap<>();
         for(ClassroomExercises exercises:exercisesList){
             if(exercises.getPublishTime()!=null) {
-                String day = sdf.format(exercises.getPublishTime());
+                String day = DateUtil.formatDate(exercises.getPublishTime());
                 if (dayClassroomUseNumMap.containsKey(day)) {
                     dayClassroomUseNumMap.put(day, dayClassroomUseNumMap.get(day) + 1);
                 } else {
@@ -409,49 +480,28 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Specification<ClassroomExercises> specification = new Specification<ClassroomExercises>() {
-            @Override
-            public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                List<Predicate> list = new ArrayList<>();
-                try {
-                    Predicate condDel = criteriaBuilder.equal(root.get("deleteFlag"),0);
-                    list.add(condDel);
-                    Predicate cond = criteriaBuilder.equal(root.get("schoolId"),userService.getCurrentSchoolIdSafely());
-                    list.add(cond);
-                    if(classId!=null){
-                        Predicate con = criteriaBuilder.like(root.get("classIds").as(String.class),"%"+classId+"%");
-                        list.add(con);
-                    }
-                    if(StringUtils.isNotEmpty(homeworkName)){
-                        Predicate con1 = criteriaBuilder.like(root.get("homeworkName").as(String.class),"%"+homeworkName+"%");
-                        list.add(con1);
-                    }
-                    if(StringUtils.isNotEmpty(startDate)&&StringUtils.isNotEmpty(endDate)){
-                        Date startDate1 = sdf.parse(startDate);
-                        Date endDate1 = sdf.parse(endDate);
-                        Predicate condition = criteriaBuilder.between(root.<Date>get("createTime"),startDate1,endDate1);
-                        list.add(condition);
-                    }
-                    if(exercisesType!=null){
-                        Predicate con2 = criteriaBuilder.equal(root.get("exercisesType"),exercisesType);
-                        list.add(con2);
-                    }
-                    Predicate con3 = criteriaBuilder.equal(root.get("useStatus"),1);
-                    list.add(con3);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-
-                Predicate[] p =  new Predicate[list.size()];
-                return criteriaBuilder.and(list.toArray(p));
-            }
-        };
+        
+        // 使用公共方法构建 Specification
+        Specification<ClassroomExercises> specification = buildClassroomExercisesSpecification(classId, homeworkName, startDate, endDate, exercisesType, 1);
+        
         Page<ClassroomExercises> page=  classroomExercisesRepository.findAll(specification,pageable);
         List<ClassroomExercises> exercisesList=page.getContent();
-        for(ClassroomExercises item:exercisesList){
-            List<ClassroomExercisesQuestion> questionList=classroomExercisesQuestionService.selectQuestionList(item.getId());
-            item.setQuestionList(questionList);
+        
+        // 批量查询问题列表
+        if (!exercisesList.isEmpty()) {
+            List<Long> exercisesIds = exercisesList.stream().map(ClassroomExercises::getId).collect(Collectors.toList());
+            List<ClassroomExercisesQuestion> allQuestions = classroomExercisesQuestionService.selectQuestionListByExercisesIds(exercisesIds);
+            
+            // 按课堂练习 ID 分组
+            Map<Long, List<ClassroomExercisesQuestion>> questionMap = new HashMap<>();
+            for (ClassroomExercisesQuestion question : allQuestions) {
+                questionMap.computeIfAbsent(question.getClassroomExercisesId(), k -> new ArrayList<>()).add(question);
+            }
+            
+            // 设置问题列表到对应的课堂练习对象
+            for (ClassroomExercises item : exercisesList) {
+                item.setQuestionList(questionMap.getOrDefault(item.getId(), new ArrayList<>()));
+            }
         }
         return page;
     }
@@ -462,47 +512,28 @@ public class ClassroomExercisesServiceImpl implements IClassroomExercisesService
         pageSize = pageSize == null ? 100 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Specification<ClassroomExercises> specification = new Specification<ClassroomExercises>() {
-            @Override
-            public Predicate toPredicate(Root<ClassroomExercises> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                List<Predicate> list = new ArrayList<>();
-                try {
-                    Predicate condDel = criteriaBuilder.equal(root.get("deleteFlag"),0);
-                    list.add(condDel);
-                    Predicate cond = criteriaBuilder.equal(root.get("schoolId"),userService.getCurrentSchoolIdSafely());
-                    list.add(cond);
-                    if (classId != null) {
-                        Predicate con = criteriaBuilder.like(root.get("classIds").as(String.class),"%"+classId+"%");
-                        list.add(con);
-                    }
-                    if(StringUtils.isNotEmpty(homeworkName)){
-                        Predicate con1 = criteriaBuilder.like(root.get("homeworkName").as(String.class),"%"+homeworkName+"%");
-                        list.add(con1);
-                    }
-                    if(StringUtils.isNotEmpty(startTime)&&StringUtils.isNotEmpty(endTime)){
-                        Date startDate1 = sdf.parse(startTime);
-                        Date endDate1 = sdf.parse(endTime);
-                        Predicate condition = criteriaBuilder.between(root.<Date>get("createTime"),startDate1,endDate1);
-                        list.add(condition);
-                    }
-                    if(exercisesType!=null){
-                        Predicate con2 = criteriaBuilder.equal(root.get("exercisesType"),exercisesType);
-                        list.add(con2);
-                    }
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-
-                Predicate[] p =  new Predicate[list.size()];
-                return criteriaBuilder.and(list.toArray(p));
-            }
-        };
+        
+        // 使用公共方法构建 Specification
+        Specification<ClassroomExercises> specification = buildClassroomExercisesSpecification(classId, homeworkName, startTime, endTime, exercisesType, null);
+        
         Page<ClassroomExercises> page=  classroomExercisesRepository.findAll(specification,pageable);
         List<ClassroomExercises> exercisesList=page.getContent();
-        for(ClassroomExercises item:exercisesList){
-            List<ClassroomExercisesQuestion> questionList=classroomExercisesQuestionService.selectQuestionList(item.getId());
-            item.setQuestionList(questionList);
+        
+        // 批量查询问题列表
+        if (!exercisesList.isEmpty()) {
+            List<Long> exercisesIds = exercisesList.stream().map(ClassroomExercises::getId).collect(Collectors.toList());
+            List<ClassroomExercisesQuestion> allQuestions = classroomExercisesQuestionService.selectQuestionListByExercisesIds(exercisesIds);
+            
+            // 按课堂练习 ID 分组
+            Map<Long, List<ClassroomExercisesQuestion>> questionMap = new HashMap<>();
+            for (ClassroomExercisesQuestion question : allQuestions) {
+                questionMap.computeIfAbsent(question.getClassroomExercisesId(), k -> new ArrayList<>()).add(question);
+            }
+            
+            // 设置问题列表到对应的课堂练习对象
+            for (ClassroomExercises item : exercisesList) {
+                item.setQuestionList(questionMap.getOrDefault(item.getId(), new ArrayList<>()));
+            }
         }
         return page;
     }

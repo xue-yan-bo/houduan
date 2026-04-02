@@ -129,6 +129,27 @@ public class WrongTitleStatistics implements Serializable {
     @Column(name = "subject")
     private String subject;
 
+    /**
+     * 年级
+     */
+    @Column(name = "grade")
+    private String grade;
+
+    @Column(name = "exercise_book_id")
+    private Long exerciseBookId;
+
+    @Column(name = "exercise_book_question_id")
+    private Long exerciseBookQuestionId;
+
+    @Column(name = "wrong_num")
+    private Integer wrongNum;
+
+    @Column(name = "answer_image")
+    private String answerImage;
+
+    @Column(name = "answer_context")
+    private String answerContext;
+
     public String getTitleContext() {
         if(StringUtils.isNotEmpty(titleContext)&&titleContext.contains("\\")){
             return titleContext.replace("\\","");

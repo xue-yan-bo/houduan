@@ -43,10 +43,16 @@ public class WrongTitleStatisticsController {
     public void updateClassWrongBook(@RequestBody WrongTitleStatistics wrongTitleStatistics) {
         wrongTitleBookService.updateClassWrongBook(wrongTitleStatistics);
     }
+    
     @DeleteMapping("/deleteClassWrong/{id}")
     @Operation(summary = "删除班级错题")
     public void deleteById(@PathVariable Long id) {
         wrongTitleBookService.deleteClassWrong(id);
+    }
 
+    @GetMapping("/classAiChart")
+    @Operation(summary = "调用大模型解析错题")
+    public void aiChart(Long id) {
+        wrongTitleBookService.aiChart(id);
     }
 }

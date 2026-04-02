@@ -46,4 +46,10 @@ public class ClassroomStudentWriteDataController {
     public void clearTeacherApprove(Long classroomExercisesId,Long studentId,Integer pageNum){
         classroomTearcherApproveStuService.clearTeacherApprove(classroomExercisesId,studentId,pageNum);
     }
+
+    @GetMapping("/clearTeacher2Approve")
+    @Operation(summary = "清除课堂老师对老师的批阅")
+    public void clearTeacher2Approve(Long classroomExercisesId,Long teacherId,Integer pageNum){
+        classroomTearcherApproveStuService.clearTeacher2Approve(classroomExercisesId,teacherId,pageNum);
+    }
 }

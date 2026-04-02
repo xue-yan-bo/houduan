@@ -71,6 +71,26 @@ public class NettyResponseSender extends ResponseSender {
         }
     }
 
+    @Override
+    public void sendRaw(byte[] data) throws IOException {
+        try {
+            ctx.writeAndFlush(Unpooled.wrappedBuffer(data));
+        } catch (Exception e) {
+            log.error("Error sending raw data: {}", e.getMessage(), e);
+            // 不抛出异常，避免因为发送失败而导致通道关闭
+        }
+    }
+
+    @Override
+    public void sendText(String text) {
+        try {
+            byte[] data = (text + "\n").getBytes();
+            ctx.writeAndFlush(Unpooled.wrappedBuffer(data));
+        } catch (Exception e) {
+            log.error("Error sending text", e);
+        }
+    }
+
     private void sendLcdDisplayData(byte[] data, int length) {
         byte[] buff = new byte[length + 5];
         buff[0] = 0x55;
@@ -106,20 +126,5 @@ public class NettyResponseSender extends ResponseSender {
         buff[length + 10] = (byte)(checksum & 0xFF);
         
         ctx.writeAndFlush(Unpooled.wrappedBuffer(buff));
-    }
-
-    @Override
-    public void sendRaw(byte[] data) throws IOException {
-        ctx.writeAndFlush(Unpooled.wrappedBuffer(data));
-    }
-
-    @Override
-    public void sendText(String text) {
-        try {
-            byte[] data = (text + "\n").getBytes();
-            ctx.writeAndFlush(Unpooled.wrappedBuffer(data));
-        } catch (Exception e) {
-            log.error("Error sending text", e);
-        }
     }
 }

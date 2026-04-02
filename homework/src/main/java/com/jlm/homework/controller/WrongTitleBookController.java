@@ -1,5 +1,6 @@
 package com.jlm.homework.controller;
 
+import com.jlm.homework.dto.Result;
 import com.jlm.homework.entity.WrongTitleBook;
 import com.jlm.homework.entity.WrongTitleStatistics;
 import com.jlm.homework.service.IWrongTitleBookService;
@@ -21,13 +22,27 @@ public class WrongTitleBookController {
     @PostMapping("/addWrongBook")
     @Operation(summary = "加入错题本")
     public void addWrongBook(@RequestBody WrongTitleBook  wrongTitleBook) {
-        wrongTitleBookService.addWrongBook(wrongTitleBook);
+         wrongTitleBookService.addWrongBook(wrongTitleBook);
     }
 
     @PostMapping("/updateWrongBook")
     @Operation(summary = "修改错题本")
     public void updateWrongBook(@RequestBody WrongTitleBook  wrongTitleBook) {
         wrongTitleBookService.updateWrongBook(wrongTitleBook);
+    }
+
+    @PostMapping("/confirmDuplicate")
+    @Operation(summary = "老师确认合并相似错题")
+    public Result<String> confirmDuplicate(@RequestParam("id") Long id) {
+        wrongTitleBookService.confirmDuplicate(id);
+        return Result.success("合并成功");
+    }
+
+    @PostMapping("/rejectDuplicate")
+    @Operation(summary = "老师拒绝合并，标记为新错题")
+    public Result<String> rejectDuplicate(@RequestParam("id") Long id) {
+        wrongTitleBookService.rejectDuplicate(id);
+        return Result.success("已标记为新题");
     }
     @GetMapping("/{studentId}")
     @Operation(summary = "学生错题本、我的错题本")

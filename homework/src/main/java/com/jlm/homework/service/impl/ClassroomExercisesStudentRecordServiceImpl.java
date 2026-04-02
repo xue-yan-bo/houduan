@@ -16,6 +16,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import com.alibaba.cloud.commons.lang.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.content.Media;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
@@ -28,18 +29,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Base64Utils;
 import org.springframework.util.CollectionUtils;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+@Slf4j
 @Service
 public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExercisesStudentRecordService {
     @Resource
@@ -69,6 +69,9 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
     private ClassroomExercisesStudentAnswerRepository classroomExercisesStudentAnswerRepository;
     @Autowired
     private IClassroomExercisesStudentAnswerService classroomExercisesStudentAnswerService;
+    
+    // 线程池
+    private final ExecutorService executorService = Executors.newFixedThreadPool(10);
     @Override
     public List<ClassroomExercisesStudentRecord> selectByClassroomExercisesId(Long classroomExercisesId) {
         ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
@@ -101,6 +104,42 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         return studentRecord;
     }
 
+    /**
+     * 批量加载学生记录的关联数据
+     * @param recordList 学生记录列表
+     */
+    private void loadStudentRecordAssociations(List<ClassroomExercisesStudentRecord> recordList) {
+        if (!recordList.isEmpty()) {
+            // 收集所有学生记录 ID
+            List<Long> recordIds = new ArrayList<>();
+            for (ClassroomExercisesStudentRecord studentRecord : recordList) {
+                recordIds.add(studentRecord.getId());
+            }
+            
+            // 批量查询写数据
+            List<ClassroomStudentWriteData> allWriteData = classroomStudentWriteDataService.findByStudentRecordIds(recordIds);
+            // 按学生记录 ID 分组
+            Map<Long, List<ClassroomStudentWriteData>> writeDataMap = new HashMap<>();
+            for (ClassroomStudentWriteData writeData : allWriteData) {
+                writeDataMap.computeIfAbsent(writeData.getStudentRecordId(), k -> new ArrayList<>()).add(writeData);
+            }
+            
+            // 批量查询审批数据
+            List<ClassroomTearcherApproveStu> allApproveStu = classroomTearcherApproveStuService.findByStudentRecordIds(recordIds);
+            // 按学生记录 ID 分组
+            Map<Long, List<ClassroomTearcherApproveStu>> approveStuMap = new HashMap<>();
+            for (ClassroomTearcherApproveStu approveStu : allApproveStu) {
+                approveStuMap.computeIfAbsent(approveStu.getStudentRecordId(), k -> new ArrayList<>()).add(approveStu);
+            }
+            
+            // 设置数据到学生记录
+            for (ClassroomExercisesStudentRecord studentRecord : recordList) {
+                studentRecord.setStudentWriteDataList(writeDataMap.getOrDefault(studentRecord.getId(), new ArrayList<>()));
+                studentRecord.setTearcherApproveStuList(approveStuMap.getOrDefault(studentRecord.getId(), new ArrayList<>()));
+            }
+        }
+    }
+
     @Override
     public List<ClassroomExercisesStudentRecord> selectByClassroomExercisesIdAndClass(Long classroomExercisesId, Long classId) {
         ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
@@ -108,13 +147,9 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         record.setClassId(classId);
         Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration", "createTime");
         List<ClassroomExercisesStudentRecord> recordList = classroomExercisesStudentRecordRepository.findAll(Example.of(record), sort);
-        for (ClassroomExercisesStudentRecord studentRecord : recordList) {
-            List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
-            studentRecord.setStudentWriteDataList(writeDataList);
-
-            List<ClassroomTearcherApproveStu> tearcherApproveStuList = classroomTearcherApproveStuService.findByStudentRecordId(studentRecord.getId());
-            studentRecord.setTearcherApproveStuList(tearcherApproveStuList);
-        }
+        
+        // 加载关联数据
+        loadStudentRecordAssociations(recordList);
 
         return recordList;
     }
@@ -125,13 +160,9 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         record.setClassId(classId);
         Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration", "createTime");
         List<ClassroomExercisesStudentRecord> recordList = classroomExercisesStudentRecordRepository.findAll(Example.of(record), sort);
-        for (ClassroomExercisesStudentRecord studentRecord : recordList) {
-            List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
-            studentRecord.setStudentWriteDataList(writeDataList);
-
-            List<ClassroomTearcherApproveStu> tearcherApproveStuList = classroomTearcherApproveStuService.findByStudentRecordId(studentRecord.getId());
-            studentRecord.setTearcherApproveStuList(tearcherApproveStuList);
-        }
+        
+        // 加载关联数据
+        loadStudentRecordAssociations(recordList);
 
         return recordList;
     }
@@ -160,9 +191,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                         Predicate condition1 = criteriaBuilder.like(root.get("classIds").as(String.class), "%" + classId + "%");
                         list.add(condition1);
                     }
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-
-                    Predicate condition2 = criteriaBuilder.like(root.get("homeworkName").as(String.class), "%" + sdf.format(new Date()) + "堂课互动" + "%");
+                    Predicate condition2 = criteriaBuilder.like(root.get("homeworkName").as(String.class), "%" + DateUtil.formatDate(new Date()) + "堂课互动" + "%");
                     list.add(condition2);
                     Predicate[] p = new Predicate[list.size()];
                     return criteriaBuilder.and(list.toArray(p));
@@ -188,53 +217,85 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         final Long exercisesId = classroomExercisesId;
         List<ClassroomExercisesStudentRecord> finalRecordList = recordList;
         List<ClassroomTearcherApproveStu> tearcherApproveStuList = exerciseWriteData.getTearcherApproveStuList();
-        FutureTask<String> futureTask = new FutureTask<>(() -> {
-            if(exerciseWriteData.getTeacherWriteDto()!=null){
-                for(ClassroomTeacherWriteData teacherWriteData:exerciseWriteData.getTeacherWriteDto().getTeacherWriteDataList()){
-                    teacherWriteData.setClassroomExercisesId(exercisesId);
-                    teacherWriteData.setCreateTime(new Date());
-                    classroomTeacherWriteDataService.save(teacherWriteData);
-                }
-            }
-            for (ClassroomExercisesStudentRecord record : finalRecordList) {
-                if (record.getEndFlag() == null || record.getEndFlag().equals("0")) {
-                    record.setEndFlag(1);
-                    record.setEndTime(now);
-                }
-                if (record.getStartTime() != null) {
-                    record.setAnswerDuration(now.getTime() - record.getStartTime().getTime());
-                }
-                classroomExercisesStudentRecordRepository.save(record);
-                for (StudentWriteDto studentWriteDto : writeDtos) {
-                    if (Long.compare(studentWriteDto.getStudentId(), record.getStudentId()) == 0) {
-                        record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordList());
-                        record.setAnswerLevel(studentWriteDto.getAnswerLevel());
-                        record.setTeacherComment(studentWriteDto.getTeacherComment());
-                        this.save(record);
+        // 使用线程池执行任务
+        executorService.submit(() -> {
+            try {
+                if(exerciseWriteData.getTeacherWriteDto()!=null){
+                    for(ClassroomTeacherWriteData teacherWriteData:exerciseWriteData.getTeacherWriteDto().getTeacherWriteDataList()){
+                        teacherWriteData.setClassroomExercisesId(exercisesId);
+                        teacherWriteData.setCreateTime(new Date());
+                        classroomTeacherWriteDataService.save(teacherWriteData);
                     }
                 }
-
-                if(tearcherApproveStuList!=null&&tearcherApproveStuList.size()>0){
-                    for(ClassroomTearcherApproveStu approveStu:tearcherApproveStuList){
-                        if (Long.compare(approveStu.getStudentId(), record.getStudentId()) == 0) {
-                            approveStu.setStudentRecordId(record.getId());
-                            classroomTearcherApproveStuService.save(approveStu);
+                List<ClassroomExercisesStudentRecord> recordsToSave = new ArrayList<>();
+                List<ClassroomTearcherApproveStu> approveStusToSave = new ArrayList<>();
+                
+                for (ClassroomExercisesStudentRecord record : finalRecordList) {
+                    if (record.getEndFlag() == null || record.getEndFlag().equals("0")) {
+                        record.setEndFlag(1);
+                        record.setEndTime(now);
+                    }
+                    if (record.getStartTime() != null) {
+                        record.setAnswerDuration(now.getTime() - record.getStartTime().getTime());
+                    }
+                    
+                    for (StudentWriteDto studentWriteDto : writeDtos) {
+                        if (Long.compare(studentWriteDto.getStudentId(), record.getStudentId()) == 0) {
+                            record.setStudentWriteDataList(studentWriteDto.getStudentWriteRecordList());
+                            record.setAnswerLevel(studentWriteDto.getAnswerLevel());
+                            record.setTeacherComment(studentWriteDto.getTeacherComment());
+                        }
+                    }
+                    
+                    recordsToSave.add(record);
+                    
+                    if(tearcherApproveStuList!=null&&tearcherApproveStuList.size()>0){
+                        for(ClassroomTearcherApproveStu approveStu:tearcherApproveStuList){
+                            if (approveStu.getStudentId()!=null&&Long.compare(approveStu.getStudentId(), record.getStudentId()) == 0) {
+                                approveStu.setClassroomExercisesId(record.getClassroomExercisesId());
+                                approveStu.setStudentRecordId(record.getId());
+                                approveStusToSave.add(approveStu);
+                            } else if (approveStu.getTeacherId()!=null) {
+                                approveStu.setClassroomExercisesId(exercisesId);
+                                approveStu.setTeacherId(approveStu.getTeacherId());
+                                approveStusToSave.add(approveStu);
+                            }
                         }
                     }
                 }
-            }
-            if(exercises!=null&&exercises.getExercisesType()==1) {
-
-                List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
-                for (ClassroomExercisesStudentRecord record : studentRecordList) {
-                    aiParseWriteMid(record.getId());
+                
+                // 批量保存学生记录
+                if (!recordsToSave.isEmpty()) {
+                    classroomExercisesStudentRecordRepository.saveAll(recordsToSave);
+                    
+                    // 处理学生写数据
+                    for (ClassroomExercisesStudentRecord record : recordsToSave) {
+                        if (record.getStudentWriteDataList() != null && !record.getStudentWriteDataList().isEmpty()) {
+                            for (ClassroomStudentWriteData studentWriteData : record.getStudentWriteDataList()) {
+                                studentWriteData.setStudentRecordId(record.getId());
+                                if (studentWriteData.getStudentsWriteRecords() != null && !studentWriteData.getStudentsWriteRecords().isEmpty()) {
+                                    classroomStudentWriteDataService.save(studentWriteData);
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            return "异步-OK";
+                
+                // 批量保存教师审批
+                if (!approveStusToSave.isEmpty()) {
+                    classroomTearcherApproveStuService.saveAll(approveStusToSave);
+                }
+                if(exercises!=null&&exercises.getExercisesType()==1) {
 
+                    List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
+                    for (ClassroomExercisesStudentRecord record : studentRecordList) {
+                        aiParseWriteMid(record.getId());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("异步处理结束答题异常", e);
+            }
         });
-        Thread thread = new Thread(futureTask);
-        thread.start();
     }
 
     @Override
@@ -248,15 +309,39 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration", "createTime");
         List<ClassroomExercisesStudentRecord> recordList = classroomExercisesStudentRecordRepository.findAll(Example.of(record), sort);
         List<StudentWriteDto> studentWriteDtoList = new ArrayList<>();
-        for (ClassroomExercisesStudentRecord studentRecord : recordList) {
-            StudentWriteDto studentWriteDto = new StudentWriteDto();
-            studentWriteDto.setStudentId(studentRecord.getStudentId());
-            studentWriteDto.setStudentName(studentRecord.getStudentName());
-            List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
-            studentWriteDto.setStudentWriteRecordList(writeDataList);
-            List<ClassroomTearcherApproveStu> tearcherApproveStuList = classroomTearcherApproveStuService.findByStudentRecordId(studentRecord.getId());
-            studentRecord.setTearcherApproveStuList(tearcherApproveStuList);
-            studentWriteDtoList.add(studentWriteDto);
+        
+        if (!recordList.isEmpty()) {
+            // 收集所有学生记录 ID
+            List<Long> recordIds = new ArrayList<>();
+            for (ClassroomExercisesStudentRecord studentRecord : recordList) {
+                recordIds.add(studentRecord.getId());
+            }
+            
+            // 批量查询写数据
+            List<ClassroomStudentWriteData> allWriteData = classroomStudentWriteDataService.findByStudentRecordIds(recordIds);
+            // 按学生记录 ID 分组
+            Map<Long, List<ClassroomStudentWriteData>> writeDataMap = new HashMap<>();
+            for (ClassroomStudentWriteData writeData : allWriteData) {
+                writeDataMap.computeIfAbsent(writeData.getStudentRecordId(), k -> new ArrayList<>()).add(writeData);
+            }
+            
+            // 批量查询审批数据
+            List<ClassroomTearcherApproveStu> allApproveStu = classroomTearcherApproveStuService.findByStudentRecordIds(recordIds);
+            // 按学生记录 ID 分组
+            Map<Long, List<ClassroomTearcherApproveStu>> approveStuMap = new HashMap<>();
+            for (ClassroomTearcherApproveStu approveStu : allApproveStu) {
+                approveStuMap.computeIfAbsent(approveStu.getStudentRecordId(), k -> new ArrayList<>()).add(approveStu);
+            }
+            
+            // 构建返回数据
+            for (ClassroomExercisesStudentRecord studentRecord : recordList) {
+                StudentWriteDto studentWriteDto = new StudentWriteDto();
+                studentWriteDto.setStudentId(studentRecord.getStudentId());
+                studentWriteDto.setStudentName(studentRecord.getStudentName());
+                studentWriteDto.setStudentWriteRecordList(writeDataMap.getOrDefault(studentRecord.getId(), new ArrayList<>()));
+                studentRecord.setTearcherApproveStuList(approveStuMap.getOrDefault(studentRecord.getId(), new ArrayList<>()));
+                studentWriteDtoList.add(studentWriteDto);
+            }
         }
         return studentWriteDtoList;
     }
@@ -270,12 +355,10 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         }
         Sort sort = Sort.by(Sort.Direction.ASC, "answerDuration", "createTime");
         List<ClassroomExercisesStudentRecord> recordList = classroomExercisesStudentRecordRepository.findAll(Example.of(record), sort);
-        for (ClassroomExercisesStudentRecord studentRecord : recordList) {
-            List<ClassroomStudentWriteData> writeDataList = classroomStudentWriteDataService.findByStudentRecordId(studentRecord.getId());
-            studentRecord.setStudentWriteDataList(writeDataList);
-            List<ClassroomTearcherApproveStu> tearcherApproveStuList = classroomTearcherApproveStuService.findByStudentRecordId(studentRecord.getId());
-            studentRecord.setTearcherApproveStuList(tearcherApproveStuList);
-        }
+        
+        // 加载关联数据
+        loadStudentRecordAssociations(recordList);
+        
         return recordList;
     }
 
@@ -301,17 +384,12 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                     list.add(condition2);
                 }
 
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                Calendar calendar = Calendar.getInstance();
-
                 try {
                     Predicate condition3 = null;
-                    String dateStr = sdf.format(date);
+                    String dateStr = DateUtil.formatDate(date);
                     if (StringUtils.isNotEmpty(dateStr)) {
-                        Date startDate1 = sdf.parse(dateStr);
-                        calendar.setTime(startDate1);
-                        calendar.add(Calendar.DAY_OF_MONTH, 1);
-                        Date endDate1 = calendar.getTime();
+                        Date startDate1 = DateUtil.parseDate(dateStr);
+                        Date endDate1 = DateUtil.addOneDay(startDate1);
                         condition3 = criteriaBuilder.between(root.<Date>get("createTime"), startDate1, endDate1);
                         list.add(condition3);
                     }
@@ -427,6 +505,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                     }
                 }
                 if (studentAnswerList.size() > 0) {
+                    List<ClassroomExercisesStudentAnswer> answersToSave = new ArrayList<>();
                     for (ClassroomExercisesStudentAnswer answer : studentAnswerList) {
                         for (ClassroomExercisesQuestion question : questionList) {
                             if (answer.getTitleNumber().compareTo(question.getTitleNumber()) == 0) {
@@ -442,17 +521,21 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                                 answer.setSubject(question.getSubject());
                                 answer.setKnowledgePoint(question.getKnowledgePoint());
                                 answer.setCreateTime(new Date());
-                                classroomExercisesStudentAnswerRepository.save(answer);
+                                answersToSave.add(answer);
                             }
 
                         }
+                    }
+                    if (!answersToSave.isEmpty()) {
+                        classroomExercisesStudentAnswerRepository.saveAll(answersToSave);
                     }
                 }
             }
             File file = new File(imageUrl);
             file.delete();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            log.error("处理异常", e);
+            throw new RuntimeException("处理异常: " + e.getMessage(), e);
         }
     }
 
@@ -510,6 +593,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             }
 
             if (studentAnswerList.size() > 0) {
+                List<ClassroomExercisesStudentAnswer> answersToSave = new ArrayList<>();
                 for (ClassroomExercisesStudentAnswer answer : studentAnswerList) {
                     for (ClassroomExercisesQuestion question : questionList) {
                         if (answer.getTitleNumber().compareTo(question.getTitleNumber()) == 0) {
@@ -525,17 +609,21 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                             answer.setSubject(question.getSubject());
                             answer.setKnowledgePoint(question.getKnowledgePoint());
                             answer.setCreateTime(new Date());
-                            classroomExercisesStudentAnswerRepository.save(answer);
+                            answersToSave.add(answer);
                         }
 
                     }
+                }
+                if (!answersToSave.isEmpty()) {
+                    classroomExercisesStudentAnswerRepository.saveAll(answersToSave);
                 }
             }
 
             File file = new File(imageUrl);
             file.delete();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            log.error("处理异常", e);
+            throw new RuntimeException("处理异常: " + e.getMessage(), e);
         }
     }
     @Override
@@ -596,7 +684,8 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             File fileImag = new File(imageUrl);
             fileImag.delete();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            log.error("处理异常", e);
+            throw new RuntimeException("处理异常: " + e.getMessage(), e);
         }
     }
 
@@ -627,6 +716,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         }
 
         if (studentAnswerList.size() > 0) {
+            List<ClassroomExercisesStudentAnswer> answersToSave = new ArrayList<>();
             for (ClassroomExercisesStudentAnswer answer : studentAnswerList) {
                 for (ClassroomExercisesQuestion question : questionList) {
                     if (answer.getTitleNumber().compareTo(question.getTitleNumber()) == 0) {
@@ -642,10 +732,13 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                         answer.setSubject(question.getSubject());
                         answer.setKnowledgePoint(question.getKnowledgePoint());
                         answer.setCreateTime(new Date());
-                        classroomExercisesStudentAnswerRepository.save(answer);
+                        answersToSave.add(answer);
                     }
 
                 }
+            }
+            if (!answersToSave.isEmpty()) {
+                classroomExercisesStudentAnswerRepository.saveAll(answersToSave);
             }
         }
 
@@ -653,6 +746,11 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
         if(statistics!=null) {
             messagingTemplate.convertAndSend("/classroom/aiResult/" + studentRecord.getClassroomExercisesId(), statistics);
         }
+    }
+
+    @Override
+    public List<ClassroomTearcherApproveStu> getTeacherApproveStuList(Long classroomExercisesId,Long teacherId) {
+        return classroomTearcherApproveStuService.getTeacherApproveStuListByExercisesId(classroomExercisesId,teacherId);
     }
 
     @Override
@@ -680,6 +778,68 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
     }
 
     /**
+     * 压缩图片
+     *
+     * @param imageBytes 原始图片字节数组
+     * @return 压缩后的图片字节数组
+     * @throws IOException 处理异常
+     */
+    private byte[] compressImage(byte[] imageBytes) throws IOException {
+        // 图片压缩参数
+        final int MAX_WIDTH = 1280;  // 最大宽度
+        final int MAX_HEIGHT = 720;   // 最大高度
+        final float QUALITY = 0.7f;   // 压缩质量
+        
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            // 读取图片
+            BufferedImage image = javax.imageio.ImageIO.read(bais);
+            if (image == null) {
+                return imageBytes; // 无法读取图片，返回原始数据
+            }
+            
+            // 计算压缩后的尺寸
+            int width = image.getWidth();
+            int height = image.getHeight();
+            
+            if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+                // 按比例缩放
+                float scale = Math.min((float) MAX_WIDTH / width, (float) MAX_HEIGHT / height);
+                int newWidth = (int) (width * scale);
+                int newHeight = (int) (height * scale);
+                
+                // 创建缩放后的图片
+                BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+                Graphics2D g2d = resizedImage.createGraphics();
+                g2d.drawImage(image, 0, 0, newWidth, newHeight, null);
+                g2d.dispose();
+                
+                // 压缩图片
+                javax.imageio.ImageIO.write(resizedImage, "jpg", baos);
+            } else {
+                // 图片尺寸合适，只进行质量压缩
+                BufferedImage compressedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+                Graphics2D g2d = compressedImage.createGraphics();
+                g2d.drawImage(image, 0, 0, width, height, null);
+                g2d.dispose();
+                
+                // 获取JPEG编码器
+                javax.imageio.ImageWriter writer = javax.imageio.ImageIO.getImageWritersByFormatName("jpg").next();
+                javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
+                param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
+                param.setCompressionQuality(QUALITY);
+                
+                // 写入压缩后的图片
+                writer.setOutput(new javax.imageio.stream.MemoryCacheImageOutputStream(baos));
+                writer.write(null, new javax.imageio.IIOImage(compressedImage, null, null), param);
+                writer.dispose();
+            }
+            
+            return baos.toByteArray();
+        }
+    }
+
+    /**
      * 将图片编码为Base64字符串
      *
      * @param imagePath 图片路径（支持本地文件路径或HTTP URL）
@@ -693,20 +853,39 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
             normalizedPath = imagePath.replace("\\", "/")
                     .replace("http:/", "http://");
         }
+        
         if (normalizedPath.startsWith("http://") || normalizedPath.startsWith("https://")) {
             // 处理网络图片
+            log.debug("编码网络图片: {}", normalizedPath);
             URL url = new URL(normalizedPath);
-            try (InputStream is = url.openStream()) {
-                byte[] bytes = is.readAllBytes();
-                return Base64Utils.encodeToString(bytes);
+            try (InputStream is = url.openStream();
+                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    baos.write(buffer, 0, bytesRead);
+                }
+                // 压缩图片
+                byte[] compressedBytes = compressImage(baos.toByteArray());
+                return Base64Utils.encodeToString(compressedBytes);
             }
         } else {
             // 处理本地文件
+            log.debug("编码本地图片: {}", normalizedPath);
             File file = new File(normalizedPath);
-            try (FileInputStream fis = new FileInputStream(file)) {
-                byte[] bytes = new byte[(int) file.length()];
-                fis.read(bytes);
-                return Base64Utils.encodeToString(bytes);
+            if (!file.exists()) {
+                throw new IOException("图片文件不存在: " + normalizedPath);
+            }
+            try (FileInputStream fis = new FileInputStream(file);
+                 ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    baos.write(buffer, 0, bytesRead);
+                }
+                // 压缩图片
+                byte[] compressedBytes = compressImage(baos.toByteArray());
+                return Base64Utils.encodeToString(compressedBytes);
             }
         }
     }

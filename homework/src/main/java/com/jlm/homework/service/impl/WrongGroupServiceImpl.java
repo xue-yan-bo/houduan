@@ -21,7 +21,11 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import jakarta.persistence.criteria.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -64,6 +68,10 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
 
     @Override
     public WrongGroup addGroup(WrongGroup wrongGroup) {
+        Date now = new Date();
+        if (wrongGroup.getCreateTime() == null) {
+            wrongGroup.setCreateTime(now);
+        }
         return wrongGroupRepository.save(wrongGroup);
     }
 
@@ -85,10 +93,42 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
     public Page<WrongGroup> selectList(Integer pageNum, Integer pageSize, WrongGroup wrongGroup) {
         pageNum = pageNum == null ? 0 : pageNum-1;
         pageSize = pageSize == null ? 10 : pageSize;
-        Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
-        Pageable pageable;
-        pageable = PageRequest.of(pageNum, pageSize, sort);
-        return wrongGroupRepository.findAll(Example.of(wrongGroup),pageable);
+        // 排序时将null值放在最后
+        Sort sort = Sort.by(
+            Sort.Order.desc("createTime").nullsLast()
+        );
+        Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
+        
+        // 使用Specification构建查询条件，支持name字段的模糊查询
+        Specification<WrongGroup> specification = new Specification<WrongGroup>() {
+            @Override
+            public Predicate toPredicate(Root<WrongGroup> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                List<Predicate> list = new ArrayList<>();
+                
+                // 对name字段使用模糊查询
+                if (org.springframework.util.StringUtils.hasText(wrongGroup.getName())) {
+                    list.add(criteriaBuilder.like(root.get("name"), "%" + wrongGroup.getName() + "%"));
+                }
+                
+                // 对其他字段使用精确查询
+                if (wrongGroup.getType() != null) {
+                    list.add(criteriaBuilder.equal(root.get("type"), wrongGroup.getType()));
+                }
+                if (wrongGroup.getStudentId() != null) {
+                    list.add(criteriaBuilder.equal(root.get("studentId"), wrongGroup.getStudentId()));
+                }
+                if (wrongGroup.getStatus() != null) {
+                    list.add(criteriaBuilder.equal(root.get("status"), wrongGroup.getStatus()));
+                }
+                if (org.springframework.util.StringUtils.hasText(wrongGroup.getGenerateType())) {
+                    list.add(criteriaBuilder.equal(root.get("generateType"), wrongGroup.getGenerateType()));
+                }
+                
+                return criteriaBuilder.and(list.toArray(new Predicate[0]));
+            }
+        };
+        
+        return wrongGroupRepository.findAll(specification, pageable);
     }
 
     @Override
@@ -119,11 +159,12 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
                     // 如果不是图片，直接添加
                     hasAnswerHtmlBuilder.append(contentStr);
                 }
-                
+
                 // 添加答案
                 if(item.getSolution()!=null) {
                     hasAnswerHtmlBuilder.append(new String(item.getSolution()));
                 }
+                hasAnswerHtmlBuilder.append("<br />");
             }
         }
         String hasAnswerHtml = cleanHtmlWithCache(hasAnswerHtmlBuilder.toString(), context);

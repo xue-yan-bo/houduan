@@ -11,6 +11,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -21,9 +22,7 @@ import java.util.List;
  * 实现从URL下载.docx文档、转换为图片并叠加StudentsWriteRecord坐标点
  */
 public class DocumentAndCoordinatesRenderer {
-    
 
-    
     /**
      * 从URL下载文档并保存到临时文件
      * 
@@ -36,89 +35,151 @@ public class DocumentAndCoordinatesRenderer {
             throw new IOException("文档URL不能为空！");
         }
         
-        // 处理URL编码问题，特别是文件名中的中文和特殊字符
+        // 尝试使用原始URL下载
         try {
-            // 解析URL，分别编码路径部分
-            URL originalUrl = new URL(documentUrl);
-            String protocol = originalUrl.getProtocol();
-            String host = originalUrl.getHost();
-            int port = originalUrl.getPort();
-            String path = originalUrl.getPath();
-            String query = originalUrl.getQuery();
-            String ref = originalUrl.getRef();
-            
-            // 对路径进行编码处理，确保中文和特殊字符正确编码
-            String encodedPath = encodeUrlPath(path);
-            
-            // 重新构建URL
-            StringBuilder urlBuilder = new StringBuilder();
-            urlBuilder.append(protocol).append("://").append(host);
-            if (port != -1) {
-                urlBuilder.append(":").append(port);
-            }
-            urlBuilder.append(encodedPath);
-            if (query != null) {
-                urlBuilder.append("?").append(query);
-            }
-            if (ref != null) {
-                urlBuilder.append("#").append(ref);
-            }
-            
-            URL encodedUrl = new URL(urlBuilder.toString());
-            
-            // 创建URL连接并设置请求属性
-            java.net.URLConnection connection = encodedUrl.openConnection();
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0");
-            connection.setConnectTimeout(30000); // 30秒连接超时
-            connection.setReadTimeout(60000); // 60秒读取超时
-            connection.setDoInput(true);
-            
-            // 检查Content-Type
-            String contentType = connection.getContentType();
-            //System.out.println("下载文档Content-Type: " + contentType);
-            
-            // 验证Content-Type是否为预期的文档类型
-            if (!isValidContentType(contentType)) {
-                // 即使Content-Type不符合预期，也尝试下载并检查文件内容
-                //System.out.println("警告：Content-Type不符合预期，但将继续下载并验证文件内容");
-            }
-            
-            // 创建临时文件
-            File tempFile = File.createTempFile("temp_doc", ".docx");
-            tempFile.deleteOnExit(); // JVM退出时自动删除
-            
-            // 下载文件内容
-            try (InputStream in = connection.getInputStream();
-                 OutputStream out = new FileOutputStream(tempFile)) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                int totalBytesRead = 0;
-                
-                while ((bytesRead = in.read(buffer)) != -1) {
-                    out.write(buffer, 0, bytesRead);
-                    totalBytesRead += bytesRead;
-                }
-                
-                // 检查是否有内容被读取
-                if (totalBytesRead == 0) {
-                    tempFile.delete();
-                    throw new IOException("下载的文档为空，无法处理。URL: " + documentUrl);
-                }
-                
-                //System.out.println("成功下载文档，文件大小: " + totalBytesRead + " 字节");
-            }
-            
-            // 下载后进行文件内容验证
-            if (!validateFileContent(tempFile)) {
-                tempFile.delete(); // 删除无效文件
-                throw new IOException("下载的文档内容无效，文件格式不正确或已损坏。URL: " + documentUrl);
-            }
-            
-            return tempFile;
+            return downloadDocumentWithRetry(documentUrl);
         } catch (IOException e) {
-            // 增强错误信息，包含详细的URL和错误原因
-            throw new IOException("下载文档失败: " + documentUrl + "，错误: " + e.getMessage(), e);
+            // 原始URL下载失败，尝试使用公网域名
+            String internalUrl = ImageOverlayUtil.convertToInternalUrl(documentUrl);
+            return downloadDocumentWithRetry(internalUrl);
+
         }
+    }
+    
+    /**
+     * 尝试下载文档，支持重试机制
+     */
+    private static File downloadDocumentWithRetry(String documentUrl) throws IOException {
+        int maxRetries = 2; // 最大重试次数
+        int retryCount = 0;
+        IOException lastException = null;
+        
+        while (retryCount < maxRetries) {
+            try {
+                // 处理URL编码问题，特别是文件名中的中文和特殊字符
+                // 解析URL，分别编码路径部分
+                URL originalUrl  = new URL(documentUrl);;
+
+                String protocol = originalUrl.getProtocol();
+                String host = originalUrl.getHost();
+                int port = originalUrl.getPort();
+                String path = originalUrl.getPath();
+                String query = originalUrl.getQuery();
+                String ref = originalUrl.getRef();
+                
+                // 对路径进行编码处理，确保中文和特殊字符正确编码
+                String encodedPath = encodeUrlPath(path);
+                
+                // 重新构建URL
+                StringBuilder urlBuilder = new StringBuilder();
+                urlBuilder.append(protocol).append("://").append(host);
+                if (port != -1) {
+                    urlBuilder.append(":").append(port);
+                }
+                urlBuilder.append(encodedPath);
+                if (query != null) {
+                    urlBuilder.append("?").append(query);
+                }
+                if (ref != null) {
+                    urlBuilder.append("#").append(ref);
+                }
+                
+                URL encodedUrl = new URL(urlBuilder.toString());
+                
+                // 创建URL连接并设置请求属性
+                java.net.URLConnection connection = encodedUrl.openConnection();
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0");
+                connection.setConnectTimeout(60000); // 60秒连接超时
+                connection.setReadTimeout(120000); // 120秒读取超时
+                connection.setDoInput(true);
+                
+                // 检查Content-Type
+                String contentType = connection.getContentType();
+                //System.out.println("下载文档Content-Type: " + contentType);
+                
+                // 验证Content-Type是否为预期的文档类型
+                if (!isValidContentType(contentType)) {
+                    // 即使Content-Type不符合预期，也尝试下载并检查文件内容
+                    //System.out.println("警告：Content-Type不符合预期，但将继续下载并验证文件内容");
+                }
+                
+                // 创建临时文件，根据文件类型设置扩展名
+                String fileExtension = ".docx";
+                // 尝试从URL中获取文件扩展名
+                if (documentUrl != null && documentUrl.lastIndexOf('.') != -1) {
+                    String urlExtension = documentUrl.substring(documentUrl.lastIndexOf('.'));
+                    if (urlExtension.equalsIgnoreCase(".pdf")) {
+                        fileExtension = ".pdf";
+                    } else if (urlExtension.equalsIgnoreCase(".doc")) {
+                        fileExtension = ".doc";
+                    }
+                }
+                File tempFile = File.createTempFile("temp_doc", fileExtension);
+                tempFile.deleteOnExit(); // JVM退出时自动删除
+                
+                // 下载文件内容
+                try (InputStream in = connection.getInputStream();
+                     OutputStream out = new FileOutputStream(tempFile)) {
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    int totalBytesRead = 0;
+                    
+                    while ((bytesRead = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, bytesRead);
+                        totalBytesRead += bytesRead;
+                    }
+                    
+                    // 检查是否有内容被读取
+                    if (totalBytesRead == 0) {
+                        tempFile.delete();
+                        throw new IOException("下载的文档为空，无法处理。URL: " + documentUrl);
+                    }
+                    
+                    //System.out.println("成功下载文档，文件大小: " + totalBytesRead + " 字节");
+                }
+                
+                // 下载后进行文件内容验证
+                if (!validateFileContent(tempFile)) {
+                    tempFile.delete(); // 删除无效文件
+                    throw new IOException("下载的文档内容无效，文件格式不正确或已损坏。URL: " + documentUrl);
+                }
+                
+                return tempFile;
+            } catch (IOException e) {
+                lastException = e;
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    // 等待一段时间后重试
+                    try {
+                        Thread.sleep(2000 * retryCount); // 每次重试等待时间递增
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 所有重试都失败，抛出最后一次异常
+        throw new IOException("下载文档失败，已尝试 " + maxRetries + " 次: " + documentUrl + "，错误: " + (lastException != null ? lastException.getMessage() : "未知错误"), lastException);
+    }
+    
+    /**
+     * 将私有域名转换为公网域名
+     */
+    private static String convertToPublicUrl(String privateUrl) {
+        // 替换私有域名为公网域名
+        // 这里需要根据实际情况修改，例如将内部IP或私有域名替换为公网域名
+        // 示例：将 192.168.1.100 替换为 example.com
+        if (privateUrl.contains("192.168.")) {
+            return privateUrl.replaceAll("192\\.168\\.\\d+\\.\\d+", "example.com");
+        }
+        // 示例：将内部域名替换为公网域名
+        if (privateUrl.contains("internal.example.com")) {
+            return privateUrl.replace("internal.example.com", "example.com");
+        }
+        // 如果没有匹配的私有域名，返回原始URL
+        return privateUrl;
     }
     
     /**
@@ -137,7 +198,9 @@ public class DocumentAndCoordinatesRenderer {
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
             "application/msword", // .doc
             "application/zip", // 有时docx文件可能被识别为zip
-            "application/octet-stream" // 二进制流，通用情况
+            "application/octet-stream", // 二进制流，通用情况
+            "application/pdf", // PDF文件
+            "application/x-pdf" // 另一种PDF Content-Type
         };
         
         for (String validType : validContentTypes) {
@@ -150,7 +213,8 @@ public class DocumentAndCoordinatesRenderer {
         return contentType.toLowerCase().contains("word") || 
                contentType.toLowerCase().contains("document") ||
                contentType.toLowerCase().contains("docx") ||
-               contentType.toLowerCase().contains("doc");
+               contentType.toLowerCase().contains("doc") ||
+               contentType.toLowerCase().contains("pdf");
     }
     
     /**
@@ -200,8 +264,19 @@ public class DocumentAndCoordinatesRenderer {
                 }
             }
             
+            // 检查文件是否为PDF格式
+            try (FileInputStream fis = new FileInputStream(file)) {
+                // PDF文件的魔术数字是"%PDF"，即前四个字节应该是0x25, 0x50, 0x44, 0x46
+                byte[] header = new byte[4];
+                int bytesRead = fis.read(header);
+                if (bytesRead >= 4 && header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F') {
+                    //System.out.println("文件验证通过：是有效的PDF格式");
+                    return true;
+                }
+            }
+            
             // 如果文件格式不匹配预期，记录详细信息
-            System.err.println("验证失败：文件格式不是有效的.docx或.doc格式");
+            System.err.println("验证失败：文件格式不是有效的.docx、.doc或.pdf格式");
             System.err.println("文件大小：" + file.length() + " 字节");
             
             // 检查文件是否为HTML或错误页面
@@ -308,6 +383,7 @@ public class DocumentAndCoordinatesRenderer {
         // 检测文件的实际格式（不依赖扩展名）
         boolean isZipFormat = false;
         boolean isOle2Format = false;
+        boolean isPdfFormat = false;
         
         try (FileInputStream fis = new FileInputStream(docFile)) {
             // 检查ZIP文件的魔术数字（前两个字节应该是PK）
@@ -326,6 +402,10 @@ public class DocumentAndCoordinatesRenderer {
                               header[5] == (byte)0xB1 && 
                               header[6] == (byte)0x1A && 
                               header[7] == (byte)0xE1);
+            }
+            
+            if (bytesRead >= 4) {
+                isPdfFormat = (header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F');
             }
         }
         
@@ -373,7 +453,7 @@ public class DocumentAndCoordinatesRenderer {
                         // 添加空值检查和长度限制
                         if (paragraph != null && paragraph.length() > 0) {
                             try {
-                                // 安全处理段落文本
+                                // 安全处理段落文本，确保编码正确
                                 String safeParagraph = paragraph.replaceAll("[\\r\\n]+", "\n").trim();
                                 if (safeParagraph.length() > 0) {
                                     content.append(safeParagraph).append("\n");
@@ -413,6 +493,19 @@ public class DocumentAndCoordinatesRenderer {
                 System.err.println("提取.doc文档内容失败：" + e.getMessage());
                 return "无法提取.doc文档内容。";
             }
+        } else if (isPdfFormat) {
+            // 处理PDF格式
+            try (FileInputStream fis = new FileInputStream(docFile)) {
+                // 使用PDFBox库提取PDF内容
+                org.apache.pdfbox.pdmodel.PDDocument document = org.apache.pdfbox.pdmodel.PDDocument.load(fis);
+                org.apache.pdfbox.text.PDFTextStripper stripper = new org.apache.pdfbox.text.PDFTextStripper();
+                String content = stripper.getText(document);
+                document.close();
+                return content.trim();
+            } catch (Exception e) {
+                System.err.println("提取PDF文档内容失败：" + e.getMessage());
+                return "无法提取PDF文档内容。";
+            }
         } else {
             System.err.println("不支持的文档格式，无法提取内容：" + docFile.getName());
             return "不支持的文档格式。";
@@ -431,7 +524,25 @@ public class DocumentAndCoordinatesRenderer {
         
         // 添加文档内容（简化实现）
         g2d.setColor(Color.BLACK);
-        g2d.setFont(new Font("SimSun", Font.PLAIN, 12));
+        // 尝试使用系统默认字体，确保支持中文
+        Font font = null;
+        try {
+            // 尝试使用中文字体
+            font = new Font("SimSun", Font.PLAIN, 12);
+            // 验证字体是否可用
+            if (!font.getFamily().equals("SimSun")) {
+                // 如果SimSun不可用，尝试其他中文字体
+                font = new Font("宋体", Font.PLAIN, 12);
+                if (!font.getFamily().equals("宋体")) {
+                    // 如果都不可用，使用系统默认字体
+                    font = Font.decode(null);
+                }
+            }
+        } catch (Exception e) {
+            // 字体创建失败，使用系统默认字体
+            font = Font.decode(null);
+        }
+        g2d.setFont(font);
         
         // 检测文件扩展名和基本验证
         String fileName = docFile.getName().toLowerCase();

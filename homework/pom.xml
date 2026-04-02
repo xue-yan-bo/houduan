@@ -189,6 +189,12 @@
             <artifactId>poi-scratchpad</artifactId>
             <version>5.2.3</version>
         </dependency>
+        <!-- 添加对PDF格式的支持 -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.32</version>
+        </dependency>
         <dependency>
             <groupId>ai.z.openapi</groupId>
             <artifactId>zai-sdk</artifactId>

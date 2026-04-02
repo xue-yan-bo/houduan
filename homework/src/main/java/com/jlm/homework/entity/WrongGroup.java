@@ -58,4 +58,20 @@ public class WrongGroup {
     @Column(name = "update_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date updateTime;
+    /**
+     * 状态 0：未发布 1：发布
+     */
+    @Column(name = "status", columnDefinition = "int default 0")
+    private Integer status;
+    /**
+     * 生成方式生成方式：周错题试卷、月错题试卷
+     */
+    @Column(name = "generate_type")
+    private String generateType;
+    
+    /**
+     * 生成类型：1原题生成、2变式题生成
+     */
+    @Column(name = "question_generate_type")
+    private String questionGenerateType;
 }

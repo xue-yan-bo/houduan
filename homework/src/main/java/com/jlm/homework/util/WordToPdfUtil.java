@@ -18,12 +18,16 @@ public class WordToPdfUtil {
     private final DocToPDF docToPDF;
 
     @Autowired
-    public WordToPdfUtil(MinioClient minioClient, MinioConfig minioConfig, WebClient.Builder webClientBuilder, @Value("${pdf.path:/tmp/pdf}") String pdfPath, @Value("${minio.bucketName:exercise}") String bucketName) {
+    public WordToPdfUtil(MinioClient minioClient, MinioConfig minioConfig, WebClient.Builder webClientBuilder, 
+                       @Value("${pdf.path:/tmp/pdf}") String pdfPath, 
+                       @Value("${minio.bucketName:exercise}") String bucketName,
+                       @Value("${stirling.api.base-url:http://192.168.1.156:8089}") String stirlingBaseUrl) {
         // 初始化DocToPDF
-        WebClient stirlingWebClient = webClientBuilder.baseUrl(minioConfig.getPublicEndpoint()).build(); // 根据实际配置调整
+        WebClient stirlingWebClient = webClientBuilder.baseUrl(stirlingBaseUrl).build();
         this.docToPDF = new DocToPDF(stirlingWebClient, pdfPath, minioClient, minioConfig, bucketName);
         
         log.info("WordToPdfUtil初始化成功");
+        log.info("Stirling API base URL: {}", stirlingBaseUrl);
         log.info("MinIO内网endpoint: {}, 公网endpoint: {}", minioConfig.getEndpoint(), minioConfig.getPublicEndpoint());
     }
 

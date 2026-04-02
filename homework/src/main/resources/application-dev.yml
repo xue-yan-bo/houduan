@@ -146,3 +146,9 @@ ai-mid:
   #model: qwen3-vl-flash-2026-01-22
   #model: qwen3-vl-plus-2025-12-19
   model: glm-4.6v
+
+# Stirling PDF转换服务配置
+stirling:
+  api:
+    # Stirling API基础地址
+    base-url: http://192.168.1.156:8089

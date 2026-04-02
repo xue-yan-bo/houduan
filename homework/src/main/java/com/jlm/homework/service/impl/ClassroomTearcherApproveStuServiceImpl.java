@@ -201,4 +201,19 @@ public class ClassroomTearcherApproveStuServiceImpl implements IClassroomTearche
         List<ClassroomTearcherApproveStu> list=classroomTearcherApproveStuRepository.findAll(Example.of(data),sort);
         return list;
     }
+
+    @Override
+    public void clearTeacher2Approve(Long classroomExercisesId, Long teacherId, Integer pageNum) {
+        ClassroomTearcherApproveStu data=new ClassroomTearcherApproveStu();
+        data.setClassroomExercisesId(classroomExercisesId);
+        data.setTeacherId(teacherId);
+        data.setPageNum(pageNum);
+        Sort sort = Sort.by(Sort.Direction.ASC,"pageNum","indexN","createTime");
+        List<ClassroomTearcherApproveStu> list=classroomTearcherApproveStuRepository.findAll(Example.of(data),sort);
+        if(list!=null&&list.size()>0){
+            for(ClassroomTearcherApproveStu approveStu:list){
+                classroomTearcherApproveStuRepository.deleteById(approveStu.getId());
+            }
+        }
+    }
 }

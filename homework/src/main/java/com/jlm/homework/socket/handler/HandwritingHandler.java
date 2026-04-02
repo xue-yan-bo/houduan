@@ -344,13 +344,13 @@ public class HandwritingHandler implements MessageHandler {
                     
                     // 清空原列表，避免数据重复处理
                     context.setStudentsFeedbackRecords(java.util.Collections.synchronizedList(new ArrayList<>()));
-                    
+                    saveSessionContextToRedis(context);
                     // 保存数据到数据库
                     Long feedbackId = handlerService.saveFeedbackRecords(context.getFeedbackId(), Long.parseLong(relation.getUserId()), context.getFeedbackSubject(), recordsToSave);
                     context.setFeedbackId(feedbackId);
-                    
                     // 保存会话上下文到Redis
                     saveSessionContextToRedis(context);
+
                     log.info("反馈数据保存成功，记录数: {}, feedbackId: {}, userId: {}", recordsToSave.size(), feedbackId, relation.getUserId());
                 } catch (Exception e) {
                     log.error("反馈数据保存失败，记录数: {}, feedbackId: {}, userId: {}, 错误: {}", 

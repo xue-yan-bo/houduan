@@ -14,7 +14,7 @@ public interface IWrongTitleBookService {
 
     void createWrongBook(Long studentsHomeworkId);
 
-    void addWrongBook(WrongTitleBook wrongTitleBook);
+    Result<Object> addWrongBook(WrongTitleBook wrongTitleBook);
 
     Page<WrongTitleBook> getPage(Integer pageNum, Integer pageSize, WrongTitleBook wrongTitleBook);
 

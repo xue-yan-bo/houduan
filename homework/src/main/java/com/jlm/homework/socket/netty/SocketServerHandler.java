@@ -317,7 +317,7 @@ public class SocketServerHandler extends ChannelInboundHandlerAdapter {
                 }
                 
                 // 保存未保存的反馈数据
-                if (!sessionContext.getStudentsFeedbackRecords().isEmpty()) {
+                if (!sessionContext.getStudentsFeedbackRecords().isEmpty()&&sessionContext.getFeedbackId()!=null) {
                     handlerService.saveFeedbackRecords(
                         sessionContext.getFeedbackId(), userId, 
                         sessionContext.getFeedbackSubject(), 

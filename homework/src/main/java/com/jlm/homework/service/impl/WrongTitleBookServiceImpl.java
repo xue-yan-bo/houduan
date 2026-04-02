@@ -411,22 +411,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 wrongTitleBookRepository.save(wrongTitleBook);
             }
         }
-        if(StringUtils.isNotEmpty(wrongTitleBook.getKnowledgePoint())){
-            old.setKnowledgePoint(wrongTitleBook.getKnowledgePoint());
-        }
-        if(StringUtils.isNotEmpty(wrongTitleBook.getParse())){
-            old.setParse(wrongTitleBook.getParse());
-        }
-        if(StringUtils.isNotEmpty(wrongTitleBook.getTitleAnswer())){
-            old.setTitleAnswer(wrongTitleBook.getTitleAnswer());
-        }
-        if(StringUtils.isNotEmpty(wrongTitleBook.getStudentAnswer())){
-            old.setStudentAnswer(wrongTitleBook.getStudentAnswer());
-        }
-        if(StringUtils.isNotEmpty(wrongTitleBook.getStudentAnswer())){
-            old.setStudentAnswer(wrongTitleBook.getStudentAnswer());
-        }
-        wrongTitleBookRepository.save(old);
+
     }
 
     @Override

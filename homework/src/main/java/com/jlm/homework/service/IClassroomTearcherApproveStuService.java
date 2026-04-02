@@ -18,4 +18,6 @@ public interface IClassroomTearcherApproveStuService {
     void clearTeacherApprove(Long studentRecordId, Long studentId, Integer pageNum);
 
     List<ClassroomTearcherApproveStu> getTeacherApproveStuListByExercisesId(Long classroomExercisesId,Long teacherId);
+
+    void clearTeacher2Approve(Long classroomExercisesId, Long teacherId, Integer pageNum);
 }

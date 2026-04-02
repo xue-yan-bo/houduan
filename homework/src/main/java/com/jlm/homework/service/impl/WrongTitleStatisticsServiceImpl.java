@@ -171,17 +171,23 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
 
     @Override
     public void updateClassWrongBook(WrongTitleStatistics wrongTitleStatistics) {
-        WrongTitleStatistics old=wrongTitleStatisticsRepository.findById(wrongTitleStatistics.getId()).orElse(null);
-        if(StringUtils.isNotEmpty(wrongTitleStatistics.getTitleContext())){
-            old.setTitleContext(wrongTitleStatistics.getTitleContext());
+        if (wrongTitleStatistics.getId() == null) {
+            return;
         }
-        if(StringUtils.isNotEmpty(wrongTitleStatistics.getKnowledgePoint())){
-            old.setKnowledgePoint(wrongTitleStatistics.getKnowledgePoint());
+        WrongTitleStatistics old = wrongTitleStatisticsRepository.findById(wrongTitleStatistics.getId()).orElse(null);
+        if (old != null) {
+            if(StringUtils.isNotEmpty(wrongTitleStatistics.getTitleContext())){
+                old.setTitleContext(wrongTitleStatistics.getTitleContext());
+            }
+            if(StringUtils.isNotEmpty(wrongTitleStatistics.getKnowledgePoint())){
+                old.setKnowledgePoint(wrongTitleStatistics.getKnowledgePoint());
+            }
+            if(StringUtils.isNotEmpty(wrongTitleStatistics.getParse())){
+                old.setParse(wrongTitleStatistics.getParse());
+            }
+            // 修复Bug：这里必须保存old对象，而不是前端传来的wrongTitleStatistics
+            wrongTitleStatisticsRepository.save(old);
         }
-        if(StringUtils.isNotEmpty(wrongTitleStatistics.getParse())){
-            old.setParse(wrongTitleStatistics.getParse());
-        }
-        wrongTitleStatisticsRepository.save(wrongTitleStatistics);
     }
 
     @Override

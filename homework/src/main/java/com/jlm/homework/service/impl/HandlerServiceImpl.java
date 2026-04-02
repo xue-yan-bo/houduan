@@ -10,6 +10,7 @@ import com.jlm.homework.entity.*;
 import com.jlm.homework.feign.ClassFeignClient;
 import com.jlm.homework.feign.StudentFeignClient;
 import com.jlm.homework.service.*;
+import com.jlm.homework.repository.WrongGroupRepository;
 import com.jlm.homework.util.*;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.FutureTask;
@@ -51,6 +53,9 @@ public class HandlerServiceImpl implements IHandlerService {
     private AIUtil aiUtil;
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private WrongGroupRepository wrongGroupRepository;
 
     @Override
     public List<HomeWork2Board> getHomeWork2Board(String subject, String date, Long studentId) {
@@ -338,5 +343,17 @@ public class HandlerServiceImpl implements IHandlerService {
             return feedback.getId();
         }
         return null;
+    }
+
+    @Override
+    public List<com.jlm.homework.entity.WrongGroup> getWrongTitlePapers(Long studentId) {
+        try {
+            log.info("根据学生ID获取错题组：studentId={}", studentId);
+            // 根据学生ID查询错题组（截至当前时间）
+            return wrongGroupRepository.findByStudentIdAndCreateTimeBefore(studentId, new Date());
+        } catch (Exception e) {
+            log.error("根据学生ID获取错题组失败：{}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
     }
 }

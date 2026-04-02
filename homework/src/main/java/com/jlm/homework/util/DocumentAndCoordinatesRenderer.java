@@ -7,6 +7,9 @@ import org.apache.poi.xwpf.usermodel.*;
 import org.apache.poi.hwpf.HWPFDocument;
 import org.apache.poi.hwpf.extractor.WordExtractor;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.springframework.web.reactive.function.client.WebClient;
+import io.minio.MinioClient;
+import com.jlm.homework.config.MinioConfig;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -697,36 +700,189 @@ public class DocumentAndCoordinatesRenderer {
      * @param coordinates 坐标点列表
      * @param pageNum 页码
      * @param outputPath 输出路径
+     * @param docToPDF DocToPDF实例，用于处理PDF文档
+     * @throws Exception 异常
+     */
+    public static void generateDocumentWithCoordinates(String documentUrl, List<HomeworkStudentWriteData> coordinates,
+                                                    int pageNum, String outputPath, DocToPDF docToPDF) 
+            throws Exception {
+        // 1. 下载文档
+        File docFile = downloadDocument(documentUrl);
+        
+        try {
+            // 2. 检查文件是否为PDF格式
+            boolean isPdf = false;
+            try (FileInputStream fis = new FileInputStream(docFile)) {
+                byte[] header = new byte[4];
+                int bytesRead = fis.read(header);
+                isPdf = (bytesRead >= 4 && header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F');
+            }
+            
+            if (isPdf && docToPDF != null) {
+                // 使用DocToPDF处理PDF文档
+                List<String> imageUrls = docToPDF.pdfToImages(documentUrl);
+                if (!imageUrls.isEmpty() && pageNum <= imageUrls.size()) {
+                    // 下载图片并绘制坐标点
+                    URL imageUrl = new URL(imageUrls.get(pageNum - 1));
+                    BufferedImage docImage = ImageIO.read(imageUrl);
+                    
+                    // 3. 在图片上绘制坐标点
+                    BufferedImage resultImage = drawCoordinates(docImage, coordinates, pageNum,
+                                                              Color.RED, 3); // 红色点，大小为3
+                    
+                    // 4. 保存结果图片
+                    File outputFile = new File(outputPath);
+                    ImageIO.write(resultImage, "PNG", outputFile);
+                }
+            } else {
+                // 处理非PDF文档
+                // 2. 转换文档为图片
+                BufferedImage docImage = convertDocxToImage(docFile, pageNum);
+                
+                // 3. 在图片上绘制坐标点
+                BufferedImage resultImage = drawCoordinates(docImage, coordinates, pageNum,
+                                                          Color.RED, 3); // 红色点，大小为3
+                
+                // 4. 保存结果图片
+                File outputFile = new File(outputPath);
+                ImageIO.write(resultImage, "PNG", outputFile);
+            }
+            
+            //System.out.println("图片生成成功: " + outputPath);
+        } finally {
+            // 清理临时文件
+            docFile.delete();
+        }
+    }
+    
+    /**
+     * 生成包含文档和坐标点的完整图片（不使用DocToPDF）
+     * 
+     * @param documentUrl 文档URL
+     * @param coordinates 坐标点列表
+     * @param pageNum 页码
+     * @param outputPath 输出路径
      * @throws IOException IO异常
      * @throws InvalidFormatException 格式异常
      */
     public static void generateDocumentWithCoordinates(String documentUrl, List<HomeworkStudentWriteData> coordinates,
                                                     int pageNum, String outputPath) 
             throws IOException, InvalidFormatException {
-        // 1. 下载文档
-        File docxFile = downloadDocument(documentUrl);
-        
         try {
-            // 2. 转换文档为图片
-            BufferedImage docImage = convertDocxToImage(docxFile, pageNum);
-            
-            // 3. 在图片上绘制坐标点
-            BufferedImage resultImage = drawCoordinates(docImage, coordinates, pageNum,
-                                                      Color.RED, 3); // 红色点，大小为3
-            
-            // 4. 保存结果图片
-            File outputFile = new File(outputPath);
-            ImageIO.write(resultImage, "PNG", outputFile);
-            
-            //System.out.println("图片生成成功: " + outputPath);
-        } finally {
-            // 清理临时文件
-            docxFile.delete();
+            generateDocumentWithCoordinates(documentUrl, coordinates, pageNum, outputPath, null);
+        } catch (Exception e) {
+            if (e instanceof IOException) {
+                throw (IOException) e;
+            } else if (e instanceof InvalidFormatException) {
+                throw (InvalidFormatException) e;
+            } else {
+                throw new IOException(e.getMessage(), e);
+            }
         }
     }
     
     /**
      * 生成文档所有页码的图片，每张图片包含对应页的坐标点
+     * 
+     * @param documentUrl 文档URL
+     * @param coordinates 坐标点列表
+     * @param outputPathPrefix 输出路径前缀（不含扩展名）
+     * @param docToPDF DocToPDF实例，用于处理PDF文档
+     * @return 生成的图片文件列表
+     * @throws Exception 如果发生错误
+     */
+    public static List<String> generateAllPagesDocumentWithCoordinates(String documentUrl, List<HomeworkStudentWriteData> coordinates,
+                                                                     String outputPathPrefix, DocToPDF docToPDF) 
+            throws Exception {
+        List<String> generatedImages = new ArrayList<>();
+        
+        // 1. 下载文档
+        File docFile = downloadDocument(documentUrl);
+        
+        try {
+            // 2. 检查文件是否为PDF格式
+            boolean isPdf = false;
+            try (FileInputStream fis = new FileInputStream(docFile)) {
+                byte[] header = new byte[4];
+                int bytesRead = fis.read(header);
+                isPdf = (bytesRead >= 4 && header[0] == '%' && header[1] == 'P' && header[2] == 'D' && header[3] == 'F');
+            }
+            
+            if (isPdf && docToPDF != null) {
+                // 使用DocToPDF处理PDF文档
+                List<String> imageUrls = docToPDF.pdfToImages(documentUrl);
+                int totalPages = imageUrls.size();
+                //System.out.println("PDF文档总页数: " + totalPages);
+                
+                // 为每一页生成图片
+                for (int pageNum = 1; pageNum <= totalPages; pageNum++) {
+                    try {
+                        // 生成带页码的输出路径
+                        String pageOutputPath = outputPathPrefix + "_page" + pageNum + ".png";
+                        // 下载图片并绘制坐标点
+                        URL imageUrl = new URL(imageUrls.get(pageNum - 1));
+                        BufferedImage docImage = ImageIO.read(imageUrl);
+                        
+                        if(coordinates!=null) {
+                            // 在图片上绘制坐标点
+                            BufferedImage resultImage = drawCoordinates(docImage, coordinates, pageNum,
+                                    Color.RED, 3); // 红色点，大小为3
+                            ImageIO.write(resultImage, "PNG", new File(pageOutputPath));
+                        }else{
+                            ImageIO.write(docImage, "PNG", new File(pageOutputPath));
+                        }
+
+                        //System.out.println("第" + pageNum + "页图片生成成功: " + pageOutputPath);
+                        generatedImages.add(pageOutputPath);
+                    } catch (Exception e) {
+                        System.err.println("生成第" + pageNum + "页图片失败: " + e.getMessage());
+                        e.printStackTrace();
+                        // 继续处理其他页面
+                    }
+                }
+            } else {
+                // 处理非PDF文档
+                // 2. 获取文档总页数
+                int totalPages = getDocumentPageCount(docFile);
+                //System.out.println("文档总页数: " + totalPages);
+                
+                // 3. 为每一页生成图片
+                for (int pageNum = 1; pageNum <= totalPages; pageNum++) {
+                    try {
+                        // 生成带页码的输出路径
+                        String pageOutputPath = outputPathPrefix + "_page" + pageNum + ".png";
+                        // 保存结果图片
+                        File outputFile = new File(pageOutputPath);
+                        // 转换文档为图片
+                        BufferedImage docImage = convertDocxToImage(docFile, pageNum);
+                        if(coordinates!=null) {
+                            // 在图片上绘制坐标点
+                            BufferedImage resultImage = drawCoordinates(docImage, coordinates, pageNum,
+                                    Color.RED, 3); // 红色点，大小为3
+                            ImageIO.write(resultImage, "PNG", outputFile);
+                        }else{
+                            ImageIO.write(docImage, "PNG", outputFile);
+                        }
+
+                        //System.out.println("第" + pageNum + "页图片生成成功: " + pageOutputPath);
+                        generatedImages.add(pageOutputPath);
+                    } catch (Exception e) {
+                        System.err.println("生成第" + pageNum + "页图片失败: " + e.getMessage());
+                        e.printStackTrace();
+                        // 继续处理其他页面
+                    }
+                }
+            }
+        } finally {
+            // 清理临时文件
+            docFile.delete();
+        }
+        
+        return generatedImages;
+    }
+    
+    /**
+     * 生成文档所有页码的图片，每张图片包含对应页的坐标点（不使用DocToPDF）
      * 
      * @param documentUrl 文档URL
      * @param coordinates 坐标点列表
@@ -738,48 +894,17 @@ public class DocumentAndCoordinatesRenderer {
     public static List<String> generateAllPagesDocumentWithCoordinates(String documentUrl, List<HomeworkStudentWriteData> coordinates,
                                                                      String outputPathPrefix) 
             throws IOException, InvalidFormatException {
-        List<String> generatedImages = new ArrayList<>();
-        
-        // 1. 下载文档
-        File docxFile = downloadDocument(documentUrl);
-        
         try {
-            // 2. 获取文档总页数
-            int totalPages = getDocumentPageCount(docxFile);
-            //System.out.println("文档总页数: " + totalPages);
-            
-            // 3. 为每一页生成图片
-            for (int pageNum = 1; pageNum <= totalPages; pageNum++) {
-                try {
-                    // 生成带页码的输出路径
-                    String pageOutputPath = outputPathPrefix + "_page" + pageNum + ".png";
-                    // 保存结果图片
-                    File outputFile = new File(pageOutputPath);
-                    // 转换文档为图片
-                    BufferedImage docImage = convertDocxToImage(docxFile, pageNum);
-                    if(coordinates!=null) {
-                        // 在图片上绘制坐标点
-                        BufferedImage resultImage = drawCoordinates(docImage, coordinates, pageNum,
-                                Color.RED, 3); // 红色点，大小为3
-                        ImageIO.write(resultImage, "PNG", outputFile);
-                    }else{
-                        ImageIO.write(docImage, "PNG", outputFile);
-                    }
-
-                    //System.out.println("第" + pageNum + "页图片生成成功: " + pageOutputPath);
-                    generatedImages.add(pageOutputPath);
-                } catch (Exception e) {
-                    System.err.println("生成第" + pageNum + "页图片失败: " + e.getMessage());
-                    e.printStackTrace();
-                    // 继续处理其他页面
-                }
+            return generateAllPagesDocumentWithCoordinates(documentUrl, coordinates, outputPathPrefix, null);
+        } catch (Exception e) {
+            if (e instanceof IOException) {
+                throw (IOException) e;
+            } else if (e instanceof InvalidFormatException) {
+                throw (InvalidFormatException) e;
+            } else {
+                throw new IOException(e.getMessage(), e);
             }
-        } finally {
-            // 清理临时文件
-            docxFile.delete();
         }
-        
-        return generatedImages;
     }
     
     /**

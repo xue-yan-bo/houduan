@@ -99,8 +99,7 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
         } else if (StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())) {
             try {
                 String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
-                DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
-                imageNames = Arrays.asList(outputPath);
+                imageNames =DocumentAndCoordinatesRenderer.generateAllPagesDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList,  outputPath);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -386,8 +385,7 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
         } else if (StringUtils.isNotEmpty(studentsHomework.getDailyPracticePreview())) {
             try {
                 String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
-                DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList, 1, outputPath);
-                imageNames = Arrays.asList(outputPath);
+                imageNames =DocumentAndCoordinatesRenderer.generateAllPagesDocumentWithCoordinates(studentsHomework.getDailyPracticePreview(), homeworkStudentWriteDataList,  outputPath);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -910,8 +908,7 @@ public class StudentHomeworkAIServiceImpl implements IStudentHomeworkAIService {
             try {
                 // 处理PDF文件，转换为图片并叠加坐标点
                 String outputPath = studentsHomework.getHomeworkPublishName() + "_" + studentsHomework.getStudentName() + ".png";
-                DocumentAndCoordinatesRenderer.generateDocumentWithCoordinates(topicImagesStr, homeworkStudentWriteDataList, 1, outputPath);
-                imageNames = Arrays.asList(outputPath);
+                imageNames = DocumentAndCoordinatesRenderer.generateAllPagesDocumentWithCoordinates(topicImagesStr, homeworkStudentWriteDataList,  outputPath);
             } catch (Exception e) {
                 log.warn("处理PDF文件失败: {}", e.getMessage());
                 throw new RuntimeException("处理PDF文件失败", e);

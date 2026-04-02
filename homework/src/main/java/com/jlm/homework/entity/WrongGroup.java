@@ -74,4 +74,22 @@ public class WrongGroup {
      */
     @Column(name = "question_generate_type")
     private String questionGenerateType;
+    
+    /**
+     * 班级ID
+     */
+    @Column(name = "class_id")
+    private Long classId;
+    
+    /**
+     * 是否提交
+     */
+    @Column(name = "is_submitted", columnDefinition = "boolean default false")
+    private Boolean isSubmitted;
+    
+    /**
+     * 是否批改
+     */
+    @Column(name = "is_corrected", columnDefinition = "boolean default false")
+    private Boolean isCorrected;
 }

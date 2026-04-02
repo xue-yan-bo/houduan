@@ -112,8 +112,15 @@ public class BasicUtil {
      * @return 文件下载路径
      */
     public static String buildFileDownloadUrl(String download, Long studentId, Long groupId, String status, String objectName) {
-        log.info("文件下载路径：{}", download + "/bucket/download/" + studentId + "/" + groupId + "/" + status + "/" + objectName);
-        return download + "/bucket/download/" + studentId + "/" + groupId + "/" + status + "/" + objectName;
+        try {
+            String encodedObjectName = java.net.URLEncoder.encode(objectName, "UTF-8");
+            String url = download + "/bucket/download/" + studentId + "/" + groupId + "/" + status + "/" + encodedObjectName;
+            log.info("文件下载路径：{}", url);
+            return url;
+        } catch (java.io.UnsupportedEncodingException e) {
+            log.error("URL编码失败: {}", e.getMessage());
+            return download + "/bucket/download/" + studentId + "/" + groupId + "/" + status + "/" + objectName;
+        }
     }
 
     /**
@@ -128,7 +135,13 @@ public class BasicUtil {
      * @return 下载路径
      */
     public static String buildMinIoDownloadUrl(String bucketName, String userUuid, Long groupId, String status, String objectName) {
-        return DOWNLOAD_MINIO + "/" + bucketName + "/" + userUuid + "/" + groupId + "/" + status + "/" + objectName;
+        try {
+            String encodedObjectName = java.net.URLEncoder.encode(objectName, "UTF-8");
+            return DOWNLOAD_MINIO + "/" + bucketName + "/" + userUuid + "/" + groupId + "/" + status + "/" + encodedObjectName;
+        } catch (java.io.UnsupportedEncodingException e) {
+            log.error("URL编码失败: {}", e.getMessage());
+            return DOWNLOAD_MINIO + "/" + bucketName + "/" + userUuid + "/" + groupId + "/" + status + "/" + objectName;
+        }
     }
 
     /**

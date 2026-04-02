@@ -12,6 +12,7 @@ import com.jlm.homework.repository.WrongTitleBookRepository;
 import com.jlm.homework.repository.WrongTitleStatisticsRepository;
 import com.jlm.homework.service.IWrongTitleStatisticsService;
 import jakarta.annotation.Resource;
+import jakarta.persistence.criteria.Predicate;
 import com.alibaba.cloud.commons.lang.StringUtils;
 import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.util.AIUtil;
@@ -21,6 +22,7 @@ import com.alibaba.fastjson.JSONObject;
 import java.io.IOException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -112,31 +114,59 @@ public class WrongTitleStatisticsServiceImpl implements IWrongTitleStatisticsSer
     }
 
     @Override
-    public Page<WrongTitleStatistics> getPage(Integer pageNum, Integer pageSize, WrongTitleStatistics wrongTitleBook) {
+    public Page<WrongTitleStatistics> getPage(Integer pageNum, Integer pageSize, WrongTitleStatistics wrongTitleBook, Date startTime, Date endTime) {
         pageNum = pageNum == null ? 0 : pageNum-1;
         pageSize = pageSize == null ? 10 : pageSize;
         Sort sort = Sort.by(Sort.Direction.DESC, "id");
         Pageable pageable;
         pageable = PageRequest.of(pageNum, pageSize, sort);
-        if(wrongTitleBook!=null){
-            if(StringUtils.isEmpty(wrongTitleBook.getHomeworkPublishName())){
-                wrongTitleBook.setHomeworkPublishName(null);
-            }
-            if(StringUtils.isEmpty(wrongTitleBook.getSource())){
-                wrongTitleBook.setSource(null);
-            }
-            if(StringUtils.isEmpty(wrongTitleBook.getGrade())){
-                wrongTitleBook.setGrade(null);
+
+        Specification<WrongTitleStatistics> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if(wrongTitleBook!=null){
+                if(StringUtils.isNotEmpty(wrongTitleBook.getHomeworkPublishName())){
+                    predicates.add(cb.like(root.get("homeworkPublishName"), "%" + wrongTitleBook.getHomeworkPublishName() + "%"));
+                }
+                if(StringUtils.isNotEmpty(wrongTitleBook.getSource())){
+                    predicates.add(cb.equal(root.get("source"), wrongTitleBook.getSource()));
+                }
+                if(StringUtils.isNotEmpty(wrongTitleBook.getSubject())){
+                    predicates.add(cb.equal(root.get("subject"), wrongTitleBook.getSubject()));
+                }
+                if(StringUtils.isNotEmpty(wrongTitleBook.getGrade())){
+                    predicates.add(cb.equal(root.get("grade"), wrongTitleBook.getGrade()));
+                }
+                if(wrongTitleBook.getSchoolId() != null && wrongTitleBook.getSchoolId() != 0){
+                    predicates.add(cb.equal(root.get("schoolId"), wrongTitleBook.getSchoolId()));
+                }
+                if(wrongTitleBook.getClassId() != null){
+                    predicates.add(cb.equal(root.get("classId"), wrongTitleBook.getClassId()));
+                }
+                if(wrongTitleBook.getHomeworkPublishId() != null){
+                    predicates.add(cb.equal(root.get("homeworkPublishId"), wrongTitleBook.getHomeworkPublishId()));
+                }
+                if(wrongTitleBook.getQuestionId() != null){
+                    predicates.add(cb.equal(root.get("questionId"), wrongTitleBook.getQuestionId()));
+                }
             }
 
-            // 如果前端没有传classId也没有传grade(即选择了"全部班级"和"全部年级")，直接返回空数据
-            if (wrongTitleBook.getClassId() == null && wrongTitleBook.getGrade() == null) {
-                return new PageImpl<>(new java.util.ArrayList<>(), pageable, 0);
+            if(startTime != null){
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createDate"), startTime));
             }
-        } else {
+            if(endTime != null){
+                predicates.add(cb.lessThanOrEqualTo(root.get("createDate"), endTime));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        // 如果前端没有传classId也没有传grade(即选择了"全部班级"和"全部年级")，直接返回空数据
+        if (wrongTitleBook == null || (wrongTitleBook.getClassId() == null && StringUtils.isEmpty(wrongTitleBook.getGrade()))) {
             return new PageImpl<>(new java.util.ArrayList<>(), pageable, 0);
         }
-        return wrongTitleStatisticsRepository.findAll(Example.of(wrongTitleBook),pageable);
+
+        return wrongTitleStatisticsRepository.findAll(spec, pageable);
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.alibaba.cloud.commons.lang.StringUtils;
 import com.jlm.homework.dto.Copybook2Board;
 import com.jlm.homework.dto.HomeWork2Board;
 import com.jlm.homework.entity.SmartDeviceUserRelation;
+import com.jlm.homework.entity.WrongGroup;
 import com.jlm.homework.service.IHandlerService;
 import com.jlm.homework.service.ISmartDeviceUserRelationService;
 import com.jlm.homework.socket.ButtonParseResult;
@@ -158,7 +159,21 @@ public class ButtonHandler implements MessageHandler {
             } else if (context.isFeedbackFlag()) {
                 handleFeedbackOk(context, relation);
             } else if (context.isErrorTitleFlag()) {
-                handleErrorTitleOk(context, relation);
+                // 一级菜单：错题上传 / 改错模式 选择
+                if (context.getCurrentMenu() == context.getErrorTitleMenu()) {
+                    handleErrorTitleOk(context, relation);
+                }
+                // 二级菜单：科目菜单
+                else {
+                    // 根据当前模式，分发给不同的处理方法
+                    if ("upload".equals(context.getErrorTitleMode())) {
+                        // 错题上传的二级菜单（科目）
+                        handleErrorUploadSubOk(context, relation);
+                    } else if ("correction".equals(context.getErrorTitleMode())) {
+                        // 错题改错的二级菜单（科目）
+                        handleErrorCorrectionSubOk(context, relation);
+                    }
+                }
             } else if (context.isCopybookFlag()) {
                 handleCopybookOk(context, relation);
             } else if (context.isMenuFlag() && context.getCurrentMenu() != null) {
@@ -171,6 +186,46 @@ public class ButtonHandler implements MessageHandler {
                     // 会话已关闭，跳过发送
                 }
             }
+        }
+    }
+
+    private void handleErrorCorrectionSubOk(SessionContext context, SmartDeviceUserRelation relation) throws IOException {
+        // 处理错题组选择后的逻辑
+        MenuT currentMenu = context.getCurrentMenu();
+        if (currentMenu != null && currentMenu.getPItems() != null && !currentMenu.getPItems().isEmpty()) {
+            int idx = currentMenu.getSelectItem();
+            MenuItemT item = currentMenu.getPItems().get(idx);
+            Long wrongGroupId = item.getObjectId();
+            String wrongGroupName = item.getDesc();
+            
+            log.info("选择错题组：id={}, name={}", wrongGroupId, wrongGroupName);
+            
+            // 设置当前错题组ID
+            context.setErrorTitleId(wrongGroupId);
+            
+            // 这里可以添加加载错题组内容的逻辑
+            // 例如：加载错题组中的具体题目，进入答题界面等
+            
+            // 暂时返回主菜单，实际应该进入答题界面
+            resetContext(context);
+            responseSender.sendMenuUpdate(context);
+        }
+    }
+
+    private void handleErrorUploadSubOk(SessionContext context, SmartDeviceUserRelation relation) throws IOException {
+        if (!context.getUploadErrorTitleRecords().isEmpty() && context.getCurrentMenu() != null) {
+            MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
+            String name = itemT.getDesc();
+            context.setErrorTitleSubject(name);
+            // 参数说明：
+            // - context.getErrorTitleId()：错题本/错题批次ID
+            // - Long.parseLong(relation.getUserId())：当前登录用户的ID
+            // - name：用户选择的科目
+            // - context.getUploadErrorTitleRecords()：用户要上传的错题记录列表
+            handlerService.saveErrorTitleRecords(context.getErrorTitleId(), Long.parseLong(relation.getUserId()), name, context.getUploadErrorTitleRecords());
+            context.setUploadErrorTitleRecords(new ArrayList<>());
+            resetContext(context);
+            responseSender.sendMenuUpdate(context);
         }
     }
 
@@ -465,14 +520,21 @@ public class ButtonHandler implements MessageHandler {
     }
     
     private void handleErrorTitleOk(SessionContext context, SmartDeviceUserRelation relation) throws IOException {
-         if (!context.getUploadErrorTitleRecords().isEmpty() && context.getCurrentMenu() != null) {
-             MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
-             String name = itemT.getDesc();
-             context.setErrorTitleSubject(name);
-             handlerService.saveErrorTitleRecords(context.getErrorTitleId(),Long.parseLong(relation.getUserId()), name, context.getUploadErrorTitleRecords());
-             context.setUploadErrorTitleRecords(new ArrayList<>());
-             resetContext(context);
-             responseSender.sendMenuUpdate(context);
+        if (context.getCurrentMenu() != null) {
+            MenuItemT itemT = context.getCurrentMenu().getPItems().get(context.getCurrentMenu().getSelectItem());
+            String name = itemT.getDesc();
+            
+            // 如果当前是纠错模式的主菜单
+            if (context.getCurrentMenu() == context.getErrorTitleMenu()) {
+                if ("错题上传".equals(name)) {
+                    context.setErrorTitleMode("upload");
+                    buildErrorTitleUploadMenu(context);
+                } else if ("改错模式".equals(name)) {
+                    context.setErrorTitleMode("correction");
+                    // 直接显示错题组列表，不需要选择科目
+                    buildErrorTitleCorrectionMenu(context, relation);
+                }
+            }
         } else {
             handleMenuNavigation(context);
         }
@@ -528,7 +590,7 @@ public class ButtonHandler implements MessageHandler {
             context.setConfirmCount(1);
             // Build menu
             buildFeedbackMenu(context);
-        } else if ("错题上传".equals(name)) {
+        } else if ("纠错模式".equals(name)) {
              context.setErrorTitleFlag(true);
              context.setConfirmCount(1);
              buildErrorTitleMenu(context);
@@ -652,21 +714,65 @@ public class ButtonHandler implements MessageHandler {
         context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
         responseSender.sendMenuUpdate(context);
     }
-    
+    //纠错模式菜单
     private void buildErrorTitleMenu(SessionContext context) throws IOException {
-         // Same as Feedback
-         List<MenuItemT> items = new ArrayList<>();
-         items.add(new MenuItemT(1, null, "语文", null));
+        // 创建纠错模式的二级菜单
+        List<MenuItemT> items = new ArrayList<>();
+        items.add(new MenuItemT(1, null, "错题上传", null));
+        items.add(new MenuItemT(2, null, "改错模式", null));
+        
+        context.setErrorTitleMenu(new MenuT(context.getMainMenu(), items, 0, 0, items.size(), items.size()));
+        context.setCurrentMenu(context.getErrorTitleMenu());
+        context.getCurrentMenu().setShowStartItem(0);
+        context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
+        responseSender.sendMenuUpdate(context);
+    }
+    
+    //错题上传菜单
+    private void buildErrorTitleUploadMenu(SessionContext context) throws IOException {
+        // 创建错题上传的科目菜单
+        List<MenuItemT> items = new ArrayList<>();
+        items.add(new MenuItemT(1, null, "语文", null));
         items.add(new MenuItemT(2, null, "数学", null));
-        items.add(new MenuItemT(3,null,"英语", null));
-        items.add(new MenuItemT(4,null,"历史", null));
-        items.add(new MenuItemT(5,null,"政治", null));
-         // ...
-         context.setErrorTitleMenu(new MenuT(context.getMainMenu(), items, 0, 0, items.size(), items.size()));
-         context.setCurrentMenu(context.getErrorTitleMenu());
-         context.getCurrentMenu().setShowStartItem(0);
-         context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
-         responseSender.sendMenuUpdate(context);
+        items.add(new MenuItemT(3, null, "英语", null));
+        items.add(new MenuItemT(4, null, "历史", null));
+        items.add(new MenuItemT(5, null, "政治", null));
+        
+        MenuT uploadMenu = new MenuT(context.getErrorTitleMenu(), items, 0, 0, items.size(), items.size());
+        context.setCurrentMenu(uploadMenu);
+        context.getCurrentMenu().setShowStartItem(0);
+        context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
+        responseSender.sendMenuUpdate(context);
+    }
+    
+    //改错模式菜单 - 直接显示错题组列表
+    private void buildErrorTitleCorrectionMenu(SessionContext context, SmartDeviceUserRelation relation) throws IOException {
+        // 获取学生ID
+        Long studentId = Long.parseLong(relation.getUserId());
+        
+        // 根据学生ID获取所有错题组（截至当前时间）
+        List<WrongGroup> wrongGroups = handlerService.getWrongTitlePapers(studentId);
+        
+        if (wrongGroups != null && !wrongGroups.isEmpty()) {
+            // 构建错题组菜单
+            List<MenuItemT> items = new ArrayList<>();
+            int nb = 1;
+            for (WrongGroup wrongGroup : wrongGroups) {
+                String desc = wrongGroup.getName();
+                items.add(new MenuItemT(nb++, wrongGroup.getId(), desc, null));
+            }
+            
+            MenuT correctionMenu = new MenuT(context.getErrorTitleMenu(), items, 0, 0, items.size(), items.size());
+            context.setCurrentMenu(correctionMenu);
+            context.getCurrentMenu().setShowStartItem(0);
+            context.getCurrentMenu().setSelectItem(0, context.getCurrentMenu());
+            responseSender.sendMenuUpdate(context);
+        } else {
+            // 没有找到错题组，返回主菜单
+            log.info("该学生没有错题组");
+            resetContext(context);
+            responseSender.sendMenuUpdate(context);
+        }
     }
     private void buildCopybookMenu(SessionContext context) throws IOException {
         SmartDeviceUserRelation relation=context.getRelation();
@@ -739,7 +845,7 @@ public class ButtonHandler implements MessageHandler {
         mainItems.add(new MenuItemT(1, null, "作业模式", null));
         mainItems.add(new MenuItemT(2, null, "订正模式", null));
         mainItems.add(new MenuItemT(3, null, "反馈模式", null));
-        mainItems.add(new MenuItemT(4, null, "错题上传", null));
+        mainItems.add(new MenuItemT(4, null, "纠错模式", null));
         mainItems.add(new MenuItemT(5, null, "字帖模式", null));
         context.setMainMenu(new MenuT(null, mainItems, 0, 0, mainItems.size(), mainItems.size()));
         context.setCurrentMenu(context.getMainMenu());
@@ -996,7 +1102,6 @@ public class ButtonHandler implements MessageHandler {
                 messagingTemplate.convertAndSend("/topic/lastPage/"+relation.getUserId(), relation.getUserId());
             } catch (IllegalStateException e) {
                 log.warn("Failed to send last page request: {}", e.getMessage());
-                // 会话已关闭，跳过发送
             }
         }
         //获取当前选择菜单页数

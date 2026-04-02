@@ -6,13 +6,13 @@ import com.jlm.homework.entity.WrongGroupItem;
 import com.jlm.homework.entity.convert.FileConstant;
 import com.jlm.homework.entity.convert.PoiConvert;
 import com.jlm.homework.entity.convert.StatusType;
+import com.jlm.homework.repository.WrongGroupItemRepository;
 import com.jlm.homework.repository.WrongGroupRepository;
 import com.jlm.homework.service.IBucketService;
 import com.jlm.homework.service.IWrongGroupService;
 import com.jlm.homework.util.BasicUtil;
 import com.jlm.homework.util.LatexUtil;
 import jakarta.annotation.Resource;
-import lombok.extern.log4j.Log4j;
 import lombok.extern.slf4j.Slf4j;
 import com.alibaba.cloud.commons.lang.StringUtils;
 import org.apache.http.client.fluent.Request;
@@ -24,9 +24,6 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import jakarta.persistence.criteria.*;
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -37,6 +34,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -62,6 +60,9 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
 
     @Resource
     private WrongGroupRepository wrongGroupRepository;
+
+    @Resource
+    private WrongGroupItemRepository wrongGroupItemRepository;
 
     @Autowired
     private IBucketService bucketService;
@@ -381,5 +382,52 @@ public class WrongGroupServiceImpl implements IWrongGroupService {
      */
     private String wrapImageContent(String imageUrl) {
         return "<img src=\"" + imageUrl + "\" />";
+    }
+
+    @Override
+    public List<WrongGroup> getWrongGroupsByStudentId(Long studentId, java.util.Date endTime) {
+        try {
+            log.info("根据学生ID获取错题组（截至时间）：studentId={}, endTime={}", studentId, endTime);
+            return wrongGroupRepository.findByStudentIdAndCreateTimeBefore(studentId, endTime);
+        } catch (Exception e) {
+            log.error("根据学生ID获取错题组失败：{}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public boolean saveErrorCorrectionRecords(Long studentId, Long wrongGroupId, List<WrongGroupItem> wrongGroupItems) {
+        try {
+            log.info("保存错题改错结果：studentId={}, wrongGroupId={}, itemCount={}", 
+                    studentId, wrongGroupId, wrongGroupItems != null ? wrongGroupItems.size() : 0);
+            
+            // 这里实现具体的保存逻辑
+            // 1. 查找错题组
+            WrongGroup wrongGroup = getById(wrongGroupId);
+            if (wrongGroup == null) {
+                log.error("错题组不存在：wrongGroupId={}", wrongGroupId);
+                return false;
+            }
+            
+            // 2. 检查权限（确保是该学生的错题组）
+            if (!wrongGroup.getStudentId().equals(studentId)) {
+                log.error("权限不足：studentId={} 不是错题组 {} 的所有者", studentId, wrongGroupId);
+                return false;
+            }
+            
+            // 3. 标记为已提交
+            wrongGroup.setIsSubmitted(true);
+            wrongGroup.setUpdateTime(new Date());
+            wrongGroupRepository.save(wrongGroup);
+            
+            // 4. 这里可以添加具体的错题项目处理逻辑
+            // 例如：更新错题项目的状态、保存学生的解答等
+            
+            log.info("错题改错结果保存成功：wrongGroupId={}", wrongGroupId);
+            return true;
+        } catch (Exception e) {
+            log.error("保存错题改错结果失败：{}", e.getMessage(), e);
+            return false;
+        }
     }
 }

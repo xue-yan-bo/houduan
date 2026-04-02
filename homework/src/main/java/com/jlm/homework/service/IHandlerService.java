@@ -24,4 +24,6 @@ public interface IHandlerService {
     List<Copybook2Board> getCopybookBoards(Long studentId);
 
     Long createFeedbackRecords(long studentId);
+
+    List<com.jlm.homework.entity.WrongGroup> getWrongTitlePapers(Long studentId);
 }

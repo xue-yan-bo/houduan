@@ -38,6 +38,7 @@ public class SessionContext implements Serializable {
     private Long errorTitleId = null;
     private String feedbackSubject = null;
     private String errorTitleSubject = null;
+    private String errorTitleMode = null; // 纠错模式类型：upload(错题上传)、correction(改错模式)
     private MenuT currentMenu = null; // 当前菜单
     private Long buttonTimes = null;
     private int confirmCount = 0; // querenJishu
@@ -83,6 +84,7 @@ public class SessionContext implements Serializable {
         this.copybookId = null;
         this.feedbackId = null;
         this.errorTitleId = null;
+        this.errorTitleMode = null;
         this.pageNum = null;
         this.currentMenu = null;
         this.confirmCount = 0;

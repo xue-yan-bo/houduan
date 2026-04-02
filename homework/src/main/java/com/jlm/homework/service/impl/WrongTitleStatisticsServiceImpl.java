@@ -12,6 +12,7 @@ import com.jlm.homework.repository.WrongTitleBookRepository;
 import com.jlm.homework.repository.WrongTitleStatisticsRepository;
 import com.jlm.homework.service.IWrongTitleStatisticsService;
 import jakarta.annotation.Resource;
+import jakarta.persistence.criteria.Predicate;
 import com.alibaba.cloud.commons.lang.StringUtils;
 import com.jlm.homework.config.ZhipuAIConfig;
 import com.jlm.homework.util.AIUtil;

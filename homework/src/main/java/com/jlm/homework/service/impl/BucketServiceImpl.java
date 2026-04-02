@@ -55,20 +55,23 @@ public class BucketServiceImpl implements IBucketService {
             InvalidResponseException, XmlParserException, InternalException {
 
         PutObjectArgs putObjectArgs = null;
+        String encodedObjectName = URLEncoder.encode(objectName, StandardCharsets.UTF_8);
 
         if (object instanceof MultipartFile) {
             MultipartFile multipartFile = (MultipartFile) object;
+            String encodedOriginalFilename = URLEncoder.encode(multipartFile.getOriginalFilename(), StandardCharsets.UTF_8);
             putObjectArgs = PutObjectArgs.builder()
                     .bucket(bucketName)
-                    .object(studentId + "/" + groupId + "/" + status + "/" + multipartFile.getOriginalFilename())
+                    .object(studentId + "/" + groupId + "/" + status + "/" + encodedOriginalFilename)
                     .stream(multipartFile.getInputStream(), multipartFile.getSize(), -1)
                     .contentType(StrUtil.isBlank(contentType) ? multipartFile.getContentType() : contentType)
                     .build();
+            encodedObjectName = encodedOriginalFilename;
         } else if (object instanceof byte[]) {
             byte[] data = (byte[]) object;
             putObjectArgs = PutObjectArgs.builder()
                     .bucket(bucketName)
-                    .object(studentId + "/" + groupId + "/" + status + "/" + objectName)
+                    .object(studentId + "/" + groupId + "/" + status + "/" + encodedObjectName)
                     .stream(new ByteArrayInputStream(data), data.length, -1)
                     .contentType(StrUtil.isBlank(contentType) ? FileConstant.MIME_TYPE_DOCX : contentType)
                     .build();
@@ -81,7 +84,7 @@ public class BucketServiceImpl implements IBucketService {
         }
 
         // 构建MinIO直接访问URL
-        String objectPath = studentId + "/" + groupId + "/" + status + "/" + objectName;
+        String objectPath = studentId + "/" + groupId + "/" + status + "/" + encodedObjectName;
         String minioUrl = minioConfig.getEndpoint() + "/" + bucketName + "/" + objectPath;
         
         // 将内网地址替换为外网地址
@@ -96,10 +99,11 @@ public class BucketServiceImpl implements IBucketService {
     @Override
     public ResponseEntity<byte[]> download(String objectName, Long studentId, Long groupId, String status, HttpServletResponse response) throws
             IOException, NoSuchAlgorithmException, InvalidKeyException, ServerException, InsufficientDataException, ErrorResponseException, InvalidResponseException, XmlParserException, InternalException {
+        String encodedObjectName = URLEncoder.encode(objectName, StandardCharsets.UTF_8);
         byte[] bytes = minioClient.getObject(
                 GetObjectArgs.builder()
                         .bucket(bucketName)
-                        .object(studentId + "/" + groupId + "/" + status + "/" + objectName)
+                        .object(studentId + "/" + groupId + "/" + status + "/" + encodedObjectName)
                         .build()
         ).readAllBytes();
 

@@ -44,7 +44,7 @@ public class WrongTitleBookController {
         wrongTitleBookService.rejectDuplicate(id);
         return Result.success("已标记为新题");
     }
-    @GetMapping("/{studentId}")
+    @GetMapping("/{studentId}:\\d+")
     @Operation(summary = "学生错题本、我的错题本")
     public Page<WrongTitleBook> findByStudentId(@PathVariable("studentId") Long studentId,
                        @RequestParam(defaultValue = "1")Integer pageNum,

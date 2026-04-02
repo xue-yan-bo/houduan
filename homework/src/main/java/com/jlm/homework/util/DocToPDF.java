@@ -325,4 +325,119 @@ public class DocToPDF {
         }
         return "";
     }
+
+    public List<String> pdfToImages(String pdfUrl) throws Exception {
+        List<String> imageUrls = new ArrayList<>();
+        
+        // 下载PDF文件
+        File tempPdfFile = File.createTempFile("temp", ".pdf");
+        boolean downloadSuccess = false;
+        
+        try {
+            log.info("尝试使用内网下载PDF文件...");
+            String[] bucketAndPath = extractBucketAndObjectPathFromUrl(pdfUrl);
+            String urlBucketName = bucketAndPath[0];
+            String objectPath = bucketAndPath[1];
+            
+            downloadFileFromMinio(urlBucketName, objectPath, tempPdfFile);
+            downloadSuccess = true;
+            log.info("PDF文件下载成功，大小: {} bytes", tempPdfFile.length());
+        } catch (Exception e) {
+            log.warn("内网下载失败: {}，尝试使用公网下载", e.getMessage());
+            
+            try {
+                String publicEndpoint = minioConfig.getPublicEndpoint();
+                if (publicEndpoint != null && !publicEndpoint.isEmpty()) {
+                    log.info("尝试使用公网地址下载: {}", publicEndpoint);
+                    String[] bucketAndPath = extractBucketAndObjectPathFromUrl(pdfUrl);
+                    String urlBucketName = bucketAndPath[0];
+                    String objectPath = bucketAndPath[1];
+                    
+                    downloadFileFromMinioWithEndpoint(publicEndpoint, urlBucketName, objectPath, tempPdfFile);
+                    downloadSuccess = true;
+                    log.info("公网下载成功，文件大小: {} bytes", tempPdfFile.length());
+                } else {
+                    throw new RuntimeException("公网地址未配置，无法下载文件");
+                }
+            } catch (Exception ex) {
+                log.error("公网下载也失败: {}", ex.getMessage());
+                throw new RuntimeException("内网和公网下载都失败", ex);
+            }
+        }
+        
+        if (!downloadSuccess) {
+            throw new RuntimeException("无法下载PDF文件");
+        }
+        
+        try {
+            // 调用onlyOffice API将PDF转换为图片
+            FileSystemResource file = new FileSystemResource(tempPdfFile);
+            
+            byte[] bytes = stirlingWebClient.post()
+                    .uri("/api/v1/convert/pdf/images")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData("fileInput", file))
+                    .retrieve()
+                    .bodyToMono(byte[].class)
+                    .block();
+            
+            if (bytes == null) {
+                throw new RuntimeException("PDF转换图片失败,未获取到响应数据");
+            }
+            
+            // 保存转换后的图片并上传到MinIO
+            String tempDir = pdfPath + File.separator + UUID.randomUUID();
+            FileUtil.mkdir(tempDir);
+            
+            // 假设返回的是zip文件，包含所有图片
+            String zipPath = tempDir + File.separator + "images.zip";
+            FileUtil.writeBytes(bytes, zipPath);
+            
+            // 解压zip文件
+            cn.hutool.core.util.ZipUtil.unzip(zipPath, tempDir);
+            
+            // 上传图片到MinIO
+            File[] imageFiles = new File(tempDir).listFiles((dir, name) -> 
+                name.toLowerCase().endsWith(".png") || name.toLowerCase().endsWith(".jpg") || name.toLowerCase().endsWith(".jpeg")
+            );
+            
+            if (imageFiles != null) {
+                for (File imageFile : imageFiles) {
+                    try (InputStream inputStream = FileUtil.getInputStream(imageFile)) {
+                        String objectName = "images/" + UUID.randomUUID() + "." + getFileExtension(imageFile.getName());
+                        minioClient.putObject(
+                                PutObjectArgs.builder()
+                                        .bucket(bucketName)
+                                        .object(objectName)
+                                        .stream(inputStream, inputStream.available(), -1)
+                                        .contentType("image/png")
+                                        .build()
+                        );
+                        
+                        // 构建返回的URL
+                        String publicEndpoint = minioConfig.getPublicEndpoint();
+                        String imageUrl;
+                        if (publicEndpoint != null && !publicEndpoint.isEmpty()) {
+                            imageUrl = publicEndpoint + "/" + bucketName + "/" + objectName;
+                        } else {
+                            imageUrl = "http://localhost:9000/" + bucketName + "/" + objectName; // 默认地址
+                        }
+                        imageUrls.add(imageUrl);
+                    } catch (Exception e) {
+                        log.error("上传图片失败: {}", e.getMessage(), e);
+                    }
+                }
+            }
+            
+            // 清理临时文件
+            FileUtil.del(tempDir);
+            FileUtil.del(zipPath);
+            
+            log.info("PDF转换图片成功，生成 {} 张图片", imageUrls.size());
+        } finally {
+            tempPdfFile.delete();
+        }
+        
+        return imageUrls;
+    }
 }

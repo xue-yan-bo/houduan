@@ -20,7 +20,7 @@ public class WordToPdfUtil {
     @Autowired
     public WordToPdfUtil(MinioClient minioClient, MinioConfig minioConfig, WebClient.Builder webClientBuilder, @Value("${pdf.path:/tmp/pdf}") String pdfPath, @Value("${minio.bucketName:exercise}") String bucketName) {
         // 初始化DocToPDF
-        WebClient stirlingWebClient = webClientBuilder.baseUrl("http://localhost:8080").build(); // 根据实际配置调整
+        WebClient stirlingWebClient = webClientBuilder.baseUrl(minioConfig.getPublicEndpoint()).build(); // 根据实际配置调整
         this.docToPDF = new DocToPDF(stirlingWebClient, pdfPath, minioClient, minioConfig, bucketName);
         
         log.info("WordToPdfUtil初始化成功");

@@ -73,6 +73,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                     list.add(cond);
                     // 排除掉那些已经被合并掉的题目（状态为2的），只显示主题目和解析中的题目
                     list.add(criteriaBuilder.notEqual(root.get("duplicateStatus"), 2));
+                    list.add(criteriaBuilder.notEqual(root.get("duplicateStatus"), 1));
                     if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(source)){
                         Predicate condition = criteriaBuilder.like(root.get("source"),"%"+source+"%");
                         list.add(condition);

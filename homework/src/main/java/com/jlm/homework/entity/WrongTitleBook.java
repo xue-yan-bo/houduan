@@ -5,6 +5,9 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import jakarta.persistence.*;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.alibaba.cloud.commons.lang.StringUtils;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.util.Date;
@@ -65,9 +68,11 @@ public class WrongTitleBook {
     @Column(name = "title_answer")
     private String titleAnswer;
 
+    @JsonIgnore
     @Column(name = "title_image")
     private String titleImage;
 
+    @JsonIgnore
     @Column(name = "source_image_url")
     private String sourceImageUrl;
 
@@ -129,5 +134,19 @@ public class WrongTitleBook {
     @Column(name = "grade")
     private String grade;
 
+    @JsonProperty("titleImage")
+    public String getTitleImageForJson() {
+        if (StringUtils.isNotEmpty(this.titleContext)) {
+            return null;
+        }
+        return this.titleImage;
+    }
 
+    @JsonProperty("sourceImageUrl")
+    public String getSourceImageUrlForJson() {
+        if (StringUtils.isNotEmpty(this.titleContext)) {
+            return null;
+        }
+        return this.sourceImageUrl;
+    }
 }

@@ -128,9 +128,30 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                         Predicate condition = criteriaBuilder.equal(root.get("classId"),wrongTitleBook.getClassId());
                         list.add(condition);
                     }
+                    if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getGrade())){
+                        Predicate condition = criteriaBuilder.equal(root.get("grade"),wrongTitleBook.getGrade());
+                        list.add(condition);
+                    }
+                    if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSubject())){
+                        Predicate condition = criteriaBuilder.equal(root.get("subject"),wrongTitleBook.getSubject());
+                        list.add(condition);
+                    }
+                    if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getHomeworkPublishName())){
+                        Predicate condition = criteriaBuilder.like(root.get("homeworkPublishName"),"%"+wrongTitleBook.getHomeworkPublishName()+"%");
+                        list.add(condition);
+                    }
                     if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSource())){
                         Predicate condition = criteriaBuilder.like(root.get("source"),"%"+wrongTitleBook.getSource()+"%");
                         list.add(condition);
+                    }
+                    // 过滤掉被合并的题
+                    list.add(criteriaBuilder.notEqual(root.get("duplicateStatus"), 2));
+                    list.add(criteriaBuilder.notEqual(root.get("duplicateStatus"), 1));
+                    
+                    // 班级错题本，过滤掉别人已经错过的（同一道题班级只展示一次，也就是只展示母题）
+                    // 这里的getPage如果用于班级错题本并且不指定学生ID，则过滤
+                    if (wrongTitleBook.getStudentId() == null) {
+                        list.add(criteriaBuilder.isNull(root.get("duplicateOf")));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -335,6 +356,11 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                     if (history.getId().equals(wrongTitleBook.getId()) || com.alibaba.cloud.commons.lang.StringUtils.isEmpty(history.getTitleContext()) || (history.getDuplicateStatus() != null && history.getDuplicateStatus() == 2)) {
                                         continue;
                                     }
+                                    // 如果是个人错题，需要特殊处理才能在个人的错题本里看到吗？
+                                    // 在班级范围内查重，如果有一样的题，会标记为 duplicateStatus=2。
+                                    // 标记为2后，个人错题本 (findByStudentId) 会将它过滤掉。
+                                    // 如果是不同人做错了同一道题，后一个人错题会被标记为2，在自己的错题本里就看不到了！
+                                    // 但是现在的需求是：个人错题本也有去重，如果是自己做错了两次，次数+1，只展示一次。
                                     SimilarityRequestDto.HistoryTextDto hText = new SimilarityRequestDto.HistoryTextDto();
                                     hText.setId(history.getId());
                                     hText.setText(history.getTitleContext());
@@ -352,17 +378,29 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                 }
 
                                 if (maxSimilarity >= 0.8 && duplicateOf != null) {
-                                    // 确定是重复题：自动标记状态为2 (已合并/废弃)
-                                    wrongTitleBook.setDuplicateStatus(2);
                                     wrongTitleBook.setDuplicateOf(duplicateOf);
 
                                     // 更新母题的错误次数
                                     Optional<WrongTitleBook> parentOpt = wrongTitleBookRepository.findById(duplicateOf);
                                     if (parentOpt.isPresent()) {
                                         WrongTitleBook parentBook = parentOpt.get();
-                                        Integer oldErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
-                                        parentBook.setErrorCount(oldErrorCount + 1);
-                                        wrongTitleBookRepository.save(parentBook);
+                                        if (parentBook.getStudentId() != null && wrongTitleBook.getStudentId() != null && parentBook.getStudentId().equals(wrongTitleBook.getStudentId())) {
+                                            // 同一个学生的相同错题，废弃新题，次数+1
+                                            wrongTitleBook.setDuplicateStatus(2);
+                                            Integer oldErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
+                                            parentBook.setErrorCount(oldErrorCount + 1);
+                                            wrongTitleBookRepository.save(parentBook);
+                                        } else {
+                                            // 班级里不同学生的错题
+                                            Integer oldErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
+                                            parentBook.setErrorCount(oldErrorCount + 1);
+                                            wrongTitleBookRepository.save(parentBook);
+                                            
+                                            // 班级本去重，不展示这条（或者用其他方法去重）
+                                            // 为了让该学生在个人错题本能看到这题，状态应为3
+                                            // 可以在查询班级错题时排除 duplicateOf != null 的记录
+                                            wrongTitleBook.setDuplicateStatus(3);
+                                        }
                                     }
                                 } else {
                                     // 新题，或者相似度小于0.8

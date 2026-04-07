@@ -149,4 +149,14 @@ public class WrongTitleBook {
         }
         return this.sourceImageUrl;
     }
+
+    @JsonProperty("titleImage")
+    public void setTitleImage(String titleImage) {
+        this.titleImage = titleImage;
+    }
+
+    @JsonProperty("sourceImageUrl")
+    public void setSourceImageUrl(String sourceImageUrl) {
+        this.sourceImageUrl = sourceImageUrl;
+    }
 }

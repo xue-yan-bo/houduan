@@ -334,87 +334,121 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 try {
                     Result<String> aiResult = aiFeignClient.analyzeImage(imageUrl);
                     if (aiResult != null && aiResult.getCode() == 200) {
-                        String text = aiResult.getData();
-                        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {
-                            wrongTitleBook.setTitleContext(text);
-                            // ----------- 新增：异步去重查重核心逻辑 -----------
-                            // 查询范围扩大到当前班级 (不仅限当前学生)
-                            if (wrongTitleBook.getClassId() != null) {
-                                WrongTitleBook search = new WrongTitleBook();
-                                search.setClassId(wrongTitleBook.getClassId());
-
-                                // 查找该班级所有的历史错题
-                                java.util.List<WrongTitleBook> historyBooks = wrongTitleBookRepository.findAll(Example.of(search));
-
-                                SimilarityRequestDto requestDto = new SimilarityRequestDto();
-                                requestDto.setTargetText(text);
-                                List<SimilarityRequestDto.HistoryTextDto> historyList = new ArrayList<>();
-
-                                // 遍历提取文本内容用于查重
-                                for (WrongTitleBook history : historyBooks) {
-                                    // 排除自己，且排除没有文本内容的记录，并且只和主错题(不等于2)查重
-                                    if (history.getId().equals(wrongTitleBook.getId()) || com.alibaba.cloud.commons.lang.StringUtils.isEmpty(history.getTitleContext()) || (history.getDuplicateStatus() != null && history.getDuplicateStatus() == 2)) {
-                                        continue;
-                                    }
-                                    // 如果是个人错题，需要特殊处理才能在个人的错题本里看到吗？
-                                    // 在班级范围内查重，如果有一样的题，会标记为 duplicateStatus=2。
-                                    // 标记为2后，个人错题本 (findByStudentId) 会将它过滤掉。
-                                    // 如果是不同人做错了同一道题，后一个人错题会被标记为2，在自己的错题本里就看不到了！
-                                    // 但是现在的需求是：个人错题本也有去重，如果是自己做错了两次，次数+1，只展示一次。
-                                    SimilarityRequestDto.HistoryTextDto hText = new SimilarityRequestDto.HistoryTextDto();
-                                    hText.setId(history.getId());
-                                    hText.setText(history.getTitleContext());
-                                    historyList.add(hText);
-                                }
-                                requestDto.setHistoryTexts(historyList);
-
-                                double maxSimilarity = 0.0;
-                                Long duplicateOf = null;
-
-                                Result<SimilarityResultDto> simResult = aiFeignClient.checkSimilarity(requestDto);
-                                if(simResult != null && simResult.getCode() == 200 && simResult.getData() != null) {
-                                    maxSimilarity = simResult.getData().getMaxSimilarity() != null ? simResult.getData().getMaxSimilarity() : 0.0;
-                                    duplicateOf = simResult.getData().getDuplicateOf();
-                                }
-
-                                if (maxSimilarity >= 0.8 && duplicateOf != null) {
-                                    wrongTitleBook.setDuplicateOf(duplicateOf);
-
-                                    // 更新母题的错误次数
-                                    Optional<WrongTitleBook> parentOpt = wrongTitleBookRepository.findById(duplicateOf);
-                                    if (parentOpt.isPresent()) {
-                                        WrongTitleBook parentBook = parentOpt.get();
-                                        if (parentBook.getStudentId() != null && wrongTitleBook.getStudentId() != null && parentBook.getStudentId().equals(wrongTitleBook.getStudentId())) {
-                                            // 同一个学生的相同错题，废弃新题，次数+1
-                                            wrongTitleBook.setDuplicateStatus(2);
-                                            Integer oldErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
-                                            parentBook.setErrorCount(oldErrorCount + 1);
-                                            wrongTitleBookRepository.save(parentBook);
-                                        } else {
-                                            // 班级里不同学生的错题
-                                            Integer oldErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
-                                            parentBook.setErrorCount(oldErrorCount + 1);
-                                            wrongTitleBookRepository.save(parentBook);
-                                            
-                                            // 班级本去重，不展示这条（或者用其他方法去重）
-                                            // 为了让该学生在个人错题本能看到这题，状态应为3
-                                            // 可以在查询班级错题时排除 duplicateOf != null 的记录
-                                            wrongTitleBook.setDuplicateStatus(3);
-                                        }
-                                    }
-                                } else {
-                                    // 新题，或者相似度小于0.8
-                                    wrongTitleBook.setDuplicateStatus(3);
-                                }
-                            } else {
-                                wrongTitleBook.setDuplicateStatus(3);
-                            }
-                            // 去重逻辑结束，新题标记为3 (解析完成)，并且不能直接在 catch 中拦截阻止 save
+                        String fetchedText = aiResult.getData();
+                        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(fetchedText)) {
+                            wrongTitleBook.setTitleContext(fetchedText);
                             wrongTitleBookRepository.save(wrongTitleBook);
                         }
                     }
                 } catch (Exception e) {
                     System.err.println("AI提取题目文字失败: " + e.getMessage());
+                }
+            }
+        }
+
+        // 无论是由上述代码刚刚识别出文字，还是本来入库时就已经自带文字，只要有题目内容，就开始执行去重查重
+        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getTitleContext())) {
+            // 如果已经被处理为重复（2），或者已经判定完（3并有duplicateOf），则不再重复去重
+            if (wrongTitleBook.getDuplicateStatus() == null || wrongTitleBook.getDuplicateStatus() == 0) {
+                String text = wrongTitleBook.getTitleContext();
+
+                // ----------- 新增：异步去重查重核心逻辑 -----------
+                // 为防止批量并发提交导致的查重失效，对查重入库逻辑加锁
+                synchronized (this.getClass()) {
+                    // 重新从数据库获取最新状态的母题记录，避免并发时的脏读
+                    wrongTitleBook = wrongTitleBookRepository.findById(wrongTitleBook.getId()).orElse(wrongTitleBook);
+
+                    // 查询范围扩大到当前班级 (不仅限当前学生)
+                    if (wrongTitleBook.getClassId() != null) {
+                        WrongTitleBook search = new WrongTitleBook();
+                        search.setClassId(wrongTitleBook.getClassId());
+
+                        // 忽略实体类中带有默认值的字段，否则 Example 默认会加上 error_count=1 和 duplicate_status=0 的条件
+                        org.springframework.data.domain.ExampleMatcher matcher = org.springframework.data.domain.ExampleMatcher.matching()
+                                .withIgnorePaths("errorCount", "duplicateStatus");
+
+                        // 查找该班级所有的历史错题
+                        java.util.List<WrongTitleBook> historyBooks = wrongTitleBookRepository.findAll(Example.of(search, matcher));
+
+                        SimilarityRequestDto requestDto = new SimilarityRequestDto();
+                        requestDto.setTargetText(text);
+                        List<SimilarityRequestDto.HistoryTextDto> historyList = new ArrayList<>();
+
+                        double maxSimilarity = 0.0;
+                        Long duplicateOf = null;
+                        boolean exactMatchFound = false;
+
+                        // 遍历提取文本内容用于查重
+                        for (WrongTitleBook history : historyBooks) {
+                            // 排除自己、没有文本内容的记录、个人已被合并的记录(2)，以及已经是别人题目的重复题(duplicateOf != null，即只和母题查重)
+                            if (history.getId().equals(wrongTitleBook.getId())
+                                    || com.alibaba.cloud.commons.lang.StringUtils.isEmpty(history.getTitleContext())
+                                    || (history.getDuplicateStatus() != null && history.getDuplicateStatus() == 2)
+                                    || history.getDuplicateOf() != null) {
+                                continue;
+                            }
+
+                            // 增加精确匹配兜底：如果相似度大于等于 0.8 直接算重复，不用再调AI
+                            double localSimilarity = com.jlm.homework.util.TextSimilarityUtil.getSimilarity(text, history.getTitleContext());
+                            if (localSimilarity >= 0.8) {
+                                maxSimilarity = localSimilarity;
+                                duplicateOf = history.getId();
+                                exactMatchFound = true;
+                                break;
+                            }
+
+                            SimilarityRequestDto.HistoryTextDto hText = new SimilarityRequestDto.HistoryTextDto();
+                            hText.setId(history.getId());
+                            hText.setText(history.getTitleContext());
+                            historyList.add(hText);
+                        }
+
+                        if (!exactMatchFound && !historyList.isEmpty()) {
+                            requestDto.setHistoryTexts(historyList);
+                            Result<SimilarityResultDto> simResult = aiFeignClient.checkSimilarity(requestDto);
+                            System.out.println("====== simResult: " + com.alibaba.fastjson.JSON.toJSONString(simResult));
+                            if(simResult != null && simResult.getCode() == 200 && simResult.getData() != null) {
+                                maxSimilarity = simResult.getData().getMaxSimilarity() != null ? simResult.getData().getMaxSimilarity() : 0.0;
+                                duplicateOf = simResult.getData().getDuplicateOf();
+                            }
+                        }
+
+                        if (maxSimilarity >= 0.8 && duplicateOf != null) {
+                            wrongTitleBook.setDuplicateOf(duplicateOf);
+
+                            // 更新母题的错误次数
+                            Optional<WrongTitleBook> parentOpt = wrongTitleBookRepository.findById(duplicateOf);
+                            if (parentOpt.isPresent()) {
+                                WrongTitleBook parentBook = parentOpt.get();
+                                if (parentBook.getStudentId() != null && wrongTitleBook.getStudentId() != null && parentBook.getStudentId().equals(wrongTitleBook.getStudentId())) {
+                                    // 同一个学生的相同错题，废弃新题，次数+1
+                                    wrongTitleBook.setDuplicateStatus(2);
+                                    Integer oldErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
+                                    parentBook.setErrorCount(oldErrorCount + 1);
+                                    wrongTitleBookRepository.save(parentBook);
+                                } else {
+                                    // 班级里不同学生的错题
+                                    Integer oldErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
+                                    parentBook.setErrorCount(oldErrorCount + 1);
+                                    wrongTitleBookRepository.save(parentBook);
+
+                                    // 班级本去重，不展示这条
+                                    wrongTitleBook.setDuplicateStatus(3);
+                                }
+                            }
+                        } else {
+                            // 新题，或者相似度小于0.8
+                            wrongTitleBook.setDuplicateStatus(3);
+                        }
+                    } else {
+                        wrongTitleBook.setDuplicateStatus(3);
+                    }
+
+                    // 保证新题至少有一次错误记录
+                    if (wrongTitleBook.getErrorCount() == null) {
+                        wrongTitleBook.setErrorCount(1);
+                    }
+                    wrongTitleBookRepository.save(wrongTitleBook);
                 }
             }
         }

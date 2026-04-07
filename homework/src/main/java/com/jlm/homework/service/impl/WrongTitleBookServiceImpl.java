@@ -363,12 +363,18 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                         WrongTitleBook search = new WrongTitleBook();
                         search.setClassId(wrongTitleBook.getClassId());
 
-                        // 忽略实体类中带有默认值的字段，否则 Example 默认会加上 error_count=1 和 duplicate_status=0 的条件
-                        org.springframework.data.domain.ExampleMatcher matcher = org.springframework.data.domain.ExampleMatcher.matching()
-                                .withIgnorePaths("errorCount", "duplicateStatus");
+                        final Long currentClassId = wrongTitleBook.getClassId();
 
-                        // 查找该班级所有的历史错题
-                        java.util.List<WrongTitleBook> historyBooks = wrongTitleBookRepository.findAll(Example.of(search, matcher));
+                        // 使用 Specification 确保查询条件准确无误，只按 classId 查询
+                        java.util.List<WrongTitleBook> historyBooks = wrongTitleBookRepository.findAll(new Specification<WrongTitleBook>() {
+                            @Override
+                            public Predicate toPredicate(Root<WrongTitleBook> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+                                if (currentClassId != null) {
+                                    return cb.equal(root.get("classId"), currentClassId);
+                                }
+                                return cb.conjunction();
+                            }
+                        });
 
                         SimilarityRequestDto requestDto = new SimilarityRequestDto();
                         requestDto.setTargetText(text);

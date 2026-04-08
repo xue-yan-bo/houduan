@@ -82,8 +82,6 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                         Predicate condition = criteriaBuilder.equal(root.get("commandFlag"),commandFlag);
                         list.add(condition);
                     }
-                    // 个人错题本去重：过滤掉作为重复题挂靠在别人母题下的题目
-                    list.add(criteriaBuilder.isNull(root.get("duplicateOf")));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -146,12 +144,11 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                         Predicate condition = criteriaBuilder.like(root.get("source"),"%"+wrongTitleBook.getSource()+"%");
                         list.add(condition);
                     }
-                    // 过滤掉被合并的题
+                    // 过滤掉被合并的题（个人层面的合并）
                     list.add(criteriaBuilder.notEqual(root.get("duplicateStatus"), 2));
                     list.add(criteriaBuilder.notEqual(root.get("duplicateStatus"), 1));
-                    
-                    // 班级错题本，过滤掉别人已经错过的（同一道题班级只展示一次，也就是只展示母题）
-                    // 这里的getPage如果用于班级错题本并且不指定学生ID，则过滤
+
+                    // 班级错题本去重：班级去重时过滤掉所有重复别人的题，但如果搜的是个人的就不应该在这里过滤所有的duplicateOf
                     if (wrongTitleBook.getStudentId() == null) {
                         list.add(criteriaBuilder.isNull(root.get("duplicateOf")));
                     }

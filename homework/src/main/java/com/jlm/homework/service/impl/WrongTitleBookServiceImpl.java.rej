@@ -1,0 +1,38 @@
+--- WrongTitleBookServiceImpl.java
++++ WrongTitleBookServiceImpl.java
+@@ -118,18 +118,20 @@
+                     // 同样，不要再用 duplicateStatus == 2 去排除个人错题了
+                     // list.add(criteriaBuilder.notEqual(root.get("duplicateStatus"), 2));
+ 
+-                    if(wrongTitleBook.getStudentId()!=null){
+-                        Predicate condition = criteriaBuilder.equal(root.get("studentId"),wrongTitleBook.getStudentId());
+-                        list.add(condition);
+-                    }
+-                    if(wrongTitleBook.getExerciseBookId()!=null){
+-                        Predicate condition = criteriaBuilder.equal(root.get("exerciseBookId"),wrongTitleBook.getExerciseBookId());
+-                        list.add(condition);
+-                    }
+-                    if(wrongTitleBook.getClassId()!=null){
+-                        Predicate condition = criteriaBuilder.equal(root.get("classId"),wrongTitleBook.getClassId());
+-                        list.add(condition);
+-                    }
+-                    if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSource())){
+-                        Predicate condition = criteriaBuilder.like(root.get("source"),"%"+wrongTitleBook.getSource()+"%");
+-                        list.add(condition);
++                    if(wrongTitleBook != null) {
++                        if(wrongTitleBook.getStudentId()!=null){
++                            Predicate condition = criteriaBuilder.equal(root.get("studentId"),wrongTitleBook.getStudentId());
++                            list.add(condition);
++                        }
++                        if(wrongTitleBook.getExerciseBookId()!=null){
++                            Predicate condition = criteriaBuilder.equal(root.get("exerciseBookId"),wrongTitleBook.getExerciseBookId());
++                            list.add(condition);
++                        }
++                        if(wrongTitleBook.getClassId()!=null){
++                            Predicate condition = criteriaBuilder.equal(root.get("classId"),wrongTitleBook.getClassId());
++                            list.add(condition);
++                        }
++                        if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSource())){
++                            Predicate condition = criteriaBuilder.like(root.get("source"),"%"+wrongTitleBook.getSource()+"%");
++                            list.add(condition);
++                        }

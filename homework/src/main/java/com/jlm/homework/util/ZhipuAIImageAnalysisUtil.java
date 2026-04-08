@@ -204,6 +204,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
     public ZhipuAIImageAnalysisUtil(String apiKey) {
         this.apiKey = apiKey;
         this.restTemplate = new RestTemplate();
+        this.restTemplate.getMessageConverters().add(0, new org.springframework.http.converter.StringHttpMessageConverter(java.nio.charset.StandardCharsets.UTF_8));
         this.objectMapper = new ObjectMapper();
     }
 
@@ -1112,16 +1113,21 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
      * @throws IOException 读取异常
      */
     private String encodeImageToBase64(String imagePath) throws IOException {
-        // 规范化URL格式，将反斜杠替换为正斜杠，确保http://格式正确
         String normalizedPath = imagePath;
         if (!normalizedPath.startsWith("http://") && !normalizedPath.startsWith("https://")) {
-            normalizedPath = imagePath.replace("\\", "/")
-                    .replace("http:/", "http://");
+            normalizedPath = imagePath.replace("\\", "/").replace("http:/", "http://");
         }
         if (normalizedPath.startsWith("http://") || normalizedPath.startsWith("https://")) {
-            // 处理网络图片
+            // 处理网络图片：增加伪装请求头，解决防盗链和 403 Forbidden 问题
             URL url = new URL(normalizedPath);
-            try (InputStream is = url.openStream()) {
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            // 伪装成浏览器请求
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(10000);
+
+            try (InputStream is = connection.getInputStream()) {
                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
                 byte[] buffer = new byte[8192];
                 int bytesRead;
@@ -1129,7 +1135,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
                     outputStream.write(buffer, 0, bytesRead);
                 }
                 byte[] imageBytes = outputStream.toByteArray();
-                return Base64.getEncoder().encodeToString(imageBytes);
+                return java.util.Base64.getEncoder().encodeToString(imageBytes);
             }
         } else {
             // 处理本地文件
@@ -1137,7 +1143,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
             try (FileInputStream fis = new FileInputStream(file)) {
                 byte[] bytes = new byte[(int) file.length()];
                 fis.read(bytes);
-                return Base64Utils.encodeToString(bytes);
+                return org.springframework.util.Base64Utils.encodeToString(bytes);
             }
         }
     }
@@ -1150,6 +1156,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
      * @throws IOException JSON解析异常
      */
     private String parseAndFormatResponse(String responseBody) throws IOException {
+        System.out.println("Zhipu API Response: " + responseBody);
         JsonNode rootNode = objectMapper.readTree(responseBody);
 
         // 检查是否有error字段
@@ -1165,6 +1172,8 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
             if (firstChoice.has("message") && firstChoice.get("message").has("content")) {
                 return firstChoice.get("message").get("content").asText();
             }
+        } else if (rootNode.has("msg")) {
+             throw new IOException("API调用失败: " + rootNode.get("msg").asText());
         }
 
         // 如果没有找到预期的内容格式，返回原始响应
@@ -1223,6 +1232,11 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
                 return objectMapper.writeValueAsString(result);
             }
+        } else if (rootNode.has("msg")) {
+             Map<String, Object> errorResult = new HashMap<>();
+             errorResult.put("status", "error");
+             errorResult.put("message", rootNode.get("msg").asText());
+             return objectMapper.writeValueAsString(errorResult);
         }
 
         // 如果没有找到预期的内容格式，返回结构化的原始响应
@@ -1483,7 +1497,7 @@ public class ZhipuAIImageAnalysisUtil extends AIUtil {
 
     public static void main(String[] args) {
 
-        ZhipuAIImageAnalysisUtil util = createInstance("7abc333508dd4d71b83dcb6f5a511eee.rjwsPZyUfDN5abhn");
+        ZhipuAIImageAnalysisUtil util = createInstance("6130d6697ed4460ba78620396b3dee91.RYikV9MfkOwNThZK");
         List<QuestionAnalysis> analyses = null;
         try {
             analyses = util.reviewExamQuestions("F:\\jlm\\1201测试.png");

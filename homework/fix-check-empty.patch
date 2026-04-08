@@ -1,0 +1,40 @@
+--- D:\JLM\test1\homework\src\main\java\com\jlm\homework\service\impl\WrongTitleBookServiceImpl.java
++++ D:\JLM\test1\homework\src\main\java\com\jlm\homework\service\impl\WrongTitleBookServiceImpl.java
+@@ -303,16 +303,17 @@
+         WrongTitleBook wrongTitleBook = optional.get();
+-        if (com.alibaba.cloud.commons.lang.StringUtils.isEmpty(wrongTitleBook.getTitleContext())) {
+-            String imageUrl = null;
+-            if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())) {
+-                imageUrl = wrongTitleBook.getTitleImage();
+-            } else if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())) {
+-                imageUrl = wrongTitleBook.getSourceImageUrl();
+-            }
+-            if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(imageUrl)) {
+-                try {
+-                    Result<String> aiResult = aiFeignClient.analyzeImage(imageUrl);
+-                    if (aiResult != null && aiResult.getCode() == 200) {
+-                        String text = aiResult.getData();
+-                        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {
+-                            wrongTitleBook.setTitleContext(text);
++        String text = wrongTitleBook.getTitleContext();
++        try {
++            if (com.alibaba.cloud.commons.lang.StringUtils.isEmpty(text)) {
++                String imageUrl = null;
++                if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())) {
++                    imageUrl = wrongTitleBook.getTitleImage();
++                } else if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())) {
++                    imageUrl = wrongTitleBook.getSourceImageUrl();
++                }
++                if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(imageUrl)) {
++                        Result<String> aiResult = aiFeignClient.analyzeImage(imageUrl);
++                        if (aiResult != null && aiResult.getCode() == 200) {
++                            text = aiResult.getData();
++                            if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {
++                                wrongTitleBook.setTitleContext(text);
++                            }
++                        }
++                }
++            }
++
++            if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {
+                             // ----------- 新增：异步去重查重核心逻辑 -----------

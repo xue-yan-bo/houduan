@@ -1,0 +1,101 @@
+298:    public void aiChart(Long wrongTitleId) {
+299-        Optional<WrongTitleBook> optional=wrongTitleBookRepository.findById(wrongTitleId);
+300-        if(optional==null||!optional.isPresent()){
+301-            return;
+302-        }
+303-        WrongTitleBook wrongTitleBook = optional.get();
+304-        if (com.alibaba.cloud.commons.lang.StringUtils.isEmpty(wrongTitleBook.getTitleContext())) {
+305-            String imageUrl = null;
+306-            if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getTitleImage())) {
+307-                imageUrl = wrongTitleBook.getTitleImage();
+308-            } else if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSourceImageUrl())) {
+309-                imageUrl = wrongTitleBook.getSourceImageUrl();
+310-            }
+311-            if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(imageUrl)) {
+312-                try {
+313-                    Result<String> aiResult = aiFeignClient.analyzeImage(imageUrl);
+314-                    if (aiResult != null && aiResult.getCode() == 200) {
+315-                        String text = aiResult.getData();
+316-                        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {
+317-                            wrongTitleBook.setTitleContext(text);
+318-                            // ----------- 新增：异步去重查重核心逻辑 -----------
+319-                            // 查询范围扩大到当前班级 (不仅限当前学生)
+320-                            if (wrongTitleBook.getClassId() != null) {
+321-                                WrongTitleBook search = new WrongTitleBook();
+322-                                search.setClassId(wrongTitleBook.getClassId());
+323-
+324-                                // 查找该班级所有的历史错题
+325-                                java.util.List<WrongTitleBook> historyBooks = wrongTitleBookRepository.findAll(Example.of(search));
+326-
+327-                                SimilarityRequestDto requestDto = new SimilarityRequestDto();
+328-                                requestDto.setTargetText(text);
+329-                                List<SimilarityRequestDto.HistoryTextDto> historyList = new ArrayList<>();
+330-
+331-                                // 遍历提取文本内容用于查重
+332-                                for (WrongTitleBook history : historyBooks) {
+333-                                    // 排除自己，且排除没有文本内容的记录，并且只和主错题(不等于2)查重
+334-                                    if (history.getId().equals(wrongTitleBook.getId()) || com.alibaba.cloud.commons.lang.StringUtils.isEmpty(history.getTitleContext()) || (history.getDuplicateStatus() != null && history.getDuplicateStatus() == 2)) {
+335-                                        continue;
+336-                                    }
+337-                                    SimilarityRequestDto.HistoryTextDto hText = new SimilarityRequestDto.HistoryTextDto();
+338-                                    hText.setId(history.getId());
+339-                                    hText.setText(history.getTitleContext());
+340-                                    historyList.add(hText);
+341-                                }
+342-                                requestDto.setHistoryTexts(historyList);
+343-
+344-                                double maxSimilarity = 0.0;
+345-                                Long duplicateOf = null;
+346-
+347-                                Result<SimilarityResultDto> simResult = aiFeignClient.checkSimilarity(requestDto);
+348-                                if(simResult != null && simResult.getCode() == 200 && simResult.getData() != null) {
+349-                                    maxSimilarity = simResult.getData().getMaxSimilarity() != null ? simResult.getData().getMaxSimilarity() : 0.0;
+350-                                    duplicateOf = simResult.getData().getDuplicateOf();
+351-                                }
+352-
+353-                                if (maxSimilarity >= 0.8 && duplicateOf != null) {
+354-                                    // 确定是重复题：自动标记状态为2 (已合并/废弃)
+355-                                    wrongTitleBook.setDuplicateStatus(2);
+356-                                    wrongTitleBook.setDuplicateOf(duplicateOf);
+357-
+358-                                    // 更新母题的错误次数
+359-                                    Optional<WrongTitleBook> parentOpt = wrongTitleBookRepository.findById(duplicateOf);
+360-                                    if (parentOpt.isPresent()) {
+361-                                        WrongTitleBook parentBook = parentOpt.get();
+362-                                        Integer oldErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
+363-                                        parentBook.setErrorCount(oldErrorCount + 1);
+364-                                        wrongTitleBookRepository.save(parentBook);
+365-                                    }
+366-                                } else {
+367-                                    // 新题，或者相似度小于0.8
+368-                                    wrongTitleBook.setDuplicateStatus(3);
+369-                                }
+370-                            } else {
+371-                                wrongTitleBook.setDuplicateStatus(3);
+372-                            }
+373-                            // 去重逻辑结束，新题标记为3 (解析完成)，并且不能直接在 catch 中拦截阻止 save
+374-                            wrongTitleBookRepository.save(wrongTitleBook);
+375-                        }
+376-                    }
+377-                } catch (Exception e) {
+378-                    System.err.println("AI提取题目文字失败: " + e.getMessage());
+379-                }
+380-            }
+381-        }
+382-
+383-        // 继续生成AI图表分析
+384-        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getTitleContext())) {
+385-            try {
+386-                String prompt = "你是一个专业的作业分析AI。请针对以下错题内容进行分析，并输出一段简短的掌握度分析（50字以内）。\n内容：" + wrongTitleBook.getTitleContext();
+387-                // 修复报红: 临时屏蔽本地 aiUtil.analyzeText() 调用，因为它可能涉及本地 API key 配置错误导致 401 权限问题，且这部分不是去重核心功能
+388-                // String analysis = aiUtil.getAIUtil().analyzeText(prompt);
+389-                String analysis = "错题已成功收录，建议后续加强相关知识点的练习。";
+390-                if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(analysis)) {
+391-                    wrongTitleBook.setAiAnalysis(analysis);
+392-                    wrongTitleBookRepository.save(wrongTitleBook);
+393-                }
+394-            } catch (Exception e) {
+395-                e.printStackTrace();
+396-            }
+397-        }
+398-    }

@@ -1,0 +1,55 @@
+--- src/main/java/com/jlm/homework/service/impl/WrongTitleBookServiceImpl.java
++++ src/main/java/com/jlm/homework/service/impl/WrongTitleBookServiceImpl.java
+@@ -324,7 +324,18 @@
+             }
+             if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(imageUrl)) {
+                 try {
+-                    Result<String> aiResult = aiFeignClient.analyzeImage(imageUrl);
++                    Result<String> aiResult = null;
++                    try {
++                        aiResult = aiFeignClient.analyzeImage(imageUrl);
++                    } catch (Exception e) {
++                        System.err.println("Feign call to ai-server failed. Falling back to local OCR... " + e.getMessage());
++                    }
++                    if (aiResult == null || aiResult.getCode() != 200 || com.alibaba.cloud.commons.lang.StringUtils.isEmpty(aiResult.getData())) {
++                        // fallback to aiUtil if feign fails
++                        aiResult = new Result<>();
++                        aiResult.setCode(200);
++                        aiResult.setData(aiUtil.getAIUtil().analyzeImage(imageUrl, "请提取这张图片中的所有试题文字内容（包含题目、选项、解析等）。"));
++                    }
+                     if (aiResult != null && aiResult.getCode() == 200) {
+                         String text = aiResult.getData();
+                         if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {
+@@ -375,7 +386,12 @@
+                                 if (maxSimilarity < 0.8) {
+                                     try {
+-                                        Result<SimilarityResultDto> simResult = aiFeignClient.checkSimilarity(requestDto);
++                                        Result<SimilarityResultDto> simResult = null;
++                                        try {
++                                            simResult = aiFeignClient.checkSimilarity(requestDto);
++                                        } catch (Exception e) {
++                                            System.err.println("Feign checkSimilarity failed. " + e.getMessage());
++                                        }
+                                         if(simResult != null && simResult.getCode() == 200 && simResult.getData() != null) {
+                                             maxSimilarity = simResult.getData().getMaxSimilarity() != null ? simResult.getData().getMaxSimilarity() : maxSimilarity;
+                                             duplicateOf = simResult.getData().getDuplicateOf() != null ? simResult.getData().getDuplicateOf() : duplicateOf;
+@@ -531,7 +547,18 @@
+ 
+             if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(imageUrl)) {
+                 try {
+-                    Result<String> aiResult = aiFeignClient.analyzeImage(imageUrl);
++                    Result<String> aiResult = null;
++                    try {
++                        aiResult = aiFeignClient.analyzeImage(imageUrl);
++                    } catch (Exception e) {
++                        System.err.println("Feign call to ai-server failed. Falling back to local OCR in chart... " + e.getMessage());
++                    }
++                    if (aiResult == null || aiResult.getCode() != 200 || com.alibaba.cloud.commons.lang.StringUtils.isEmpty(aiResult.getData())) {
++                        // fallback to aiUtil if feign fails
++                        aiResult = new Result<>();
++                        aiResult.setCode(200);
++                        aiResult.setData(aiUtil.getAIUtil().analyzeImage(imageUrl, "请提取这张图片中的所有试题文字内容。"));
++                    }
+                     if (aiResult != null && aiResult.getCode() == 200) {
+                         String text = aiResult.getData();
+                         if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {

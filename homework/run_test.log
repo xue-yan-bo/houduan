@@ -1,0 +1,97 @@
+[INFO] Scanning for projects...
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for com.jlm:homework:jar:25.0
+[WARNING] 'dependencies.dependency.(groupId:artifactId:type:classifier)' must be unique: org.apache.pdfbox:pdfbox:jar -> duplicate declaration of version 2.0.32 @ line 333, column 21
+[WARNING] 
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING] 
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING] 
+[INFO] 
+[INFO] --------------------------< com.jlm:homework >--------------------------
+[INFO] Building homework 25.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.2.4:run (default-cli) > test-compile @ homework >>>
+[INFO] 
+[INFO] --- kotlin:1.9.25:compile (compile) @ homework ---
+[INFO] Applied plugin: 'spring'
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\config\NewGlobalExceptionHandler.kt: (27, 34) Elvis operator (?:) always returns the left operand of non-nullable type String
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\config\NewGlobalExceptionHandler.kt: (40, 34) Elvis operator (?:) always returns the left operand of non-nullable type String
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\config\NewGlobalExceptionHandler.kt: (53, 34) Elvis operator (?:) always returns the left operand of non-nullable type String
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\config\NewGlobalExceptionHandler.kt: (67, 34) Elvis operator (?:) always returns the left operand of non-nullable type String
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\config\NewGlobalExceptionHandler.kt: (81, 34) Elvis operator (?:) always returns the left operand of non-nullable type String
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\config\NewGlobalExceptionHandler.kt: (95, 34) Elvis operator (?:) always returns the left operand of non-nullable type String
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\config\NewGlobalExceptionHandler.kt: (109, 34) Elvis operator (?:) always returns the left operand of non-nullable type String
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\config\ResponseAdvice.kt: (99, 13) Variable 'requestPath' is never used
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\feign\FeignConfiguration.kt: (36, 24) 'constructor Options(Int, Int, Boolean)' is deprecated. Deprecated in Java
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\feign\SystemFeignClient.kt: (53, 15) This class shouldn't be used in Kotlin. Use kotlin.Int instead.
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\service\UserService.kt: (40, 20) Condition 'result !=null' is always 'true'
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\service\UserService.kt: (41, 25) Name shadowed: userId
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\service\UserService.kt: (41, 39) Unnecessary safe call on a non-null receiver of type Result
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\service\UserService.kt: (41, 45) Unnecessary safe call on a non-null receiver of type LoginUser?
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\service\UserService.kt: (88, 54) Unnecessary non-null assertion (!!) on a non-null receiver of type UserInfo
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\service\UserService.kt: (106, 42) Unnecessary safe call on a non-null receiver of type LoginUserInfo?
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\service\UserService.kt: (107, 48) Unnecessary safe call on a non-null receiver of type LoginUserInfo?
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\service\UserService.kt: (112, 20) Condition 'result !=null' is always 'true'
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\service\UserService.kt: (113, 42) Unnecessary safe call on a non-null receiver of type Result
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\service\UserService.kt: (113, 48) Unnecessary safe call on a non-null receiver of type LoginUser?
+[WARNING] D:\JLM\test1\homework\src\main\kotlin\com\jlm\homework\service\UserService.kt: (212, 11) No cast needed
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ homework ---
+[INFO] Copying 4 resources from src\main\resources to target\classes
+[INFO] Copying 7 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (compile-java) @ homework ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 387 source files with javac [debug release 21] to target\classes
+[INFO] 由于在类路径中发现了一个或多个处理程序，因此启用了
+  批注处理。未来发行版的 javac 可能会禁用批注处理，
+  除非至少按名称指定了一个处理程序 (-processor)，
+  或指定了搜索路径 (--processor-path, --processor-module-path)，
+  或显式启用了批注处理 (-proc:only, -proc:full)。
+  可使用 -Xlint:-options 隐藏此消息。
+  可使用 -proc:none 禁用批注处理。
+[WARNING] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/dto/StudentVo.java:[8,1] Generating equals/hashCode implementation but without a call to superclass, even though this class does not extend java.lang.Object. If this is intentional, add '@EqualsAndHashCode(callSuper=false)' to your type.
+[WARNING] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/socket/HandwritingParseResult.java:[7,1] Generating equals/hashCode implementation but without a call to superclass, even though this class does not extend java.lang.Object. If this is intentional, add '@EqualsAndHashCode(callSuper=false)' to your type.
+[WARNING] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/socket/LCDDisplayParseResult.java:[8,1] Generating equals/hashCode implementation but without a call to superclass, even though this class does not extend java.lang.Object. If this is intentional, add '@EqualsAndHashCode(callSuper=false)' to your type.
+[WARNING] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/socket/ButtonParseResult.java:[5,1] Generating equals/hashCode implementation but without a call to superclass, even though this class does not extend java.lang.Object. If this is intentional, add '@EqualsAndHashCode(callSuper=false)' to your type.
+[WARNING] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/socket/MacParseResult.java:[7,1] Generating equals/hashCode implementation but without a call to superclass, even though this class does not extend java.lang.Object. If this is intentional, add '@EqualsAndHashCode(callSuper=false)' to your type.
+[WARNING] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/util/ZhipuAIImageAnalysisUtil.java:[1140,24] org.springframework.util 中的 org.springframework.util.Base64Utils 已过时, 且标记为待删除
+[WARNING] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/service/impl/ClassroomExercisesStudentRecordServiceImpl.java:[870,24] org.springframework.util 中的 org.springframework.util.Base64Utils 已过时, 且标记为待删除
+[WARNING] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/service/impl/ClassroomExercisesStudentRecordServiceImpl.java:[888,24] org.springframework.util 中的 org.springframework.util.Base64Utils 已过时, 且标记为待删除
+[WARNING] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/util/AIFileUtil.java:[32,24] org.springframework.util 中的 org.springframework.util.Base64Utils 已过时, 且标记为待删除
+[WARNING] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/util/AIFileUtil.java:[40,24] org.springframework.util 中的 org.springframework.util.Base64Utils 已过时, 且标记为待删除
+[INFO] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/util/TongYiServ.java: 某些输入文件使用或覆盖了已过时的 API。
+[INFO] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/util/TongYiServ.java: 有关详细信息, 请使用 -Xlint:deprecation 重新编译。
+[INFO] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/util/TongYiServ.java: 某些输入文件使用了未经检查或不安全的操作。
+[INFO] /D:/JLM/test1/homework/src/main/java/com/jlm/homework/util/TongYiServ.java: 有关详细信息, 请使用 -Xlint:unchecked 重新编译。
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (test-compile-java) @ homework ---
+[INFO] Not compiling test sources
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ homework ---
+[INFO] Not copying test resources
+[INFO] 
+[INFO] --- kotlin:1.9.25:test-compile (test-compile) @ homework ---
+[INFO] Test compilation is skipped
+[INFO] 
+[INFO] <<< spring-boot:3.2.4:run (default-cli) < test-compile @ homework <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.2.4:run (default-cli) @ homework ---
+[INFO] Attaching agents: []
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  48.094 s
+[INFO] Finished at: 2026-04-03T19:07:31+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.2.4:run (default-cli) on project homework: Process execution failed: Cannot run program "D:\Java\JDK-21\bin\java.exe" (in directory "D:\JLM\test1\homework"): CreateProcess error=206, 文件名或扩展名太长。 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

@@ -1,0 +1,22 @@
+--- src/main/java/com/jlm/homework/service/impl/WrongTitleBookServiceImpl.java
++++ src/main/java/com/jlm/homework/service/impl/WrongTitleBookServiceImpl.java
+@@ -324,7 +324,18 @@
+             }
+             if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(imageUrl)) {
+                 try {
+-                    Result<String> aiResult = aiFeignClient.analyzeImage(imageUrl);
++                    Result<String> aiResult = null;
++                    try {
++                        aiResult = aiFeignClient.analyzeImage(imageUrl);
++                    } catch (Exception e) {
++                        System.err.println("Feign call to ai-server failed. Falling back to local OCR... " + e.getMessage());
++                    }
++                    if (aiResult == null || aiResult.getCode() != 200 || com.alibaba.cloud.commons.lang.StringUtils.isEmpty(aiResult.getData())) {
++                        // fallback to aiUtil if feign fails
++                        aiResult = new Result<>();
++                        aiResult.setCode(200);
++                        aiResult.setData(aiUtil.getAIUtil().analyzeImage(imageUrl, "请提取这张图片中的所有试题文字内容（包含题目、选项、解析等）。"));
++                    }
+                     if (aiResult != null && aiResult.getCode() == 200) {
+                         String text = aiResult.getData();
+                         if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {

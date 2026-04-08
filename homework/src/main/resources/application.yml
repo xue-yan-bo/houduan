@@ -27,7 +27,8 @@ spring:
         enabled: true
         # 服务注册配置
         register-enabled: true
-        # 命名空间 - 设置为dev以发现同命名空间的服务
+        # 命名空间 - 设置为dev以发
+        # 现同命名空间的服务
         namespace: ${NACOS_NAMESPACE:dev}
         # 服务分组
         group: ${NACOS_GROUP:DEFAULT_GROUP}
@@ -182,7 +183,7 @@ logging:
 #智普
 zhipu:
   ai:
-    api-key: "fb1fc9c0ff2343449849169312c32239.VSKApXu5lGla881O"
+    api-key: "6130d6697ed4460ba78620396b3dee91.RYikV9MfkOwNThZK"
 
 # JODConverter配置 - Word转PDF
 jodconverter:

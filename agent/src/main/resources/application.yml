@@ -26,6 +26,6 @@ TONGYI_OPNEAI_BASE_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
 TONGYI_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 # 2.智谱
-ZHIPU_API_KEY: "7abc333508dd4d71b83dcb6f5a511eee.rjwsPZyUfDN5abhn"
+ZHIPU_API_KEY: "6130d6697ed4460ba78620396b3dee91.RYikV9MfkOwNThZK"
 ZHIPU_CHAT_MODEL: "GLM-4.5V"
 ZHIPU_IMAGE_MODEL: "GLM-4.5-Flash"

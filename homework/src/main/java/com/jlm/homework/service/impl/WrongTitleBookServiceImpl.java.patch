@@ -1,0 +1,37 @@
+--- D:/JLM/test1/homework/src/main/java/com/jlm/homework/service/impl/WrongTitleBookServiceImpl.java
++++ D:/JLM/test1/homework/src/main/java/com/jlm/homework/service/impl/WrongTitleBookServiceImpl.java
+@@ -363,11 +363,29 @@
+                                         parentBook.setErrorCount(oldErrorCount + 1);
+                                         wrongTitleBookRepository.save(parentBook);
+                                     }
++
++                                    // 如果是重复题，应该去班级统计表(wrong_title_statistics)里寻找原题，而不是完全新建一条
++                                    if (wrongTitleBook.getClassId() != null) {
++                                        WrongTitleStatistics searchStats = new WrongTitleStatistics();
++                                        searchStats.setClassId(wrongTitleBook.getClassId());
++                                        Example<WrongTitleStatistics> statsExample = Example.of(searchStats);
++                                        List<WrongTitleStatistics> statsList = wrongTitleStatisticsRepository.findAll(statsExample);
++                                        boolean foundParent = false;
++                                        for (WrongTitleStatistics stat : statsList) {
++                                            if (StringUtils.isNotEmpty(stat.getTitleContext()) && stat.getTitleContext().equals(text)) {
++                                                stat.setWrongNum(stat.getWrongNum() == null ? 2 : stat.getWrongNum() + 1);
++                                                wrongTitleStatisticsRepository.save(stat);
++                                                foundParent = true;
++                                                break;
++                                            }
++                                        }
++                                        if (!foundParent) {
++                                            addClassWrongTitle(wrongTitleBook);
++                                        }
++                                    }
+                                 } else {
+                                     // 新题，或者相似度小于0.8
+                                     wrongTitleBook.setDuplicateStatus(3);
++                                    addClassWrongTitle(wrongTitleBook);
+                                 }
+                             } else {
+                                 wrongTitleBook.setDuplicateStatus(3);
++                                addClassWrongTitle(wrongTitleBook);
+                             }
+                             // 去重逻辑结束，新题标记为3 (解析完成)，并且不能直接在 catch 中拦截阻止 save
+                             wrongTitleBookRepository.save(wrongTitleBook);

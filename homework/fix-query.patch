@@ -1,0 +1,27 @@
+--- src/main/java/com/jlm/homework/service/impl/WrongTitleBookServiceImpl.java
++++ src/main/java/com/jlm/homework/service/impl/WrongTitleBookServiceImpl.java
+@@ -127,6 +127,24 @@
+                         Predicate condition = criteriaBuilder.equal(root.get("classId"),wrongTitleBook.getClassId());
+                         list.add(condition);
+                     }
++                    if(wrongTitleBook.getGrade()!=null){
++                        if(wrongTitleBook.getGrade().trim().isEmpty()) {
++                            // 如果传了空字符串，为了让其不查出任意年级的数据，可构造一个必假的条件
++                            list.add(criteriaBuilder.equal(root.get("grade"), "NON_EXIST_GRADE_EMPTY"));
++                        } else {
++                            Predicate condition = criteriaBuilder.equal(root.get("grade"),wrongTitleBook.getGrade());
++                            list.add(condition);
++                        }
++                    }
++                    if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSubject())){
++                        Predicate condition = criteriaBuilder.equal(root.get("subject"),wrongTitleBook.getSubject());
++                        list.add(condition);
++                    }
++                    
++                    // 过滤掉被AI判断为重复并被废弃/合并的记录 (duplicateStatus != 2)
++                    // 只有未去重(null)、非重复(0/1/3)的错题才应该展示
++                    Predicate dupCondition = criteriaBuilder.notEqual(root.get("duplicateStatus"), 2);
++                    list.add(dupCondition);
++
+                     if(com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(wrongTitleBook.getSource())){
+                         Predicate condition = criteriaBuilder.like(root.get("source"),"%"+wrongTitleBook.getSource()+"%");

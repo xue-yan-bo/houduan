@@ -88,15 +88,22 @@ public class ClassroomTearcherApproveStuServiceImpl implements IClassroomTearche
             return new ArrayList<>();
         }
         
-        // 构建查询条件
-        List<ClassroomTearcherApproveStu> allApproveStu = new ArrayList<>();
-        for (Long studentRecordId : studentRecordIds) {
-            ClassroomTearcherApproveStu data = new ClassroomTearcherApproveStu();
-            data.setStudentRecordId(studentRecordId);
-            Sort sort = Sort.by(Sort.Direction.ASC, "pageNum", "indexN", "createTime");
-            List<ClassroomTearcherApproveStu> list = classroomTearcherApproveStuRepository.findAll(Example.of(data), sort);
-            allApproveStu.addAll(list);
-        }
+        List<ClassroomTearcherApproveStu> allApproveStu = classroomTearcherApproveStuRepository.findByStudentRecordIdIn(studentRecordIds);
+        
+        allApproveStu.sort((d1, d2) -> {
+            int pageNumCompare = Integer.compare(d1.getPageNum() != null ? d1.getPageNum() : 0,
+                                               d2.getPageNum() != null ? d2.getPageNum() : 0);
+            if (pageNumCompare != 0) return pageNumCompare;
+            
+            int indexCompare = Integer.compare(d1.getIndexN() != null ? d1.getIndexN() : 0,
+                                             d2.getIndexN() != null ? d2.getIndexN() : 0);
+            if (indexCompare != 0) return indexCompare;
+            
+            if (d1.getCreateTime() == null && d2.getCreateTime() == null) return 0;
+            if (d1.getCreateTime() == null) return -1;
+            if (d2.getCreateTime() == null) return 1;
+            return d1.getCreateTime().compareTo(d2.getCreateTime());
+        });
         
         return groupApproveStuByPageNum(allApproveStu);
     }

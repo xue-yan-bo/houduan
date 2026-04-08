@@ -10,4 +10,6 @@ public interface IClassroomStudentWriteDataService {
     List<ClassroomStudentWriteData> findByStudentRecordId(Long studentRecordId);
     
     List<ClassroomStudentWriteData> findByStudentRecordIds(List<Long> studentRecordIds);
+
+    void saveAll(List<ClassroomStudentWriteData> list);
 }

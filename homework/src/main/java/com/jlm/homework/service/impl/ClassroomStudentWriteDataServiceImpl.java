@@ -10,12 +10,15 @@ import jakarta.annotation.Resource;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWriteDataService {
@@ -67,6 +70,92 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void saveAll(List<ClassroomStudentWriteData> list) {
+        if(list == null || list.isEmpty()){
+            return;
+        }
+
+        List<ClassroomStudentWriteData> toSave = new ArrayList<>();
+        List<ClassroomStudentWriteData> toDelete = new ArrayList<>();
+        List<ClassroomExercisesStudentRecord> recordsToUpdate = new ArrayList<>();
+
+        List<Long> studentRecordIds = list.stream()
+                .map(ClassroomStudentWriteData::getStudentRecordId)
+                .filter(id -> id != null && id != 0)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Long, ClassroomExercisesStudentRecord> recordMap = new HashMap<>();
+        if (!studentRecordIds.isEmpty()) {
+            List<ClassroomExercisesStudentRecord> records = classroomExercisesStudentRecordRepository.findAllById(studentRecordIds);
+            for (ClassroomExercisesStudentRecord record : records) {
+                recordMap.put(record.getId(), record);
+            }
+        }
+
+        for (ClassroomStudentWriteData classroomStudentWriteData : list) {
+            if(classroomStudentWriteData.getStudentRecordId()==null||classroomStudentWriteData.getStudentRecordId()==0){
+                Long studentId =classroomStudentWriteData.getStudentId();
+                ClassroomExercisesStudentRecord record = new ClassroomExercisesStudentRecord();
+                record.setStudentId(studentId);
+                Sort sort = Sort.by(Sort.Direction.DESC,"classroomExercisesId","startTime","createTime");
+                List<ClassroomExercisesStudentRecord> recordList=classroomExercisesStudentRecordRepository.findAll(Example.of(record),sort);
+                if(recordList!=null&&recordList.size()>0){
+                    classroomStudentWriteData.setStudentRecordId(recordList.get(0).getId());
+                }
+            }
+            if(classroomStudentWriteData.getStudentsWriteRecords()==null||classroomStudentWriteData.getStudentsWriteRecords().size()<=0){
+                continue;
+            }
+            if(classroomStudentWriteData.getStudentsWriteRecords().size()<StudentWriteData_Size){
+                toSave.add(classroomStudentWriteData);
+            }else {
+                ClassroomStudentWriteData data=new ClassroomStudentWriteData();
+                data.setStudentRecordId(classroomStudentWriteData.getStudentRecordId());
+                data.setPageNum(classroomStudentWriteData.getPageNum());
+                toDelete.add(data);
+
+                for(int i=0;i<=classroomStudentWriteData.getStudentsWriteRecords().size()/StudentWriteData_Size;i++){
+                    ClassroomStudentWriteData writeData=new ClassroomStudentWriteData();
+                    writeData.setStudentRecordId(classroomStudentWriteData.getStudentRecordId());
+                    writeData.setStudentId(classroomStudentWriteData.getStudentId());
+                    writeData.setIndexN(i);
+                    writeData.setPageNum(classroomStudentWriteData.getPageNum());
+                    int end=(i+1)*StudentWriteData_Size>classroomStudentWriteData.getStudentsWriteRecords().size()?classroomStudentWriteData.getStudentsWriteRecords().size():(i+1)*StudentWriteData_Size;
+                    writeData.setStudentsWriteRecords(classroomStudentWriteData.getStudentsWriteRecords().subList(i*StudentWriteData_Size,end));
+                    writeData.setCreateTime(new Date());
+                    toSave.add(writeData);
+                }
+            }
+
+            if(classroomStudentWriteData.getStudentRecordId() != null) {
+                ClassroomExercisesStudentRecord studentRecord = recordMap.get(classroomStudentWriteData.getStudentRecordId());
+                if(studentRecord!=null&&(studentRecord.getHavaWrite()==null||studentRecord.getHavaWrite()!=1)){
+                    studentRecord.setHavaWrite(1);
+                    recordsToUpdate.add(studentRecord);
+                    recordMap.put(studentRecord.getId(), studentRecord);
+                }
+            }
+        }
+
+        if (!toDelete.isEmpty()) {
+            for (ClassroomStudentWriteData data : toDelete) {
+                classroomStudentWriteDataRepository.delete(data);
+            }
+        }
+
+        if (!toSave.isEmpty()) {
+            classroomStudentWriteDataRepository.saveAll(toSave);
+        }
+
+        if (!recordsToUpdate.isEmpty()) {
+            List<ClassroomExercisesStudentRecord> uniqueRecords = new ArrayList<>(new HashSet<>(recordsToUpdate));
+            classroomExercisesStudentRecordRepository.saveAll(uniqueRecords);
+        }
+    }
+
+    @Override
     public List<ClassroomStudentWriteData> findByStudentRecordId(Long studentRecordId) {
         ClassroomStudentWriteData data=new ClassroomStudentWriteData();
         data.setStudentRecordId(studentRecordId);
@@ -80,17 +169,17 @@ public class ClassroomStudentWriteDataServiceImpl implements IClassroomStudentWr
         if (studentRecordIds == null || studentRecordIds.isEmpty()) {
             return new ArrayList<>();
         }
-        
-        // 构建查询条件
-        List<ClassroomStudentWriteData> allWriteData = new ArrayList<>();
-        for (Long studentRecordId : studentRecordIds) {
-            ClassroomStudentWriteData data = new ClassroomStudentWriteData();
-            data.setStudentRecordId(studentRecordId);
-            Sort sort = Sort.by(Sort.Direction.ASC, "pageNum", "indexN");
-            List<ClassroomStudentWriteData> list = classroomStudentWriteDataRepository.findAll(Example.of(data), sort);
-            allWriteData.addAll(list);
-        }
-        
+
+        List<ClassroomStudentWriteData> allWriteData = classroomStudentWriteDataRepository.findByStudentRecordIdIn(studentRecordIds);
+
+        allWriteData.sort((d1, d2) -> {
+            int pageNumCompare = Integer.compare(d1.getPageNum() != null ? d1.getPageNum() : 0,
+                                               d2.getPageNum() != null ? d2.getPageNum() : 0);
+            if (pageNumCompare != 0) return pageNumCompare;
+            return Integer.compare(d1.getIndexN() != null ? d1.getIndexN() : 0,
+                                 d2.getIndexN() != null ? d2.getIndexN() : 0);
+        });
+
         return groupWriteDataByPageNum(allWriteData);
     }
 

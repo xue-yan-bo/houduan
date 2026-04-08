@@ -267,20 +267,24 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 // 批量保存学生记录
                 if (!recordsToSave.isEmpty()) {
                     classroomExercisesStudentRecordRepository.saveAll(recordsToSave);
-                    
+
                     // 处理学生写数据
+                    List<ClassroomStudentWriteData> allWriteDataToSave = new ArrayList<>();
                     for (ClassroomExercisesStudentRecord record : recordsToSave) {
                         if (record.getStudentWriteDataList() != null && !record.getStudentWriteDataList().isEmpty()) {
                             for (ClassroomStudentWriteData studentWriteData : record.getStudentWriteDataList()) {
                                 studentWriteData.setStudentRecordId(record.getId());
                                 if (studentWriteData.getStudentsWriteRecords() != null && !studentWriteData.getStudentsWriteRecords().isEmpty()) {
-                                    classroomStudentWriteDataService.save(studentWriteData);
+                                    allWriteDataToSave.add(studentWriteData);
                                 }
                             }
                         }
                     }
+                    if (!allWriteDataToSave.isEmpty()) {
+                        classroomStudentWriteDataService.saveAll(allWriteDataToSave);
+                    }
                 }
-                
+
                 // 批量保存教师审批
                 if (!approveStusToSave.isEmpty()) {
                     classroomTearcherApproveStuService.saveAll(approveStusToSave);
@@ -288,9 +292,18 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 if(exercises!=null&&exercises.getExercisesType()==1) {
 
                     List<ClassroomExercisesStudentRecord> studentRecordList = selectByClassroomExercisesIdAndClass(exercisesId, classId);
+
+                    // 并发执行 AI 解析
+                    List<CompletableFuture<Void>> aiFutures = new ArrayList<>();
                     for (ClassroomExercisesStudentRecord record : studentRecordList) {
-                        aiParseWriteMid(record.getId());
+                        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                            aiParseWriteMid(record.getId());
+                        }, executorService);
+                        aiFutures.add(future);
                     }
+
+                    // 等待所有 AI 解析完成（可选项，如果不需要等待则可以去掉 join）
+                    CompletableFuture.allOf(aiFutures.toArray(new CompletableFuture[0])).join();
                 }
             } catch (Exception e) {
                 log.error("异步处理结束答题异常", e);
@@ -654,7 +667,7 @@ public class ClassroomExercisesStudentRecordServiceImpl implements IClassroomExe
                 return;
             }
             BufferedImage image = WritingDataRenderer.drawWritingData(writeDataList.get(0).getStudentsWriteRecords(), 794, 1123);
-            String imageUrl = "随堂检测-" + studentRecord.getClassroomExercisesId() + "-" + studentRecord.getStudentName() + ".png";
+            String imageUrl = "随堂检测-" + studentRecord.getClassroomExercisesId() + "-" + studentRecord.getId() + "-" + studentRecord.getStudentName() + ".png";
             CoordinateImageGenerator.saveImage(image, imageUrl);
 
             List<AiFile> medias = new ArrayList<AiFile>();

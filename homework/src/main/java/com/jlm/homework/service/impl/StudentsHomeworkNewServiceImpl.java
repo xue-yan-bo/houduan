@@ -848,26 +848,32 @@ public class StudentsHomeworkNewServiceImpl implements IStudentsHomeworkNewServi
             }
         }
         if(studentsHomework.getHomeworkCorrectList()!=null&&!studentsHomework.getHomeworkCorrectList().isEmpty()){
+            List<StudentsHomeworkCorrect> correctsToSave = new ArrayList<>();
             for(StudentsHomeworkCorrect correct:studentsHomework.getHomeworkCorrectList()){
                 correct.setStudentsHomeworkId(studentsHomework.getId());
                 correct.setFileType("录音");
                 correct.setCreaterType(1);
                 correct.setType(1);
                 correct.setCreateTime(new Date());
-                studentsHomeworkCorrectRepository.save(correct);
+                correctsToSave.add(correct);
             }
-
+            if(!correctsToSave.isEmpty()) {
+                studentsHomeworkCorrectRepository.saveAll(correctsToSave);
+            }
         }
         if(studentsHomework.getHomeworkCorrectList2()!=null&&!studentsHomework.getHomeworkCorrectList2().isEmpty()){
+            List<StudentsHomeworkCorrect> correctsToSave2 = new ArrayList<>();
             for(StudentsHomeworkCorrect correct:studentsHomework.getHomeworkCorrectList2()){
                 correct.setStudentsHomeworkId(studentsHomework.getId());
                 correct.setFileType("录音");
                 correct.setCreaterType(1);
                 correct.setType(2);
                 correct.setCreateTime(new Date());
-                studentsHomeworkCorrectRepository.save(correct);
+                correctsToSave2.add(correct);
             }
-
+            if(!correctsToSave2.isEmpty()) {
+                studentsHomeworkCorrectRepository.saveAll(correctsToSave2);
+            }
         }
         studentsHomework = studentsHomeworkNewRepository.save(studentsHomework);
 

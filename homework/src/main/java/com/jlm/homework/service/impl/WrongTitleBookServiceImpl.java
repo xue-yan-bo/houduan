@@ -82,6 +82,8 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                         Predicate condition = criteriaBuilder.equal(root.get("commandFlag"),commandFlag);
                         list.add(condition);
                     }
+                    // 个人错题本去重：过滤掉作为重复题挂靠在别人母题下的题目
+                    list.add(criteriaBuilder.isNull(root.get("duplicateOf")));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

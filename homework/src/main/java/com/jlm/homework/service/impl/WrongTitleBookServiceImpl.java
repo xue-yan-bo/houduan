@@ -432,13 +432,51 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                                     parentBook.setErrorCount(oldErrorCount + 1);
                                     wrongTitleBookRepository.save(parentBook);
                                 } else {
-                                    // 班级里不同学生的错题
-                                    Integer oldErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
-                                    parentBook.setErrorCount(oldErrorCount + 1);
-                                    wrongTitleBookRepository.save(parentBook);
+                                    // 班级里不同学生的错题，要看这个学生以前有没有错过这道题
+                                    // 如果这个学生以前错过，才更新以前那条记录的次数并把新记录设为2
+                                    // 如果没错过，就不设为2，而是把它作为这名学生的“初次错题”，只打标记3和关联母题
 
-                                    // 班级本去重，不展示这条
-                                    wrongTitleBook.setDuplicateStatus(3);
+                                    // 1. 查找当前学生是否已有该错题（根据 duplicateOf 或 本身是母题）
+                                    WrongTitleBook studentHistorySearch = new WrongTitleBook();
+                                    studentHistorySearch.setStudentId(wrongTitleBook.getStudentId());
+                                    studentHistorySearch.setClassId(wrongTitleBook.getClassId());
+                                    final Long wtbStudentId = wrongTitleBook.getStudentId();
+                                    final Long wtbClassId = wrongTitleBook.getClassId();
+                                    final Long finalDuplicateOf = duplicateOf;
+
+                                    // 我们需要找到属于该学生、且题目内容相似的记录
+                                    // 为了严谨，我们直接找：关联到同一个母题，或者本身就是那个母题
+                                    List<WrongTitleBook> stuBooks = wrongTitleBookRepository.findAll((root, query, cb) -> {
+                                        Predicate pStu = cb.equal(root.get("studentId"), wtbStudentId);
+                                        Predicate pClass = cb.equal(root.get("classId"), wtbClassId);
+                                        Predicate pDup = cb.or(
+                                                cb.equal(root.get("id"), finalDuplicateOf),
+                                                cb.equal(root.get("duplicateOf"), finalDuplicateOf)
+                                        );
+                                        return cb.and(pStu, pClass, pDup);
+                                    });
+
+                                    if (stuBooks != null && !stuBooks.isEmpty()) {
+                                        // 这个学生以前确实错过这道题
+                                        WrongTitleBook hisStuBook = stuBooks.get(0);
+                                        wrongTitleBook.setDuplicateStatus(2);
+                                        Integer oldErrorCount = hisStuBook.getErrorCount() == null ? 1 : hisStuBook.getErrorCount();
+                                        hisStuBook.setErrorCount(oldErrorCount + 1);
+                                        wrongTitleBookRepository.save(hisStuBook);
+
+                                        // 同时不要忘记母题也要+1，因为班级整体错误数变了
+                                        Integer parentErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
+                                        parentBook.setErrorCount(parentErrorCount + 1);
+                                        wrongTitleBookRepository.save(parentBook);
+                                    } else {
+                                        // 这个学生第一次错这道题，正常累加母题次数
+                                        Integer oldErrorCount = parentBook.getErrorCount() == null ? 1 : parentBook.getErrorCount();
+                                        parentBook.setErrorCount(oldErrorCount + 1);
+                                        wrongTitleBookRepository.save(parentBook);
+
+                                        // 班级本去重，不展示这条（因为前端班级错题本默认会过滤掉 duplicateOf 不为空的）
+                                        wrongTitleBook.setDuplicateStatus(3);
+                                    }
                                 }
                             }
                         } else {

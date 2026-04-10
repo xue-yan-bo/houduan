@@ -287,6 +287,7 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
             statistics.setAnswerImage(wrongTitleBook.getAnswerImage());
             statistics.setAnswerContext(wrongTitleBook.getAnswerContext());
             statistics.setSubject(wrongTitleBook.getSubject());
+            statistics.setHasDiagram(wrongTitleBook.getHasDiagram());
             if(StringUtils.isNotEmpty(grade)){
                 statistics.setGrade(grade);
             }
@@ -333,10 +334,39 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 try {
                     Result<String> aiResult = aiFeignClient.analyzeImage(imageUrl);
                     if (aiResult != null && aiResult.getCode() == 200) {
-                        String fetchedText = aiResult.getData();
-                        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(fetchedText)) {
-                            wrongTitleBook.setTitleContext(fetchedText);
-                            wrongTitleBookRepository.save(wrongTitleBook);
+                        String jsonStr = aiResult.getData();
+                        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(jsonStr)) {
+                            jsonStr = jsonStr.trim();
+                            if (jsonStr.startsWith("```json")) {
+                                jsonStr = jsonStr.substring(7);
+                                if (jsonStr.endsWith("```")) {
+                                    jsonStr = jsonStr.substring(0, jsonStr.length() - 3);
+                                }
+                            } else if (jsonStr.startsWith("```")) {
+                                jsonStr = jsonStr.substring(3);
+                                if (jsonStr.endsWith("```")) {
+                                    jsonStr = jsonStr.substring(0, jsonStr.length() - 3);
+                                }
+                            }
+                            jsonStr = jsonStr.trim();
+                            try {
+                                JSONObject jsonObject = JSON.parseObject(jsonStr);
+                                String text = jsonObject.getString("text");
+                                Boolean hasDiagram = jsonObject.getBoolean("hasDiagram");
+
+                                if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {
+                                    wrongTitleBook.setTitleContext(text);
+                                }
+                                if (hasDiagram != null && hasDiagram) {
+                                    wrongTitleBook.setHasDiagram(1);
+                                } else {
+                                    wrongTitleBook.setHasDiagram(0);
+                                }
+                                wrongTitleBookRepository.save(wrongTitleBook);
+                            } catch (Exception e) {
+                                wrongTitleBook.setTitleContext(jsonStr);
+                                wrongTitleBookRepository.save(wrongTitleBook);
+                            }
                         }
                     }
                 } catch (Exception e) {
@@ -592,9 +622,37 @@ public class WrongTitleBookServiceImpl implements IWrongTitleBookService {
                 try {
                     Result<String> aiResult = aiFeignClient.analyzeImage(imageUrl);
                     if (aiResult != null && aiResult.getCode() == 200) {
-                        String text = aiResult.getData();
-                        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {
-                            wrongTitleBook.setTitleContext(text);
+                        String jsonStr = aiResult.getData();
+                        if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(jsonStr)) {
+                            jsonStr = jsonStr.trim();
+                            if (jsonStr.startsWith("```json")) {
+                                jsonStr = jsonStr.substring(7);
+                                if (jsonStr.endsWith("```")) {
+                                    jsonStr = jsonStr.substring(0, jsonStr.length() - 3);
+                                }
+                            } else if (jsonStr.startsWith("```")) {
+                                jsonStr = jsonStr.substring(3);
+                                if (jsonStr.endsWith("```")) {
+                                    jsonStr = jsonStr.substring(0, jsonStr.length() - 3);
+                                }
+                            }
+                            jsonStr = jsonStr.trim();
+                            try {
+                                JSONObject jsonObject = JSON.parseObject(jsonStr);
+                                String text = jsonObject.getString("text");
+                                Boolean hasDiagram = jsonObject.getBoolean("hasDiagram");
+
+                                if (com.alibaba.cloud.commons.lang.StringUtils.isNotEmpty(text)) {
+                                    wrongTitleBook.setTitleContext(text);
+                                }
+                                if (hasDiagram != null && hasDiagram) {
+                                    wrongTitleBook.setHasDiagram(1);
+                                } else {
+                                    wrongTitleBook.setHasDiagram(0);
+                                }
+                            } catch (Exception e) {
+                                wrongTitleBook.setTitleContext(jsonStr);
+                            }
                         }
                     }
                 } catch (Exception e) {

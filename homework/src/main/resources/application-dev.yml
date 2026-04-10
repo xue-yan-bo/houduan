@@ -1,6 +1,6 @@
 # 开发环境配置
 server:
-  port: ${SERVER_PORT:18080}
+  port: ${SERVER_PORT:18086}
 
 # Socket服务配置
 socket:

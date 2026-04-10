@@ -150,6 +150,9 @@ public class WrongTitleStatistics implements Serializable {
     @Column(name = "answer_context")
     private String answerContext;
 
+    @Column(name = "has_diagram", columnDefinition = "int default 0")
+    private Integer hasDiagram = 0;
+
     public String getTitleContext() {
         if(StringUtils.isNotEmpty(titleContext)&&titleContext.contains("\\")){
             return titleContext.replace("\\","");

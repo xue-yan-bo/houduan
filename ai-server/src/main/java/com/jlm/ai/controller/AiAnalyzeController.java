@@ -29,7 +29,7 @@ public class AiAnalyzeController {
         }
 
         try {
-            String prompt = "请提取这张图片中的所有试题文字内容（包含题目、选项、解析等）。不论是文科（语文、历史、英语等）、理科还是美术等其他学科，请忠实还原图片中的所有文字。如果包含公式或特殊符号，请尽量使用Markdown或LaTeX语法表示。只返回提取的纯文字内容，不要输出诸如好的、提取的文字如下等任何废话。如果识别不到文字，只需返回空字符串。";
+            String prompt = "请分析这张图片。1. 提取图片中的所有试题文字内容（包含题目、选项、解析等），忠实还原，包含公式使用Markdown。2. 判断该图片中是否包含非文字的图表、几何图形、物理受力图、函数坐标系等无法用纯文本还原的演示图。请以严格的JSON格式返回结果，格式为：{\"text\": \"提取的文字内容\", \"hasDiagram\": true/false}。除了JSON之外不要输出任何其他内容。如果识别不到文字，text的值请返回空字符串。";
             // 拿到具体的工厂类实现去解析
             String text = aiUtil.getAIUtil().analyzeImage(imageUrl, prompt);
 

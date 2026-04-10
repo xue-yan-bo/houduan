@@ -70,7 +70,7 @@ spring:
 
 # 服务器配置
 server:
-  port: ${SERVER_PORT:18080}
+  port: ${SERVER_PORT:18086}
   # 优雅关闭
   shutdown: graceful
   # Tomcat配置

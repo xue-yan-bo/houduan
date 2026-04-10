@@ -68,11 +68,11 @@ public class WrongTitleBook {
     @Column(name = "title_answer")
     private String titleAnswer;
 
-    @JsonIgnore
+    
     @Column(name = "title_image")
     private String titleImage;
 
-    @JsonIgnore
+    
     @Column(name = "source_image_url")
     private String sourceImageUrl;
 
@@ -134,29 +134,6 @@ public class WrongTitleBook {
     @Column(name = "grade")
     private String grade;
 
-    @JsonProperty("titleImage")
-    public String getTitleImageForJson() {
-        if (StringUtils.isNotEmpty(this.titleContext)) {
-            return null;
-        }
-        return this.titleImage;
-    }
-
-    @JsonProperty("sourceImageUrl")
-    public String getSourceImageUrlForJson() {
-        if (StringUtils.isNotEmpty(this.titleContext)) {
-            return null;
-        }
-        return this.sourceImageUrl;
-    }
-
-    @JsonProperty("titleImage")
-    public void setTitleImage(String titleImage) {
-        this.titleImage = titleImage;
-    }
-
-    @JsonProperty("sourceImageUrl")
-    public void setSourceImageUrl(String sourceImageUrl) {
-        this.sourceImageUrl = sourceImageUrl;
-    }
+    @Column(name = "has_diagram", columnDefinition = "int default 0")
+    private Integer hasDiagram = 0;
 }
